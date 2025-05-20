@@ -4,7 +4,7 @@ import { AppService } from './app.service';
 import { AssetsModule } from './modules/assets/assets.module';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './shared/infrastructure/database/database.module';
-import { ConfigModule } from './shared/infrastructure/config';
+import { ConfigModule, RateLimitModule } from './shared/infrastructure/config';
 
 @Module({
   imports: [
@@ -13,6 +13,7 @@ import { ConfigModule } from './shared/infrastructure/config';
     }),
     ConfigModule,
     DatabaseModule,
+    RateLimitModule,
     AssetsModule,
   ],
   controllers: [AppController],

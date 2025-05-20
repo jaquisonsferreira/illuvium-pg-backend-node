@@ -42,4 +42,31 @@ export class EnvironmentConfigService {
       password: process.env.REDIS_PASSWORD || '',
     };
   }
+
+  /**
+   * Get rate limit time-to-live in seconds
+   */
+  getRateLimitTtl(): number {
+    return parseInt(process.env.RATE_LIMIT_TTL || '60', 10);
+  }
+
+  /**
+   * Get maximum number of requests within the TTL window
+   */
+  getRateLimitMax(): number {
+    return parseInt(process.env.RATE_LIMIT_MAX || '100', 10);
+  }
+
+  /**
+   * Check if an API key is in the trusted list
+   */
+  isTrustedApiKey(apiKey: string | undefined): boolean {
+    if (!apiKey) return false;
+
+    const trustedKeys = process.env.TRUSTED_API_KEYS
+      ? process.env.TRUSTED_API_KEYS.split(',')
+      : [];
+
+    return trustedKeys.includes(apiKey);
+  }
 }

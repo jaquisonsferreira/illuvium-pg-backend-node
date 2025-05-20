@@ -31,6 +31,12 @@ async function bootstrap() {
   const environmentConfigService = app.get(EnvironmentConfigService);
   app.enableCors(createCorsConfig(environmentConfigService));
 
+  // Add rate limit headers to responses
+  app.use((req, res, next) => {
+    res.header('X-RateLimit-Style', 'RFC');
+    next();
+  });
+
   // Global ValidationPipe configuration
   app.useGlobalPipes(
     new ValidationPipe({
