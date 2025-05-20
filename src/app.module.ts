@@ -2,14 +2,16 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AssetsModule } from './modules/assets/assets.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './shared/infrastructure/database/database.module';
+import { ConfigModule } from './shared/infrastructure/config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
+    NestConfigModule.forRoot({
       isGlobal: true,
     }),
+    ConfigModule,
     DatabaseModule,
     AssetsModule,
   ],

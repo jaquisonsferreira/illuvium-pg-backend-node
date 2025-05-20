@@ -1,18 +1,22 @@
 import { Global, Module } from '@nestjs/common';
-import { db } from './index';
+import { createDatabaseConnection } from './index';
 import { RepositoryFactory } from './repositories/repository.factory';
 import { DATABASE_CONNECTION } from './constants';
+import { EnvironmentConfigService } from '../config';
 
 @Global()
 @Module({
   providers: [
     {
       provide: DATABASE_CONNECTION,
-      useValue: db,
+      useFactory: (config: EnvironmentConfigService) =>
+        createDatabaseConnection(config),
+      inject: [EnvironmentConfigService],
     },
     {
       provide: RepositoryFactory,
-      useFactory: () => new RepositoryFactory(db),
+      useFactory: (connection) => new RepositoryFactory(connection),
+      inject: [DATABASE_CONNECTION],
     },
   ],
   exports: [DATABASE_CONNECTION, RepositoryFactory],

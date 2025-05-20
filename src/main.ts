@@ -5,8 +5,13 @@ import { AppModule } from './app.module';
 import { Kysely } from 'kysely';
 import {
   Database,
+  DATABASE_CONNECTION,
   setupDatabaseSchema,
 } from './shared/infrastructure/database';
+import {
+  createCorsConfig,
+  EnvironmentConfigService,
+} from './shared/infrastructure/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -22,8 +27,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // CORS configuration, if needed
-  app.enableCors();
+  // CORS configuration with advanced options
+  const environmentConfigService = app.get(EnvironmentConfigService);
+  app.enableCors(createCorsConfig(environmentConfigService));
 
   // Global ValidationPipe configuration
   app.useGlobalPipes(
@@ -37,8 +43,8 @@ async function bootstrap() {
 
   // Configure and verify the database schema
   try {
-    const db = app.get<Kysely<Database>>('DATABASE_CONNECTION');
-    await setupDatabaseSchema(db);
+    const dbConnection = app.get<Kysely<Database>>(DATABASE_CONNECTION);
+    await setupDatabaseSchema(dbConnection);
   } catch (error) {
     console.error('Error configuring the database:', error);
   }
