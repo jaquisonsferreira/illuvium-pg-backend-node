@@ -69,4 +69,41 @@ export class EnvironmentConfigService {
 
     return trustedKeys.includes(apiKey);
   }
+
+  /**
+   * Get Sentry DSN
+   */
+  getSentryDsn(): string {
+    return process.env.SENTRY_DSN || '';
+  }
+
+  /**
+   * Check if Sentry is enabled
+   */
+  isSentryEnabled(): boolean {
+    return process.env.SENTRY_ENABLED === 'true';
+  }
+
+  /**
+   * Get Sentry traces sample rate
+   */
+  getSentryTracesSampleRate(): number {
+    return parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '0.1');
+  }
+
+  /**
+   * Get Sentry profiles sample rate
+   */
+  getSentryProfilesSampleRate(): number {
+    return parseFloat(process.env.SENTRY_PROFILES_SAMPLE_RATE || '0.1');
+  }
+
+  /**
+   * Get Sentry trace propagation targets
+   */
+  getSentryTracePropagationTargets(): string[] {
+    return process.env.SENTRY_TRACE_PROPAGATION_TARGETS
+      ? process.env.SENTRY_TRACE_PROPAGATION_TARGETS.split(',')
+      : [];
+  }
 }

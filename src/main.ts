@@ -1,6 +1,5 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { Kysely } from 'kysely';
 import {
@@ -12,6 +11,13 @@ import {
   createCorsConfig,
   EnvironmentConfigService,
 } from './shared/infrastructure/config';
+import {
+  GlobalExceptionFilter,
+  ValidationExceptionFilter,
+} from './shared/infrastructure/exceptions';
+import { HttpAdapterHost } from '@nestjs/core';
+import { CustomValidationPipe } from './shared/infrastructure/pipes';
+import { ResponseTransformInterceptor } from './shared/infrastructure/interceptors';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -37,14 +43,17 @@ async function bootstrap() {
     next();
   });
 
-  // Global ValidationPipe configuration
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      forbidUnknownValues: true,
-    }),
+  // Global Pipes
+  app.useGlobalPipes(new CustomValidationPipe());
+
+  // Global Interceptors
+  app.useGlobalInterceptors(new ResponseTransformInterceptor());
+
+  // Global exception filters
+  const httpAdapter = app.get(HttpAdapterHost);
+  app.useGlobalFilters(
+    new GlobalExceptionFilter(httpAdapter),
+    new ValidationExceptionFilter(),
   );
 
   // Configure and verify the database schema
