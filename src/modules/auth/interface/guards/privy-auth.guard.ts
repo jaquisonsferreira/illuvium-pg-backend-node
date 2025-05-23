@@ -40,7 +40,16 @@ export class PrivyAuthGuard implements CanActivate {
   }
 
   private extractTokenFromHeader(request: any): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
+    const authHeader = request.headers.authorization;
+    if (!authHeader) {
+      return undefined;
+    }
+
+    const parts = authHeader.split(/\s+/); // Split on one or more whitespace characters
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+      return undefined;
+    }
+
+    return parts[1];
   }
 }
