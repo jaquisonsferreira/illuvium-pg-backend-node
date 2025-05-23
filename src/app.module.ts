@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AssetsModule } from './modules/assets/assets.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './shared/infrastructure/database/database.module';
 import {
@@ -20,6 +21,7 @@ import {
     RateLimitModule,
     SentryModule,
     AssetsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
