@@ -10,16 +10,21 @@ import {
   SentryModule,
 } from './shared/infrastructure/config';
 
+import { ObservabilityModule } from './modules/observability/observability.module';
+
 @Module({
   imports: [
     NestConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '.env',
     }),
     ConfigModule,
     DatabaseModule,
     RateLimitModule,
     SentryModule,
     AssetsModule,
+
+    ObservabilityModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,73 +1,81 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
+import * as Sentry from '@sentry/node';
+
 import { AppModule } from './app.module';
+import { TracingInterceptor } from './modules/observability/interface/interceptors/tracing.interceptor';
 import { Kysely } from 'kysely';
 import {
-  Database,
   DATABASE_CONNECTION,
   setupDatabaseSchema,
 } from './shared/infrastructure/database';
-import {
-  createCorsConfig,
-  EnvironmentConfigService,
-} from './shared/infrastructure/config';
-import {
-  GlobalExceptionFilter,
-  ValidationExceptionFilter,
-} from './shared/infrastructure/exceptions';
-import { HttpAdapterHost } from '@nestjs/core';
-import { CustomValidationPipe } from './shared/infrastructure/pipes';
-import { ResponseTransformInterceptor } from './shared/infrastructure/interceptors';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
-  // Swagger/OpenAPI configuration
-  const config = new DocumentBuilder()
-    .setTitle('Illuvium API')
-    .setDescription('API backend for the Illuvium ecosystem')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
-
-  // CORS configuration with advanced options
-  const environmentConfigService = app.get(EnvironmentConfigService);
-  app.enableCors(createCorsConfig(environmentConfigService));
-
-  // Add rate limit headers to responses
-  app.use((req, res, next) => {
-    res.header('X-RateLimit-Style', 'RFC');
-    next();
+  // Sentry configuration
+  Sentry.init({
+    dsn: configService.get<string>('SENTRY_DSN'),
+    environment: configService.get<string>('NODE_ENV'),
+    tracesSampleRate: 1.0,
   });
 
-  // Global Pipes
-  app.useGlobalPipes(new CustomValidationPipe());
-
-  // Global Interceptors
-  app.useGlobalInterceptors(new ResponseTransformInterceptor());
-
-  // Global exception filters
-  const httpAdapter = app.get(HttpAdapterHost);
-  app.useGlobalFilters(
-    new GlobalExceptionFilter(httpAdapter),
-    new ValidationExceptionFilter(),
+  // Global validation pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
   );
+
+  // Global tracing interceptor for observability
+  app.useGlobalInterceptors(app.get(TracingInterceptor));
+
+  // CORS configuration
+  app.enableCors({
+    origin: configService.get<string>('CORS_ORIGIN', '*'),
+    credentials: true,
+  });
+
+  // Swagger documentation
+  if (configService.get<string>('NODE_ENV') !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Illuvium API')
+      .setDescription('API for Illuvium platform')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
+  }
+
+  // Global prefix
+  app.setGlobalPrefix('api');
+
+  const port = configService.get<number>('PORT', 3000);
 
   // Configure and verify the database schema
   try {
-    const dbConnection = app.get<Kysely<Database>>(DATABASE_CONNECTION);
-    await setupDatabaseSchema(dbConnection);
+    const database = app.get<Kysely<any>>(DATABASE_CONNECTION);
+    await setupDatabaseSchema(database);
+    console.log('✅ Database schema configured successfully');
   } catch (error) {
-    console.error('Error configuring the database:', error);
+    console.error('❌ Database schema configuration failed:', error);
+    process.exit(1);
   }
 
-  await app.listen(process.env.PORT ?? 3000);
-  console.log(`Aplicação rodando na porta ${process.env.PORT ?? 3000}`);
-  console.log(
-    `Documentação Swagger disponível em http://localhost:${process.env.PORT ?? 3000}/api/docs`,
-  );
+  await app.listen(port);
+
+  console.log(`🚀 Application is running on: http://localhost:${port}/api`);
+  console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
 }
-bootstrap();
+
+bootstrap().catch((error) => {
+  console.error('❌ Error starting the application:', error);
+  process.exit(1);
+});
