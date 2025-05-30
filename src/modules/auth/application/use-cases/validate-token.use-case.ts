@@ -13,7 +13,7 @@ export interface ValidateTokenRequest {
 export interface ValidateTokenResponse {
   isValid: boolean;
   user?: UserEntity;
-  error?: string;
+  internalError?: string;
 }
 
 @Injectable()
@@ -31,9 +31,12 @@ export class ValidateTokenUseCase {
         await this.privyTokenValidationService.validateToken(request.token);
 
       if (!tokenValidationResult.isValid || !tokenValidationResult.claims) {
+        const internalError =
+          tokenValidationResult.error || 'Token validation failed';
+        console.error('Token validation failed:', internalError);
         return {
           isValid: false,
-          error: tokenValidationResult.error || 'Token validation failed',
+          internalError,
         };
       }
 
@@ -44,9 +47,12 @@ export class ValidateTokenUseCase {
         );
 
       if (!domainValidationResult.isValid || !domainValidationResult.claims) {
+        const internalError =
+          domainValidationResult.error || 'Claims validation failed';
+        console.error('Claims validation failed:', internalError);
         return {
           isValid: false,
-          error: domainValidationResult.error || 'Claims validation failed',
+          internalError,
         };
       }
 
@@ -55,16 +61,24 @@ export class ValidateTokenUseCase {
       );
 
       if (!user) {
+        console.error(
+          'User not found for privy ID:',
+          domainValidationResult.claims.getUserId,
+        );
         return {
           isValid: false,
-          error: 'User not found',
+          internalError: 'User not found',
         };
       }
 
       if (!user.isActive) {
+        console.error(
+          'User account is inactive for privy ID:',
+          domainValidationResult.claims.getUserId,
+        );
         return {
           isValid: false,
-          error: 'User account is inactive',
+          internalError: 'User account is inactive',
         };
       }
 
@@ -73,10 +87,12 @@ export class ValidateTokenUseCase {
         user,
       };
     } catch (error) {
+      const internalError =
+        error instanceof Error ? error.message : 'Token validation failed';
+      console.error('Token validation error:', internalError);
       return {
         isValid: false,
-        error:
-          error instanceof Error ? error.message : 'Token validation failed',
+        internalError,
       };
     }
   }

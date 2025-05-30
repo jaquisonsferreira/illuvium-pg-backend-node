@@ -29,9 +29,7 @@ export class PrivyAuthGuard implements CanActivate {
     });
 
     if (!validationResult.isValid) {
-      throw new UnauthorizedException(
-        validationResult.error || 'Invalid token',
-      );
+      throw new UnauthorizedException('Invalid or expired access token');
     }
 
     request.user = validationResult.user;

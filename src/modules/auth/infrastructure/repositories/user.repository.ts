@@ -57,22 +57,21 @@ export class UserRepository implements UserRepositoryInterface {
   }
 
   async save(user: UserEntity): Promise<UserEntity> {
-    const updateData: UserUpdate = {
-      wallet_address: user.walletAddress,
-      email: user.email,
-      phone_number: user.phoneNumber,
-      is_active: user.isActive,
-      updated_at: new Date(),
-    };
-
     const result = await sql`
       UPDATE users
       SET
-        wallet_address = ${updateData.wallet_address},
-        email = ${updateData.email},
-        phone_number = ${updateData.phone_number},
-        is_active = ${updateData.is_active},
-        updated_at = ${updateData.updated_at}
+        nickname = ${user.nickname || null},
+        avatar_url = ${user.avatarUrl || null},
+        experiments = ${user.experiments ? JSON.stringify(user.experiments) : null},
+        social_bluesky = ${user.socialBluesky || null},
+        social_discord = ${user.socialDiscord || null},
+        social_instagram = ${user.socialInstagram || null},
+        social_farcaster = ${user.socialFarcaster || null},
+        social_twitch = ${user.socialTwitch || null},
+        social_youtube = ${user.socialYoutube || null},
+        social_x = ${user.socialX || null},
+        is_active = ${user.isActive},
+        updated_at = ${new Date()}
       WHERE id = ${user.id}
       RETURNING *
     `.execute(this.db);
@@ -88,18 +87,25 @@ export class UserRepository implements UserRepositoryInterface {
   async create(
     userData: Omit<UserProps, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<UserEntity> {
-    const newUser: NewUser = {
-      id: uuidv4(),
-      privy_id: userData.privyId,
-      wallet_address: userData.walletAddress || null,
-      email: userData.email || null,
-      phone_number: userData.phoneNumber || null,
-      is_active: userData.isActive,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
+    const result = await sql`
+      INSERT INTO users (
+        id, privy_id, nickname, avatar_url, experiments,
+        social_bluesky, social_discord, social_instagram,
+        social_farcaster, social_twitch, social_youtube, social_x,
+        is_active, created_at, updated_at
+      )
+      VALUES (
+        ${uuidv4()}, ${userData.privyId}, ${userData.nickname || null},
+        ${userData.avatarUrl || null}, ${userData.experiments ? JSON.stringify(userData.experiments) : null},
+        ${userData.socialBluesky || null}, ${userData.socialDiscord || null},
+        ${userData.socialInstagram || null}, ${userData.socialFarcaster || null},
+        ${userData.socialTwitch || null}, ${userData.socialYoutube || null},
+        ${userData.socialX || null}, ${userData.isActive}, ${new Date()}, ${new Date()}
+      )
+      RETURNING *
+    `.execute(this.db);
 
-    const dbUser = await this.repository.create(newUser);
+    const dbUser = result.rows[0] as DbUser;
     return this.toDomainEntity(dbUser);
   }
 
@@ -107,9 +113,18 @@ export class UserRepository implements UserRepositoryInterface {
     const userProps: UserProps = {
       id: dbUser.id,
       privyId: dbUser.privy_id,
-      walletAddress: dbUser.wallet_address || undefined,
-      email: dbUser.email || undefined,
-      phoneNumber: dbUser.phone_number || undefined,
+      nickname: dbUser.nickname || undefined,
+      avatarUrl: dbUser.avatar_url || undefined,
+      experiments: dbUser.experiments
+        ? JSON.parse(dbUser.experiments)
+        : undefined,
+      socialBluesky: dbUser.social_bluesky || undefined,
+      socialDiscord: dbUser.social_discord || undefined,
+      socialInstagram: dbUser.social_instagram || undefined,
+      socialFarcaster: dbUser.social_farcaster || undefined,
+      socialTwitch: dbUser.social_twitch || undefined,
+      socialYoutube: dbUser.social_youtube || undefined,
+      socialX: dbUser.social_x || undefined,
       isActive: dbUser.is_active,
       createdAt: dbUser.created_at,
       updatedAt: dbUser.updated_at,

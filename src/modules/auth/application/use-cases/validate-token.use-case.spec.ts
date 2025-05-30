@@ -17,9 +17,6 @@ describe('ValidateTokenUseCase', () => {
   const mockUser = new UserEntity({
     id: '123e4567-e89b-12d3-a456-426614174000',
     privyId: 'privy_123',
-    walletAddress: '0x1234567890123456789012345678901234567890',
-    email: 'test@example.com',
-    phoneNumber: '+1234567890',
     createdAt: new Date('2023-01-01T00:00:00.000Z'),
     updatedAt: new Date('2023-01-01T00:00:00.000Z'),
     isActive: true,
@@ -111,7 +108,7 @@ describe('ValidateTokenUseCase', () => {
 
       expect(result.isValid).toBe(true);
       expect(result.user).toBe(mockUser);
-      expect(result.error).toBeUndefined();
+      expect(result.internalError).toBeUndefined();
       expect(privyTokenValidationService.validateToken).toHaveBeenCalledWith(
         'valid-token',
       );
@@ -132,7 +129,7 @@ describe('ValidateTokenUseCase', () => {
 
       expect(result.isValid).toBe(false);
       expect(result.user).toBeUndefined();
-      expect(result.error).toBe('Invalid token');
+      expect(result.internalError).toBe('Invalid token');
       expect(tokenValidationService.validateTokenClaims).not.toHaveBeenCalled();
       expect(userRepository.findByPrivyId).not.toHaveBeenCalled();
     });
@@ -147,7 +144,7 @@ describe('ValidateTokenUseCase', () => {
 
       expect(result.isValid).toBe(false);
       expect(result.user).toBeUndefined();
-      expect(result.error).toBe('Token validation failed');
+      expect(result.internalError).toBe('Token validation failed');
       expect(tokenValidationService.validateTokenClaims).not.toHaveBeenCalled();
       expect(userRepository.findByPrivyId).not.toHaveBeenCalled();
     });
@@ -167,7 +164,7 @@ describe('ValidateTokenUseCase', () => {
 
       expect(result.isValid).toBe(false);
       expect(result.user).toBeUndefined();
-      expect(result.error).toBe('Invalid app ID');
+      expect(result.internalError).toBe('Invalid app ID');
       expect(userRepository.findByPrivyId).not.toHaveBeenCalled();
     });
 
@@ -186,7 +183,7 @@ describe('ValidateTokenUseCase', () => {
 
       expect(result.isValid).toBe(false);
       expect(result.user).toBeUndefined();
-      expect(result.error).toBe('Claims validation failed');
+      expect(result.internalError).toBe('Claims validation failed');
       expect(userRepository.findByPrivyId).not.toHaveBeenCalled();
     });
 
@@ -216,7 +213,7 @@ describe('ValidateTokenUseCase', () => {
 
       expect(result.isValid).toBe(false);
       expect(result.user).toBeUndefined();
-      expect(result.error).toBe('User not found');
+      expect(result.internalError).toBe('User not found');
     });
 
     it('should return invalid response when user is inactive', async () => {
@@ -250,7 +247,7 @@ describe('ValidateTokenUseCase', () => {
 
       expect(result.isValid).toBe(false);
       expect(result.user).toBeUndefined();
-      expect(result.error).toBe('User account is inactive');
+      expect(result.internalError).toBe('User account is inactive');
     });
 
     it('should handle unexpected errors gracefully', async () => {
@@ -262,7 +259,7 @@ describe('ValidateTokenUseCase', () => {
 
       expect(result.isValid).toBe(false);
       expect(result.user).toBeUndefined();
-      expect(result.error).toBe('Unexpected error');
+      expect(result.internalError).toBe('Unexpected error');
     });
 
     it('should handle non-Error exceptions gracefully', async () => {
@@ -274,7 +271,7 @@ describe('ValidateTokenUseCase', () => {
 
       expect(result.isValid).toBe(false);
       expect(result.user).toBeUndefined();
-      expect(result.error).toBe('Token validation failed');
+      expect(result.internalError).toBe('Token validation failed');
     });
   });
 });

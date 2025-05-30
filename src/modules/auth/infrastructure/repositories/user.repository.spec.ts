@@ -36,9 +36,16 @@ describe('UserRepository', () => {
   const mockDbUser: DbUser = {
     id: 'test-id',
     privy_id: 'test-privy-id',
-    wallet_address: 'test-wallet',
-    email: 'test@example.com',
-    phone_number: '+1234567890',
+    nickname: 'testuser',
+    avatar_url: 'https://example.com/avatar.jpg',
+    experiments: null,
+    social_bluesky: null,
+    social_discord: null,
+    social_instagram: null,
+    social_farcaster: null,
+    social_twitch: null,
+    social_youtube: null,
+    social_x: null,
     is_active: true,
     created_at: new Date('2023-01-01'),
     updated_at: new Date('2023-01-02'),
@@ -47,9 +54,8 @@ describe('UserRepository', () => {
   const mockUserProps: UserProps = {
     id: 'test-id',
     privyId: 'test-privy-id',
-    walletAddress: 'test-wallet',
-    email: 'test@example.com',
-    phoneNumber: '+1234567890',
+    nickname: 'testuser',
+    avatarUrl: 'https://example.com/avatar.jpg',
     isActive: true,
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-02'),
@@ -108,9 +114,8 @@ describe('UserRepository', () => {
       expect(result).toBeInstanceOf(UserEntity);
       expect(result?.id).toBe('test-id');
       expect(result?.privyId).toBe('test-privy-id');
-      expect(result?.walletAddress).toBe('test-wallet');
-      expect(result?.email).toBe('test@example.com');
-      expect(result?.phoneNumber).toBe('+1234567890');
+      expect(result?.nickname).toBe('testuser');
+      expect(result?.avatarUrl).toBe('https://example.com/avatar.jpg');
       expect(result?.isActive).toBe(true);
       expect(mockExecute).toHaveBeenCalledWith(mockDb);
     });
@@ -246,46 +251,46 @@ describe('UserRepository', () => {
     it('should create and return new user entity', async () => {
       const userData = {
         privyId: 'new-privy-id',
-        walletAddress: 'new-wallet',
-        email: 'new@example.com',
-        phoneNumber: '+9876543210',
+        nickname: 'newuser',
+        avatarUrl: 'https://example.com/new-avatar.jpg',
         isActive: true,
-      };
-
-      const expectedNewUser: NewUser = {
-        id: 'mocked-uuid',
-        privy_id: 'new-privy-id',
-        wallet_address: 'new-wallet',
-        email: 'new@example.com',
-        phone_number: '+9876543210',
-        is_active: true,
-        created_at: expect.any(Date),
-        updated_at: expect.any(Date),
       };
 
       const createdDbUser: DbUser = {
         id: 'mocked-uuid',
         privy_id: 'new-privy-id',
-        wallet_address: 'new-wallet',
-        email: 'new@example.com',
-        phone_number: '+9876543210',
+        nickname: 'newuser',
+        avatar_url: 'https://example.com/new-avatar.jpg',
+        experiments: null,
+        social_bluesky: null,
+        social_discord: null,
+        social_instagram: null,
+        social_farcaster: null,
+        social_twitch: null,
+        social_youtube: null,
+        social_x: null,
         is_active: true,
         created_at: new Date(),
         updated_at: new Date(),
       };
 
-      mockBaseRepository.create.mockResolvedValue(createdDbUser);
+      const mockExecute = jest.fn().mockResolvedValue({
+        rows: [createdDbUser],
+      });
+      mockSql.mockReturnValue({
+        execute: mockExecute,
+      } as any);
 
       const result = await repository.create(userData);
 
       expect(result).toBeInstanceOf(UserEntity);
       expect(result.id).toBe('mocked-uuid');
       expect(result.privyId).toBe('new-privy-id');
-      expect(result.walletAddress).toBe('new-wallet');
-      expect(result.email).toBe('new@example.com');
-      expect(result.phoneNumber).toBe('+9876543210');
+      expect(result.nickname).toBe('newuser');
+      expect(result.avatarUrl).toBe('https://example.com/new-avatar.jpg');
       expect(result.isActive).toBe(true);
-      expect(mockBaseRepository.create).toHaveBeenCalledWith(expectedNewUser);
+      expect(mockExecute).toHaveBeenCalledWith(mockDb);
+      expect(mockSql).toHaveBeenCalled();
     });
 
     it('should create user with optional fields as null', async () => {
@@ -294,37 +299,38 @@ describe('UserRepository', () => {
         isActive: true,
       };
 
-      const expectedNewUser: NewUser = {
-        id: 'mocked-uuid',
-        privy_id: 'new-privy-id',
-        wallet_address: null,
-        email: null,
-        phone_number: null,
-        is_active: true,
-        created_at: expect.any(Date),
-        updated_at: expect.any(Date),
-      };
-
       const createdDbUser: DbUser = {
         id: 'mocked-uuid',
         privy_id: 'new-privy-id',
-        wallet_address: null,
-        email: null,
-        phone_number: null,
+        nickname: null,
+        avatar_url: null,
+        experiments: null,
+        social_bluesky: null,
+        social_discord: null,
+        social_instagram: null,
+        social_farcaster: null,
+        social_twitch: null,
+        social_youtube: null,
+        social_x: null,
         is_active: true,
         created_at: new Date(),
         updated_at: new Date(),
       };
 
-      mockBaseRepository.create.mockResolvedValue(createdDbUser);
+      const mockExecute = jest.fn().mockResolvedValue({
+        rows: [createdDbUser],
+      });
+      mockSql.mockReturnValue({
+        execute: mockExecute,
+      } as any);
 
       const result = await repository.create(userData);
 
       expect(result).toBeInstanceOf(UserEntity);
-      expect(result.walletAddress).toBeUndefined();
-      expect(result.email).toBeUndefined();
-      expect(result.phoneNumber).toBeUndefined();
-      expect(mockBaseRepository.create).toHaveBeenCalledWith(expectedNewUser);
+      expect(result.nickname).toBeUndefined();
+      expect(result.avatarUrl).toBeUndefined();
+      expect(mockExecute).toHaveBeenCalledWith(mockDb);
+      expect(mockSql).toHaveBeenCalled();
     });
 
     it('should handle database errors during creation', async () => {
@@ -333,11 +339,17 @@ describe('UserRepository', () => {
         isActive: true,
       };
 
-      mockBaseRepository.create.mockRejectedValue(new Error('Database error'));
+      const mockExecute = jest
+        .fn()
+        .mockRejectedValue(new Error('Database error'));
+      mockSql.mockReturnValue({
+        execute: mockExecute,
+      } as any);
 
       await expect(repository.create(userData)).rejects.toThrow(
         'Database error',
       );
+      expect(mockExecute).toHaveBeenCalledWith(mockDb);
     });
   });
 
@@ -348,9 +360,8 @@ describe('UserRepository', () => {
       expect(result).toBeInstanceOf(UserEntity);
       expect(result.id).toBe('test-id');
       expect(result.privyId).toBe('test-privy-id');
-      expect(result.walletAddress).toBe('test-wallet');
-      expect(result.email).toBe('test@example.com');
-      expect(result.phoneNumber).toBe('+1234567890');
+      expect(result.nickname).toBe('testuser');
+      expect(result.avatarUrl).toBe('https://example.com/avatar.jpg');
       expect(result.isActive).toBe(true);
       expect(result.createdAt).toEqual(new Date('2023-01-01'));
       expect(result.updatedAt).toEqual(new Date('2023-01-02'));
@@ -359,17 +370,15 @@ describe('UserRepository', () => {
     it('should convert database user to domain entity with null optional fields', () => {
       const dbUserWithNulls: DbUser = {
         ...mockDbUser,
-        wallet_address: null,
-        email: null,
-        phone_number: null,
+        nickname: null,
+        avatar_url: null,
       };
 
       const result = (repository as any).toDomainEntity(dbUserWithNulls);
 
       expect(result).toBeInstanceOf(UserEntity);
-      expect(result.walletAddress).toBeUndefined();
-      expect(result.email).toBeUndefined();
-      expect(result.phoneNumber).toBeUndefined();
+      expect(result.nickname).toBeUndefined();
+      expect(result.avatarUrl).toBeUndefined();
     });
   });
 

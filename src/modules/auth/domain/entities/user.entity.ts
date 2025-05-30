@@ -1,9 +1,16 @@
 export interface UserProps {
   id: string;
   privyId: string;
-  walletAddress?: string;
-  email?: string;
-  phoneNumber?: string;
+  nickname?: string;
+  avatarUrl?: string;
+  experiments?: Record<string, any>;
+  socialBluesky?: string;
+  socialDiscord?: string;
+  socialInstagram?: string;
+  socialFarcaster?: string;
+  socialTwitch?: string;
+  socialYoutube?: string;
+  socialX?: string;
   createdAt: Date;
   updatedAt: Date;
   isActive: boolean;
@@ -20,16 +27,44 @@ export class UserEntity {
     return this.props.privyId;
   }
 
-  get walletAddress(): string | undefined {
-    return this.props.walletAddress;
+  get nickname(): string | undefined {
+    return this.props.nickname;
   }
 
-  get email(): string | undefined {
-    return this.props.email;
+  get avatarUrl(): string | undefined {
+    return this.props.avatarUrl;
   }
 
-  get phoneNumber(): string | undefined {
-    return this.props.phoneNumber;
+  get experiments(): Record<string, any> | undefined {
+    return this.props.experiments;
+  }
+
+  get socialBluesky(): string | undefined {
+    return this.props.socialBluesky;
+  }
+
+  get socialDiscord(): string | undefined {
+    return this.props.socialDiscord;
+  }
+
+  get socialInstagram(): string | undefined {
+    return this.props.socialInstagram;
+  }
+
+  get socialFarcaster(): string | undefined {
+    return this.props.socialFarcaster;
+  }
+
+  get socialTwitch(): string | undefined {
+    return this.props.socialTwitch;
+  }
+
+  get socialYoutube(): string | undefined {
+    return this.props.socialYoutube;
+  }
+
+  get socialX(): string | undefined {
+    return this.props.socialX;
   }
 
   get createdAt(): Date {
@@ -44,10 +79,44 @@ export class UserEntity {
     return this.props.isActive;
   }
 
-  public updateWalletAddress(walletAddress: string): UserEntity {
+  public updateNickname(nickname: string): UserEntity {
     return new UserEntity({
       ...this.props,
-      walletAddress,
+      nickname,
+      updatedAt: new Date(),
+    });
+  }
+
+  public updateAvatarUrl(avatarUrl: string): UserEntity {
+    return new UserEntity({
+      ...this.props,
+      avatarUrl,
+      updatedAt: new Date(),
+    });
+  }
+
+  public updateExperiments(experiments: Record<string, any>): UserEntity {
+    return new UserEntity({
+      ...this.props,
+      experiments,
+      updatedAt: new Date(),
+    });
+  }
+
+  public updateSocialLinks(
+    socialLinks: Partial<{
+      socialBluesky: string;
+      socialDiscord: string;
+      socialInstagram: string;
+      socialFarcaster: string;
+      socialTwitch: string;
+      socialYoutube: string;
+      socialX: string;
+    }>,
+  ): UserEntity {
+    return new UserEntity({
+      ...this.props,
+      ...socialLinks,
       updatedAt: new Date(),
     });
   }

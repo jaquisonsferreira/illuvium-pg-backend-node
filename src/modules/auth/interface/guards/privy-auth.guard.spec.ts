@@ -12,9 +12,8 @@ describe('PrivyAuthGuard', () => {
   const mockUser = new UserEntity({
     id: '123e4567-e89b-12d3-a456-426614174000',
     privyId: 'privy_123',
-    walletAddress: '0x1234567890123456789012345678901234567890',
-    email: 'test@example.com',
-    phoneNumber: '+1234567890',
+    nickname: 'testuser',
+    avatarUrl: 'https://example.com/avatar.jpg',
     createdAt: new Date('2023-01-01T00:00:00.000Z'),
     updatedAt: new Date('2023-01-01T00:00:00.000Z'),
     isActive: true,
@@ -131,11 +130,11 @@ describe('PrivyAuthGuard', () => {
 
       validateTokenUseCase.execute.mockResolvedValue({
         isValid: false,
-        error: 'Token has expired',
+        internalError: 'Token has expired',
       });
 
       await expect(guard.canActivate(context)).rejects.toThrow(
-        new UnauthorizedException('Token has expired'),
+        new UnauthorizedException('Invalid or expired access token'),
       );
 
       expect(validateTokenUseCase.execute).toHaveBeenCalledWith({
@@ -152,7 +151,7 @@ describe('PrivyAuthGuard', () => {
       });
 
       await expect(guard.canActivate(context)).rejects.toThrow(
-        new UnauthorizedException('Invalid token'),
+        new UnauthorizedException('Invalid or expired access token'),
       );
     });
 

@@ -1,22 +1,38 @@
 import { AuthController } from './auth.controller';
 import { UserEntity } from '../../domain/entities/user.entity';
+import { ManageLinkedAccountsUseCase } from '../../application/use-cases/manage-linked-accounts.use-case';
+import { LinkedAccountRepositoryInterface } from '../../domain/repositories/linked-account.repository.interface';
 
 describe('AuthController', () => {
   let controller: AuthController;
+  let mockManageLinkedAccountsUseCase: ManageLinkedAccountsUseCase;
+  let mockLinkedAccountRepository: jest.Mocked<LinkedAccountRepositoryInterface>;
 
   const mockUser = new UserEntity({
     id: '123e4567-e89b-12d3-a456-426614174000',
-    privyId: 'privy_123',
-    walletAddress: '0x1234567890123456789012345678901234567890',
-    email: 'test@example.com',
-    phoneNumber: '+1234567890',
-    createdAt: new Date('2023-01-01T00:00:00.000Z'),
-    updatedAt: new Date('2023-01-01T00:00:00.000Z'),
+    privyId: 'privy123',
+    nickname: 'testuser',
     isActive: true,
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-01-01'),
   });
 
   beforeEach(() => {
-    controller = new AuthController();
+    mockLinkedAccountRepository = {
+      findByOwner: jest.fn(),
+      findByTypeAndIdentifier: jest.fn(),
+      findWalletsByOwner: jest.fn(),
+      findEmailByOwner: jest.fn(),
+      save: jest.fn(),
+      delete: jest.fn(),
+      deleteAllByOwner: jest.fn(),
+    } as jest.Mocked<LinkedAccountRepositoryInterface>;
+
+    mockManageLinkedAccountsUseCase = new ManageLinkedAccountsUseCase(
+      mockLinkedAccountRepository,
+    );
+
+    controller = new AuthController(mockManageLinkedAccountsUseCase);
   });
 
   describe('getProfile', () => {
@@ -26,9 +42,7 @@ describe('AuthController', () => {
       expect(result).toEqual({
         id: mockUser.id,
         privyId: mockUser.privyId,
-        walletAddress: mockUser.walletAddress,
-        email: mockUser.email,
-        phoneNumber: mockUser.phoneNumber,
+        nickname: mockUser.nickname,
         isActive: mockUser.isActive,
         createdAt: mockUser.createdAt,
         updatedAt: mockUser.updatedAt,
@@ -49,9 +63,9 @@ describe('AuthController', () => {
       expect(result).toEqual({
         id: userWithoutOptionalFields.id,
         privyId: userWithoutOptionalFields.privyId,
-        walletAddress: undefined,
-        email: undefined,
-        phoneNumber: undefined,
+        nickname: undefined,
+        avatarUrl: undefined,
+        socialBluesky: undefined,
         isActive: userWithoutOptionalFields.isActive,
         createdAt: userWithoutOptionalFields.createdAt,
         updatedAt: userWithoutOptionalFields.updatedAt,
