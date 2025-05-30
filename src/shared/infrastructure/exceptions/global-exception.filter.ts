@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { Request } from 'express';
-import * as Sentry from '@sentry/node';
+
 import { BaseException } from '../../domain/exceptions';
 
 interface ErrorResponse {
@@ -100,31 +100,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       };
 
       this.logger.error(`Exceção não tratada: ${error?.message}`, error?.stack);
-
-      Sentry.captureException(exception);
     }
-
-    // Add user context to Sentry if available
-    if (request.user) {
-      Sentry.setUser({
-        id: request.user.id,
-        username: request.user.username || request.user.email,
-      });
-    }
-
-    // Add request data as breadcrumb
-    Sentry.addBreadcrumb({
-      category: 'http',
-      message: `${request.method} ${request.url}`,
-      level: 'info',
-      data: {
-        method: request.method,
-        url: request.url,
-        statusCode,
-        query: request.query,
-        headers: request.headers,
-      },
-    });
 
     httpAdapter.reply(ctx.getResponse(), errorResponse, statusCode);
   }

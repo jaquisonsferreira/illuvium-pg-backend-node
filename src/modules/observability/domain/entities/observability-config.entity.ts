@@ -3,8 +3,8 @@ export class ObservabilityConfig {
     public readonly serviceName: string,
     public readonly serviceVersion: string,
     public readonly environment: string,
-    public readonly sigNozEndpoint: string,
-    public readonly sigNozToken?: string,
+    public readonly otelEndpoint: string,
+    public readonly otelHeaders?: Record<string, string>,
     public readonly enableDebugLogs: boolean = false,
     public readonly samplingRatio: number = 1.0,
     public readonly enabledInstrumentations: string[] = [],
@@ -26,9 +26,9 @@ export class ObservabilityConfig {
       );
     }
 
-    if (!this.sigNozEndpoint || this.sigNozEndpoint.trim().length === 0) {
+    if (!this.otelEndpoint || this.otelEndpoint.trim().length === 0) {
       throw new Error(
-        'SigNoz endpoint is required for observability configuration',
+        'OpenTelemetry endpoint is required for observability configuration',
       );
     }
 
@@ -42,10 +42,8 @@ export class ObservabilityConfig {
       serviceName: this.serviceName,
       serviceVersion: this.serviceVersion,
       environment: this.environment,
-      endpoint: this.sigNozEndpoint,
-      headers: this.sigNozToken
-        ? { 'signoz-access-token': this.sigNozToken }
-        : {},
+      endpoint: this.otelEndpoint,
+      headers: this.otelHeaders || {},
       samplingRatio: this.samplingRatio,
       customAttributes: this.customAttributes,
     };

@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
-import * as Sentry from '@sentry/node';
 
 import { AppModule } from './app.module';
 import { TracingInterceptor } from './modules/observability/interface/interceptors/tracing.interceptor';
@@ -15,13 +14,6 @@ import {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
-
-  // Sentry configuration
-  Sentry.init({
-    dsn: configService.get<string>('SENTRY_DSN'),
-    environment: configService.get<string>('NODE_ENV'),
-    tracesSampleRate: 1.0,
-  });
 
   // Global validation pipe
   app.useGlobalPipes(

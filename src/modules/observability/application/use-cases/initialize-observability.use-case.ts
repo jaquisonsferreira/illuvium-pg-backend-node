@@ -7,8 +7,8 @@ export interface InitializeObservabilityInput {
   serviceName: string;
   serviceVersion: string;
   environment: string;
-  sigNozEndpoint: string;
-  sigNozToken?: string;
+  otelEndpoint: string;
+  otelHeaders?: Record<string, string>;
   enableDebugLogs?: boolean;
   samplingRatio?: number;
   enabledInstrumentations?: string[];
@@ -27,8 +27,8 @@ export class InitializeObservabilityUseCase {
       input.serviceName,
       input.serviceVersion,
       input.environment,
-      input.sigNozEndpoint,
-      input.sigNozToken,
+      input.otelEndpoint,
+      input.otelHeaders,
       input.enableDebugLogs ?? false,
       input.samplingRatio ?? 1.0,
       input.enabledInstrumentations ?? [],

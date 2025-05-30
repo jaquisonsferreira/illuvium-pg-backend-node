@@ -28,8 +28,8 @@ export class ObservabilityBootstrapService
         serviceName: config.serviceName,
         serviceVersion: config.serviceVersion,
         environment: config.environment,
-        sigNozEndpoint: config.sigNozEndpoint,
-        sigNozToken: config.sigNozToken,
+        otelEndpoint: config.otelEndpoint,
+        otelHeaders: config.otelHeaders,
         enableDebugLogs: config.enableDebugLogs,
         samplingRatio: config.samplingRatio,
         enabledInstrumentations: config.enabledInstrumentations,
@@ -37,12 +37,15 @@ export class ObservabilityBootstrapService
       });
 
       console.log(
-        `✅ SigNoz observability initialized for service: ${config.serviceName}`,
+        `✅ OpenTelemetry observability initialized for service: ${config.serviceName}`,
       );
-      console.log(`📊 Traces will be sent to: ${config.sigNozEndpoint}`);
+      console.log(`📊 Traces will be sent to: ${config.otelEndpoint}`);
       console.log(`🔍 Sampling ratio: ${config.samplingRatio * 100}%`);
     } catch (error) {
-      console.error('❌ Failed to initialize SigNoz observability:', error);
+      console.error(
+        '❌ Failed to initialize OpenTelemetry observability:',
+        error,
+      );
     }
   }
 
@@ -50,7 +53,7 @@ export class ObservabilityBootstrapService
     try {
       await this.observabilityService.flush();
       await this.observabilityService.shutdown();
-      console.log('✅ SigNoz observability shutdown completed');
+      console.log('✅ OpenTelemetry observability shutdown completed');
     } catch (error) {
       console.error('❌ Error during observability shutdown:', error);
     }

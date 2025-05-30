@@ -4,8 +4,8 @@ export interface ObservabilityConfigType {
   serviceName: string;
   serviceVersion: string;
   environment: string;
-  sigNozEndpoint: string;
-  sigNozToken?: string;
+  otelEndpoint: string;
+  otelHeaders?: Record<string, string>;
   enableDebugLogs: boolean;
   samplingRatio: number;
   enabledInstrumentations: string[];
@@ -18,11 +18,14 @@ export default registerAs(
     serviceName: process.env.OTEL_SERVICE_NAME || 'illuvium-api',
     serviceVersion: process.env.OTEL_SERVICE_VERSION || '1.0.0',
     environment: process.env.NODE_ENV || 'development',
-    sigNozEndpoint:
-      process.env.SIGNOZ_ENDPOINT || 'http://localhost:4318/v1/traces',
-    sigNozToken: process.env.SIGNOZ_TOKEN,
-    enableDebugLogs: process.env.OTEL_DEBUG === 'true',
-    samplingRatio: parseFloat(process.env.OTEL_SAMPLING_RATIO || '1.0'),
+    otelEndpoint:
+      process.env.OTEL_EXPORTER_OTLP_ENDPOINT ||
+      'http://localhost:4318/v1/traces',
+    otelHeaders: process.env.OTEL_EXPORTER_OTLP_HEADERS
+      ? JSON.parse(process.env.OTEL_EXPORTER_OTLP_HEADERS)
+      : undefined,
+    enableDebugLogs: process.env.OTEL_LOG_LEVEL === 'debug',
+    samplingRatio: parseFloat(process.env.OTEL_TRACES_SAMPLER_ARG || '1.0'),
     enabledInstrumentations: process.env.OTEL_ENABLED_INSTRUMENTATIONS?.split(
       ',',
     ) || ['http', 'express', 'nestjs-core', 'pg', 'redis'],
