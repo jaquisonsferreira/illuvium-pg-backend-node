@@ -188,10 +188,6 @@ export class ProcessPrivyWebhookUseCase {
 
       details.webhookSecret = !!process.env.PRIVY_WEBHOOK_SECRET;
 
-      details.awsCredentials = !!(
-        process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-      );
-
       const healthy = Object.values(details).every((status) => status);
 
       return { healthy, details };

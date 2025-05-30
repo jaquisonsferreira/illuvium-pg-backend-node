@@ -25,7 +25,17 @@ async function bootstrap() {
     rawBody: true,
   });
 
-  // Configure raw body middleware for webhook endpoints
+  // Configure raw body middleware for inbound webhook endpoints
+  app.use(
+    '/webhooks/inbound',
+    json({
+      verify: (req: any, res, buf) => {
+        req.rawBody = buf;
+      },
+    }),
+  );
+
+  // Legacy support for existing webhook endpoint
   app.use(
     '/webhooks',
     json({

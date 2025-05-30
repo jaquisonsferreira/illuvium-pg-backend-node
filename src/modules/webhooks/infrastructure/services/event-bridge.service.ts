@@ -35,8 +35,14 @@ export class EventBridgeService {
           : undefined,
     });
 
-    this.eventBusName = process.env.AWS_EVENTBRIDGE_BUS_NAME || 'default';
-    this.source = process.env.AWS_EVENTBRIDGE_SOURCE || 'illuvium.webhooks';
+    this.eventBusName = process.env.AWS_EVENTBRIDGE_BUS_NAME!;
+    if (!this.eventBusName) {
+      throw new Error(
+        'AWS_EVENTBRIDGE_BUS_NAME environment variable is required',
+      );
+    }
+
+    this.source = process.env.AWS_EVENTBRIDGE_SOURCE || 'obelisk.webhooks';
 
     this.logger.log(
       `EventBridge service initialized with bus: ${this.eventBusName}`,
