@@ -5,24 +5,24 @@ import { AssetsModule } from './modules/assets/assets.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './shared/infrastructure/database/database.module';
-import {
-  ConfigModule,
-  RateLimitModule,
-  SentryModule,
-} from './shared/infrastructure/config';
 import { CacheModule } from './shared/infrastructure/cache/cache.module';
+import { ConfigModule, RateLimitModule } from './shared/infrastructure/config';
+
+import { ObservabilityModule } from './modules/observability/observability.module';
 
 @Module({
   imports: [
     NestConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '.env',
     }),
     ConfigModule,
     DatabaseModule,
     RateLimitModule,
-    SentryModule,
     CacheModule,
     AssetsModule,
+
+    ObservabilityModule,
   ],
   controllers: [AppController],
   providers: [AppService, AssetsModule, WebhooksModule],
