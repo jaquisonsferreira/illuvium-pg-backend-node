@@ -1,18 +1,76 @@
 import { Module } from '@nestjs/common';
 import { AssetsController } from './interface/controllers/assets.controller';
-import { CreateAssetUseCase } from './application/use-cases/create-asset.use-case';
-import { AssetRepository } from './infrastructure/database/asset.repository';
-import { ASSET_REPOSITORY } from './constants';
+import {
+  CreateAssetUseCase,
+  SearchBlockchainAssetsUseCase,
+  GetUserPortfolioUseCase,
+  CreateSaleListingUseCase,
+  CreateBidUseCase,
+  GetAssetHistoryUseCase,
+} from './application/use-cases';
+import {
+  AssetRepository,
+  BlockchainContractRepository,
+  BlockchainAssetRepository,
+  AssetTransactionRepository,
+  AssetMarketplaceRepository,
+} from './infrastructure/database';
+import {
+  ASSET_REPOSITORY,
+  BLOCKCHAIN_CONTRACT_REPOSITORY,
+  BLOCKCHAIN_ASSET_REPOSITORY,
+  ASSET_TRANSACTION_REPOSITORY,
+  ASSET_MARKETPLACE_REPOSITORY,
+} from './constants';
 
 @Module({
   controllers: [AssetsController],
   providers: [
+    // Use Cases
     CreateAssetUseCase,
+    SearchBlockchainAssetsUseCase,
+    GetUserPortfolioUseCase,
+    CreateSaleListingUseCase,
+    CreateBidUseCase,
+    GetAssetHistoryUseCase,
+
+    // Repositories
     {
       provide: ASSET_REPOSITORY,
       useClass: AssetRepository,
     },
+    {
+      provide: BLOCKCHAIN_CONTRACT_REPOSITORY,
+      useClass: BlockchainContractRepository,
+    },
+    {
+      provide: BLOCKCHAIN_ASSET_REPOSITORY,
+      useClass: BlockchainAssetRepository,
+    },
+    {
+      provide: ASSET_TRANSACTION_REPOSITORY,
+      useClass: AssetTransactionRepository,
+    },
+    {
+      provide: ASSET_MARKETPLACE_REPOSITORY,
+      useClass: AssetMarketplaceRepository,
+    },
   ],
-  exports: [ASSET_REPOSITORY, CreateAssetUseCase],
+  exports: [
+    // Repositories
+    ASSET_REPOSITORY,
+    BLOCKCHAIN_CONTRACT_REPOSITORY,
+    BLOCKCHAIN_ASSET_REPOSITORY,
+    ASSET_TRANSACTION_REPOSITORY,
+    ASSET_MARKETPLACE_REPOSITORY,
+
+    // Use Cases
+    CreateAssetUseCase,
+    SearchBlockchainAssetsUseCase,
+    GetUserPortfolioUseCase,
+    CreateSaleListingUseCase,
+    CreateBidUseCase,
+    GetAssetHistoryUseCase,
+  ],
 })
 export class AssetsModule {}
