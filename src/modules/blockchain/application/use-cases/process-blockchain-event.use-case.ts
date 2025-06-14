@@ -9,6 +9,7 @@ import {
   TokenBurnedEvent,
   EthTransferredEvent,
 } from '../../domain/types/blockchain-event.types';
+import { ProcessBlockchainEventForAuditUseCase } from '../../../audit/application/use-cases/process-blockchain-event-for-audit.use-case';
 import { BlockchainContractRepositoryInterface } from '../../../assets/domain/repositories/blockchain-contract.repository.interface';
 import { BlockchainAssetRepositoryInterface } from '../../../assets/domain/repositories/blockchain-asset.repository.interface';
 import { AssetTransactionRepositoryInterface } from '../../../assets/domain/repositories/asset-transaction.repository.interface';
@@ -41,6 +42,7 @@ export class ProcessBlockchainEventUseCase {
     private readonly assetRepository: BlockchainAssetRepositoryInterface,
     @Inject(ASSET_TRANSACTION_REPOSITORY)
     private readonly transactionRepository: AssetTransactionRepositoryInterface,
+    private readonly auditUseCase: ProcessBlockchainEventForAuditUseCase,
   ) {}
 
   async execute(event: BlockchainEvent): Promise<EventProcessingResult> {
@@ -48,6 +50,8 @@ export class ProcessBlockchainEventUseCase {
       this.logger.debug(`Processing event: ${event.eventType}`);
 
       await this.updateDatabase(event);
+
+      await this.auditUseCase.execute(event);
 
       const result = await this.eventBridgeService.publishEvent(event);
 

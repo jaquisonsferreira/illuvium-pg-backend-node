@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
 import { AssetsModule } from '../assets/assets.module';
+import { AuditModule } from '../audit/audit.module';
 import { EventListenerService } from './infrastructure/services/event-listener.service';
 import { ContractInteractionService } from './infrastructure/services/contract-interaction.service';
 import { BlockchainEventBridgeService } from './infrastructure/services/blockchain-event-bridge.service';
@@ -17,6 +18,7 @@ import { BLOCKCHAIN_QUEUES } from './constants';
   imports: [
     ConfigModule,
     AssetsModule,
+    AuditModule,
     BullModule.registerQueue(
       { name: BLOCKCHAIN_QUEUES.BLOCK_PROCESSOR },
       { name: BLOCKCHAIN_QUEUES.EVENT_SYNC },
