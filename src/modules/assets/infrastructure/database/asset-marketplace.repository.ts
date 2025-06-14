@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { Kysely } from 'kysely';
 import {
   Database,
@@ -6,6 +6,7 @@ import {
   NewAssetMarketplace,
   AssetMarketplaceUpdate,
 } from '../../../../shared/infrastructure/database/database.types';
+import { DATABASE_CONNECTION } from '../../../../shared/infrastructure/database/constants';
 import {
   AssetMarketplace,
   ListingType,
@@ -22,7 +23,9 @@ import {
 export class AssetMarketplaceRepository
   implements AssetMarketplaceRepositoryInterface
 {
-  constructor(private readonly db: Kysely<Database>) {}
+  constructor(
+    @Inject(DATABASE_CONNECTION) private readonly db: Kysely<Database>,
+  ) {}
 
   private toDomainEntity(
     row: AssetMarketplaceDB,

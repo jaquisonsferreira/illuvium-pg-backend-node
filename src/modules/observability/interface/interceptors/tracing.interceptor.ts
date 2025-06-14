@@ -20,7 +20,10 @@ export class TracingInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    if (!this.observabilityRepository.isInitialized()) {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      !this.observabilityRepository.isInitialized()
+    ) {
       return next.handle();
     }
 

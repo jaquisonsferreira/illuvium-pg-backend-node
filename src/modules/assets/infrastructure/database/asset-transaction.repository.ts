@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { Kysely } from 'kysely';
 import {
   Database,
@@ -6,6 +6,7 @@ import {
   NewAssetTransaction,
   AssetTransactionUpdate,
 } from '../../../../shared/infrastructure/database/database.types';
+import { DATABASE_CONNECTION } from '../../../../shared/infrastructure/database/constants';
 import {
   AssetTransaction,
   TransactionEventType,
@@ -20,7 +21,9 @@ import {
 export class AssetTransactionRepository
   implements AssetTransactionRepositoryInterface
 {
-  constructor(private readonly db: Kysely<Database>) {}
+  constructor(
+    @Inject(DATABASE_CONNECTION) private readonly db: Kysely<Database>,
+  ) {}
 
   private toDomainEntity(
     row: AssetTransactionDB,

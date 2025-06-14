@@ -136,7 +136,17 @@ export class OpenTelemetryObservabilityRepository
       );
     }
 
-    const metricData = metric.toOpenTelemetryFormat();
+    const metricData =
+      typeof metric.toOpenTelemetryFormat === 'function'
+        ? metric.toOpenTelemetryFormat()
+        : {
+            name: metric.name,
+            type: metric.type,
+            value: metric.value,
+            description: metric.description,
+            unit: metric.unit,
+            labels: metric.labels || {},
+          };
 
     switch (metric.type) {
       case MetricType.COUNTER: {
