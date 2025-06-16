@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { LinkedAccountRepository } from './linked-account.repository';
 import { DATABASE_CONNECTION } from '@shared/infrastructure/database';
