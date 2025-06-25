@@ -22,7 +22,7 @@ services:
     image: redis:7-alpine
     container_name: illuvium-redis
     ports:
-      - '6380:6379' # Mapping local port 6380 to 6379 in the container
+      - '6379:6379' # Mapping local port 6380 to 6379 in the container
     volumes:
       - redis-data:/data
     networks:

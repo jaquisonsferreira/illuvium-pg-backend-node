@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { DatabaseModule } from '../../shared/infrastructure/database/database.module';
 import { AssetsController } from './interface/controllers/assets.controller';
 import {
   CreateAssetUseCase,
@@ -24,6 +25,7 @@ import {
 } from './constants';
 
 @Module({
+  imports: [DatabaseModule],
   controllers: [AssetsController],
   providers: [
     // Use Cases

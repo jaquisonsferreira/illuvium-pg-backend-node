@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { Kysely } from 'kysely';
 import {
   Database,
@@ -6,6 +6,7 @@ import {
   NewBlockchainAsset,
   BlockchainAssetUpdate,
 } from '../../../../shared/infrastructure/database/database.types';
+import { DATABASE_CONNECTION } from '../../../../shared/infrastructure/database/constants';
 import { BlockchainAsset } from '../../domain/entities/blockchain-asset.entity';
 import { BlockchainContract } from '../../domain/entities/blockchain-contract.entity';
 import {
@@ -17,7 +18,9 @@ import {
 export class BlockchainAssetRepository
   implements BlockchainAssetRepositoryInterface
 {
-  constructor(private readonly db: Kysely<Database>) {}
+  constructor(
+    @Inject(DATABASE_CONNECTION) private readonly db: Kysely<Database>,
+  ) {}
 
   private toDomainEntity(
     row: BlockchainAssetDB,
@@ -212,7 +215,15 @@ export class BlockchainAssetRepository
       query = query.where('balance', '=', '0');
     }
 
-    // TODO: Implement metadata filtering
+    if (filters.metadata) {
+      for (const [key, value] of Object.entries(filters.metadata)) {
+        query = query.where(
+          'metadata',
+          '@>',
+          JSON.stringify({ [key]: value }) as any,
+        );
+      }
+    }
 
     const countQuery = query.select((eb) => eb.fn.count('id').as('count'));
     const countResult = await countQuery.executeTakeFirst();
@@ -223,7 +234,7 @@ export class BlockchainAssetRepository
     query = query.orderBy(sortBy, sortOrder);
 
     if (filters.limit) {
-      query = query.limit(Math.min(filters.limit, 100)); // Max 100 items
+      query = query.limit(Math.min(filters.limit, 100));
     }
     if (filters.offset) {
       query = query.offset(filters.offset);
@@ -251,12 +262,21 @@ export class BlockchainAssetRepository
   }
 
   async findByMetadata(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _metadata: Record<string, any>,
+    metadata: Record<string, any>,
   ): Promise<BlockchainAsset[]> {
-    // TODO: Implement proper JSON metadata filtering
-    console.warn('findByMetadata not yet implemented - returning empty array');
-    return [];
+    let query = this.db.selectFrom('blockchain_assets').selectAll();
+
+    for (const [key, value] of Object.entries(metadata)) {
+      query = query.where(
+        'metadata',
+        '@>',
+        JSON.stringify({ [key]: value }) as any,
+      );
+    }
+
+    const rows = await query.orderBy('created_at', 'desc').execute();
+
+    return rows.map((row) => this.toDomainEntity(row));
   }
 
   async findWithBalance(): Promise<BlockchainAsset[]> {
@@ -368,10 +388,11 @@ export class BlockchainAssetRepository
   async getTotalValueByOwner(ownerAddress: string): Promise<string> {
     const result = await this.db
       .selectFrom('blockchain_assets')
-      .select((eb) => eb.fn.sum('balance').as('totalValue'))
+      .select((eb) => eb.fn.count('id').as('totalCount'))
       .where('owner_address', '=', ownerAddress.toLowerCase())
+      .where('balance', '!=', '0')
       .executeTakeFirst();
 
-    return result?.totalValue?.toString() || '0';
+    return result?.totalCount?.toString() || '0';
   }
 }

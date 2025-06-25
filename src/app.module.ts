@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { AssetsModule } from './modules/assets/assets.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BlockchainModule } from './modules/blockchain/blockchain.module';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './shared/infrastructure/database/database.module';
 import { CacheModule } from './shared/infrastructure/cache/cache.module';
@@ -22,6 +23,7 @@ import { ObservabilityModule } from './modules/observability/observability.modul
     RateLimitModule,
     CacheModule,
     AssetsModule,
+    BlockchainModule,
     ObservabilityModule,
     AuthModule,
   ],
