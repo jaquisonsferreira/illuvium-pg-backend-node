@@ -11,6 +11,7 @@ import { DatabaseModule } from './shared/infrastructure/database/database.module
 import { CacheModule } from './shared/infrastructure/cache/cache.module';
 import { ConfigModule, RateLimitModule } from './shared/infrastructure/config';
 import { DeveloperModule } from './modules/developer/developer.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 import { ObservabilityModule } from './modules/observability/observability.module';
 
@@ -30,6 +31,7 @@ import { ObservabilityModule } from './modules/observability/observability.modul
     AuthModule,
     AuditModule,
     DeveloperModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService, AssetsModule, WebhooksModule],
