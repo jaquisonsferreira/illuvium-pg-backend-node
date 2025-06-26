@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../shared/infrastructure/database/database.module';
 import { AssetsController } from './interface/controllers/assets.controller';
+import { MarketplaceBatchController } from './interface/controllers/marketplace-batch.controller';
 import {
   CreateAssetUseCase,
   SearchBlockchainAssetsUseCase,
@@ -8,6 +9,9 @@ import {
   CreateSaleListingUseCase,
   CreateBidUseCase,
   GetAssetHistoryUseCase,
+  CreateBatchListingsUseCase,
+  CancelBatchListingsUseCase,
+  UpdateBatchListingsUseCase,
 } from './application/use-cases';
 import {
   AssetRepository,
@@ -26,7 +30,7 @@ import {
 
 @Module({
   imports: [DatabaseModule],
-  controllers: [AssetsController],
+  controllers: [AssetsController, MarketplaceBatchController],
   providers: [
     // Use Cases
     CreateAssetUseCase,
@@ -35,6 +39,9 @@ import {
     CreateSaleListingUseCase,
     CreateBidUseCase,
     GetAssetHistoryUseCase,
+    CreateBatchListingsUseCase,
+    CancelBatchListingsUseCase,
+    UpdateBatchListingsUseCase,
 
     // Repositories
     {
