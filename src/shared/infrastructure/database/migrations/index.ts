@@ -11,6 +11,7 @@ import { createDeveloperNftOperationsTable } from './tables/create-developer-nft
 import { createChatRoomsTable } from './tables/create-chat-rooms-table';
 import { createChatMessagesTable } from './tables/create-chat-messages-table';
 import { createChatNotificationsTable } from './tables/create-chat-notifications-table';
+import { createWebhookSubscriptionsTable } from './tables/create-webhook-subscriptions-table';
 
 export const migrations = [
   createAssetsTable,
@@ -26,4 +27,5 @@ export const migrations = [
   createChatRoomsTable,
   createChatMessagesTable,
   createChatNotificationsTable,
+  createWebhookSubscriptionsTable,
 ];
