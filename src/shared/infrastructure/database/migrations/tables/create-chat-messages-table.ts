@@ -25,37 +25,61 @@ export async function createChatMessagesTable(db: Kysely<Database>) {
     .addColumn('metadata', 'jsonb')
     .execute();
 
-  // Create indexes
-  await db.schema
-    .createIndex('idx_chat_messages_room_id')
-    .on('chat_messages')
-    .column('room_id')
-    .execute();
+  // Create indexes only if they don't exist
+  try {
+    await db.schema
+      .createIndex('idx_chat_messages_room_id')
+      .ifNotExists()
+      .on('chat_messages')
+      .column('room_id')
+      .execute();
+  } catch {
+    console.log('idx_chat_messages_room_id already exists, skipping...');
+  }
 
-  await db.schema
-    .createIndex('idx_chat_messages_sender_id')
-    .on('chat_messages')
-    .column('sender_id')
-    .execute();
+  try {
+    await db.schema
+      .createIndex('idx_chat_messages_sender_id')
+      .ifNotExists()
+      .on('chat_messages')
+      .column('sender_id')
+      .execute();
+  } catch {
+    console.log('idx_chat_messages_sender_id already exists, skipping...');
+  }
 
-  await db.schema
-    .createIndex('idx_chat_messages_created_at')
-    .on('chat_messages')
-    .column('created_at')
-    .execute();
+  try {
+    await db.schema
+      .createIndex('idx_chat_messages_created_at')
+      .ifNotExists()
+      .on('chat_messages')
+      .column('created_at')
+      .execute();
+  } catch {
+    console.log('idx_chat_messages_created_at already exists, skipping...');
+  }
 
-  await db.schema
-    .createIndex('idx_chat_messages_type')
-    .on('chat_messages')
-    .column('type')
-    .execute();
+  try {
+    await db.schema
+      .createIndex('idx_chat_messages_type')
+      .ifNotExists()
+      .on('chat_messages')
+      .column('type')
+      .execute();
+  } catch {
+    console.log('idx_chat_messages_type already exists, skipping...');
+  }
 
-  // Add foreign key constraint to chat_rooms
-  await db.schema
-    .createIndex('idx_chat_messages_reply_to_id')
-    .on('chat_messages')
-    .column('reply_to_id')
-    .execute();
+  try {
+    await db.schema
+      .createIndex('idx_chat_messages_reply_to_id')
+      .ifNotExists()
+      .on('chat_messages')
+      .column('reply_to_id')
+      .execute();
+  } catch {
+    console.log('idx_chat_messages_reply_to_id already exists, skipping...');
+  }
 
   console.log('✅ Chat messages table created successfully');
 }
