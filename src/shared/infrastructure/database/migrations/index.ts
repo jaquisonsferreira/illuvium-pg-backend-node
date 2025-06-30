@@ -4,6 +4,8 @@ import { createBlockchainContractsTable } from './tables/create-blockchain-contr
 import { createBlockchainAssetsTable } from './tables/create-blockchain-assets-table';
 import { createAssetTransactionsTable } from './tables/create-asset-transactions-table';
 import { createAssetMarketplaceTable } from './tables/create-asset-marketplace-table';
+import { createUserAuditLogsTable } from './tables/create-user-audit-logs-table';
+import { createDeveloperAuditLogsTable } from './tables/create-developer-audit-logs-table';
 
 export const migrations = [
   createAssetsTable,
@@ -12,4 +14,6 @@ export const migrations = [
   createBlockchainAssetsTable,
   createAssetTransactionsTable,
   createAssetMarketplaceTable,
+  createUserAuditLogsTable,
+  createDeveloperAuditLogsTable,
 ];
