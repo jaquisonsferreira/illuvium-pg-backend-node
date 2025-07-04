@@ -52,7 +52,9 @@ export async function createWebhookSubscriptionsTable(
 
       console.log('webhook_subscriptions table created successfully');
     } else {
-      console.log('webhook_subscriptions table already exists, skipping creation');
+      console.log(
+        'webhook_subscriptions table already exists, skipping creation',
+      );
     }
   } catch (error) {
     console.error('Error creating webhook_subscriptions table:', error);

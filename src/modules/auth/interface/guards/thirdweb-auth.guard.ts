@@ -7,7 +7,7 @@ import {
 import { ValidateTokenUseCase } from '../../application/use-cases/validate-token.use-case';
 
 @Injectable()
-export class PrivyAuthGuard implements CanActivate {
+export class ThirdwebAuthGuard implements CanActivate {
   constructor(private readonly validateTokenUseCase: ValidateTokenUseCase) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -18,14 +18,14 @@ export class PrivyAuthGuard implements CanActivate {
       throw new UnauthorizedException('Access token is required');
     }
 
-    const appId = process.env.PRIVY_APP_ID;
-    if (!appId) {
+    const clientId = process.env.THIRDWEB_CLIENT_ID;
+    if (!clientId) {
       throw new UnauthorizedException('Authentication service not configured');
     }
 
     const validationResult = await this.validateTokenUseCase.execute({
       token,
-      appId,
+      clientId,
     });
 
     if (!validationResult.isValid) {

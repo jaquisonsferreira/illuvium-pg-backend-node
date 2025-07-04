@@ -66,7 +66,9 @@ export async function createChatNotificationsTable(db: Kysely<Database>) {
       .column('created_at')
       .execute();
   } catch {
-    console.log('idx_chat_notifications_created_at already exists, skipping...');
+    console.log(
+      'idx_chat_notifications_created_at already exists, skipping...',
+    );
   }
 
   // Composite index for user notifications
@@ -78,7 +80,9 @@ export async function createChatNotificationsTable(db: Kysely<Database>) {
       .columns(['user_id', 'is_read', 'created_at'])
       .execute();
   } catch {
-    console.log('idx_chat_notifications_user_read_created already exists, skipping...');
+    console.log(
+      'idx_chat_notifications_user_read_created already exists, skipping...',
+    );
   }
 
   console.log('✅ Chat notifications table created successfully');

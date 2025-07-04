@@ -10,7 +10,8 @@ describe('AuthController', () => {
 
   const mockUser = new UserEntity({
     id: '123e4567-e89b-12d3-a456-426614174000',
-    privyId: 'privy123',
+    thirdwebId: 'thirdweb123',
+    walletAddress: '0x1234567890123456789012345678901234567890',
     nickname: 'testuser',
     isActive: true,
     createdAt: new Date('2023-01-01'),
@@ -41,7 +42,8 @@ describe('AuthController', () => {
 
       expect(result).toEqual({
         id: mockUser.id,
-        privyId: mockUser.privyId,
+        thirdwebId: mockUser.thirdwebId,
+        walletAddress: mockUser.walletAddress,
         nickname: mockUser.nickname,
         isActive: mockUser.isActive,
         createdAt: mockUser.createdAt,
@@ -52,7 +54,8 @@ describe('AuthController', () => {
     it('should return profile with undefined optional fields', async () => {
       const userWithoutOptionalFields = new UserEntity({
         id: '123e4567-e89b-12d3-a456-426614174000',
-        privyId: 'privy_123',
+        thirdwebId: 'thirdweb_123',
+        walletAddress: '0x2222222222222222222222222222222222222222',
         createdAt: new Date('2023-01-01T00:00:00.000Z'),
         updatedAt: new Date('2023-01-01T00:00:00.000Z'),
         isActive: true,
@@ -62,7 +65,8 @@ describe('AuthController', () => {
 
       expect(result).toEqual({
         id: userWithoutOptionalFields.id,
-        privyId: userWithoutOptionalFields.privyId,
+        thirdwebId: userWithoutOptionalFields.thirdwebId,
+        walletAddress: userWithoutOptionalFields.walletAddress,
         nickname: undefined,
         avatarUrl: undefined,
         socialBluesky: undefined,
