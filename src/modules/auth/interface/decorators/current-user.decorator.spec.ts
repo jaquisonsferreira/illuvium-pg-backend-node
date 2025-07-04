@@ -18,7 +18,8 @@ function getParamDecoratorFactory(
 describe('CurrentUser Decorator', () => {
   const mockUser = new UserEntity({
     id: '123e4567-e89b-12d3-a456-426614174000',
-    privyId: 'privy_123',
+    thirdwebId: 'thirdweb_123',
+    walletAddress: '0x1234567890123456789012345678901234567890',
     nickname: 'testuser',
     avatarUrl: 'https://example.com/avatar.jpg',
     createdAt: new Date('2023-01-01T00:00:00.000Z'),
@@ -60,7 +61,8 @@ describe('CurrentUser Decorator', () => {
   it('should work with different user instances', () => {
     const anotherUser = new UserEntity({
       id: 'another-id',
-      privyId: 'another-privy-id',
+      thirdwebId: 'another-thirdweb-id',
+      walletAddress: '0x3333333333333333333333333333333333333333',
       createdAt: new Date(),
       updatedAt: new Date(),
       isActive: false,
@@ -73,7 +75,8 @@ describe('CurrentUser Decorator', () => {
 
     expect(result).toBe(anotherUser);
     expect(result.id).toBe('another-id');
-    expect(result.privyId).toBe('another-privy-id');
+    expect(result.thirdwebId).toBe('another-thirdweb-id');
+    expect(result.walletAddress).toBe('0x3333333333333333333333333333333333333333');
     expect(result.isActive).toBe(false);
   });
 

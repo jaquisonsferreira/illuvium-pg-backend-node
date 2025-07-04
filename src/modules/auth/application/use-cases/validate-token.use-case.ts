@@ -2,12 +2,12 @@ import { Injectable, Inject } from '@nestjs/common';
 import { UserRepositoryInterface } from '../../domain/repositories/user.repository.interface';
 import { TokenValidationDomainService } from '../../domain/services/token-validation.domain-service';
 import { UserEntity } from '../../domain/entities/user.entity';
-import { PrivyTokenValidationService } from '../../infrastructure/services/privy-token-validation.service';
+import { ThirdwebTokenValidationService } from '../../infrastructure/services/thirdweb-token-validation.service';
 import { USER_REPOSITORY_TOKEN } from '../../constants';
 
 export interface ValidateTokenRequest {
   token: string;
-  appId: string;
+  clientId: string;
 }
 
 export interface ValidateTokenResponse {
@@ -22,13 +22,13 @@ export class ValidateTokenUseCase {
     @Inject(USER_REPOSITORY_TOKEN)
     private readonly userRepository: UserRepositoryInterface,
     private readonly tokenValidationService: TokenValidationDomainService,
-    private readonly privyTokenValidationService: PrivyTokenValidationService,
+    private readonly thirdwebTokenValidationService: ThirdwebTokenValidationService,
   ) {}
 
   async execute(request: ValidateTokenRequest): Promise<ValidateTokenResponse> {
     try {
       const tokenValidationResult =
-        await this.privyTokenValidationService.validateToken(request.token);
+        await this.thirdwebTokenValidationService.validateToken(request.token);
 
       if (!tokenValidationResult.isValid || !tokenValidationResult.claims) {
         const internalError =
@@ -43,7 +43,7 @@ export class ValidateTokenUseCase {
       const domainValidationResult =
         this.tokenValidationService.validateTokenClaims(
           tokenValidationResult.claims,
-          request.appId,
+          request.clientId,
         );
 
       if (!domainValidationResult.isValid || !domainValidationResult.claims) {
@@ -56,13 +56,13 @@ export class ValidateTokenUseCase {
         };
       }
 
-      const user = await this.userRepository.findByPrivyId(
+      const user = await this.userRepository.findByThirdwebId(
         domainValidationResult.claims.getUserId,
       );
 
       if (!user) {
         console.error(
-          'User not found for privy ID:',
+          'User not found for thirdweb ID:',
           domainValidationResult.claims.getUserId,
         );
         return {
@@ -73,7 +73,7 @@ export class ValidateTokenUseCase {
 
       if (!user.isActive) {
         console.error(
-          'User account is inactive for privy ID:',
+          'User account is inactive for thirdweb ID:',
           domainValidationResult.claims.getUserId,
         );
         return {

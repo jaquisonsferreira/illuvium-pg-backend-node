@@ -16,7 +16,7 @@ import {
   ApiResponse,
   ApiBody,
 } from '@nestjs/swagger';
-import { PrivyAuthGuard } from '../guards/privy-auth.guard';
+import { ThirdwebAuthGuard } from '../guards/thirdweb-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { UserEntity } from '../../domain/entities/user.entity';
 import {
@@ -31,7 +31,7 @@ export class AuthController {
     private readonly manageLinkedAccountsUseCase: ManageLinkedAccountsUseCase,
   ) {}
   @Get('profile')
-  @UseGuards(PrivyAuthGuard)
+  @UseGuards(ThirdwebAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({
@@ -42,7 +42,8 @@ export class AuthController {
   async getProfile(@CurrentUser() user: UserEntity) {
     return {
       id: user.id,
-      privyId: user.privyId,
+      thirdwebId: user.thirdwebId,
+      walletAddress: user.walletAddress,
       nickname: user.nickname,
       avatarUrl: user.avatarUrl,
       experiments: user.experiments,
@@ -60,7 +61,7 @@ export class AuthController {
   }
 
   @Get('linked-accounts')
-  @UseGuards(PrivyAuthGuard)
+  @UseGuards(ThirdwebAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all linked accounts for current user' })
   @ApiResponse({
@@ -83,7 +84,7 @@ export class AuthController {
   }
 
   @Get('linked-accounts/wallets')
-  @UseGuards(PrivyAuthGuard)
+  @UseGuards(ThirdwebAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get wallet accounts for current user' })
   @ApiResponse({
@@ -106,7 +107,7 @@ export class AuthController {
   }
 
   @Get('linked-accounts/email')
-  @UseGuards(PrivyAuthGuard)
+  @UseGuards(ThirdwebAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get email account for current user' })
   @ApiResponse({
@@ -129,7 +130,7 @@ export class AuthController {
   }
 
   @Post('linked-accounts')
-  @UseGuards(PrivyAuthGuard)
+  @UseGuards(ThirdwebAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Link a new account to current user' })
@@ -168,7 +169,7 @@ export class AuthController {
   }
 
   @Delete('linked-accounts/:type/:identifier')
-  @UseGuards(PrivyAuthGuard)
+  @UseGuards(ThirdwebAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Unlink an account from current user' })
@@ -193,7 +194,7 @@ export class AuthController {
   }
 
   @Get('protected')
-  @UseGuards(PrivyAuthGuard)
+  @UseGuards(ThirdwebAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Protected route example' })
   @ApiResponse({ status: 200, description: 'Access granted' })

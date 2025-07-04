@@ -1,26 +1,26 @@
 import {
-  PrivyTokenClaims,
-  PrivyTokenClaimsData,
-} from '../value-objects/privy-token-claims.value-object';
+  ThirdwebTokenClaims,
+  ThirdwebTokenClaimsData,
+} from '../value-objects/thirdweb-token-claims.value-object';
 
 export interface TokenValidationResult {
   isValid: boolean;
-  claims?: PrivyTokenClaims;
+  claims?: ThirdwebTokenClaims;
   error?: string;
 }
 
 export class TokenValidationDomainService {
   public validateTokenClaims(
-    claimsData: PrivyTokenClaimsData,
-    expectedAppId: string,
+    claimsData: ThirdwebTokenClaimsData,
+    expectedClientId: string,
   ): TokenValidationResult {
     try {
-      const claims = new PrivyTokenClaims(claimsData);
+      const claims = new ThirdwebTokenClaims(claimsData);
 
-      if (claims.getAppId !== expectedAppId) {
+      if (claims.getAudience !== expectedClientId) {
         return {
           isValid: false,
-          error: 'Invalid app ID in token claims',
+          error: 'Invalid client ID in token claims',
         };
       }
 

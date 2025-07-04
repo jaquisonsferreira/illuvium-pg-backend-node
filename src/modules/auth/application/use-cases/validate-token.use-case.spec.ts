@@ -1,39 +1,40 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ValidateTokenUseCase } from './validate-token.use-case';
 import { UserRepositoryInterface } from '../../domain/repositories/user.repository.interface';
 import { TokenValidationDomainService } from '../../domain/services/token-validation.domain-service';
-import { PrivyTokenValidationService } from '../../infrastructure/services/privy-token-validation.service';
+import { ThirdwebTokenValidationService } from '../../infrastructure/services/thirdweb-token-validation.service';
 import { UserEntity } from '../../domain/entities/user.entity';
 import { USER_REPOSITORY_TOKEN } from '../../constants';
-import { PrivyTokenClaimsData } from '../../domain/value-objects/privy-token-claims.value-object';
+import { ThirdwebTokenClaimsData } from '../../domain/value-objects/thirdweb-token-claims.value-object';
 
-describe('ValidateTokenUseCase', () => {
+describe('ValidateTokenUseCase (Thirdweb)', () => {
   let useCase: ValidateTokenUseCase;
   let userRepository: jest.Mocked<UserRepositoryInterface>;
   let tokenValidationService: jest.Mocked<TokenValidationDomainService>;
-  let privyTokenValidationService: jest.Mocked<PrivyTokenValidationService>;
+  let thirdwebTokenValidationService: jest.Mocked<ThirdwebTokenValidationService>;
 
   const mockUser = new UserEntity({
     id: '123e4567-e89b-12d3-a456-426614174000',
-    privyId: 'privy_123',
-    createdAt: new Date('2023-01-01T00:00:00.000Z'),
-    updatedAt: new Date('2023-01-01T00:00:00.000Z'),
+    thirdwebId: 'user-123',
+    walletAddress: '0x1234567890123456789012345678901234567890',
+    createdAt: new Date(),
+    updatedAt: new Date(),
     isActive: true,
   });
 
-  const mockClaimsData: PrivyTokenClaimsData = {
-    appId: 'test-app-id',
-    userId: 'privy_123',
-    issuer: 'privy.io',
-    issuedAt: new Date(Date.now() - 60000).toISOString(),
-    expiration: new Date(Date.now() + 3600000).toISOString(),
-    sessionId: 'test-session-id',
+  const validClaimsData: ThirdwebTokenClaimsData = {
+    iss: 'https://thirdweb.com',
+    sub: 'user-123',
+    aud: 'test-client-id',
+    iat: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    exp: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    walletAddress: '0x1234567890123456789012345678901234567890',
+    chainId: '1',
   };
 
   beforeEach(async () => {
     const mockUserRepository = {
-      findByPrivyId: jest.fn(),
+      findByThirdwebId: jest.fn(),
       findById: jest.fn(),
       save: jest.fn(),
       create: jest.fn(),
@@ -43,9 +44,9 @@ describe('ValidateTokenUseCase', () => {
       validateTokenClaims: jest.fn(),
     };
 
-    const mockPrivyTokenValidationService = {
+    const mockThirdwebTokenValidationService = {
       validateToken: jest.fn(),
-      validateTokenWithVerificationKey: jest.fn(),
+      validateTokenWithOptions: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -60,8 +61,8 @@ describe('ValidateTokenUseCase', () => {
           useValue: mockTokenValidationService,
         },
         {
-          provide: PrivyTokenValidationService,
-          useValue: mockPrivyTokenValidationService,
+          provide: ThirdwebTokenValidationService,
+          useValue: mockThirdwebTokenValidationService,
         },
       ],
     }).compile();
@@ -69,7 +70,7 @@ describe('ValidateTokenUseCase', () => {
     useCase = module.get<ValidateTokenUseCase>(ValidateTokenUseCase);
     userRepository = module.get(USER_REPOSITORY_TOKEN);
     tokenValidationService = module.get(TokenValidationDomainService);
-    privyTokenValidationService = module.get(PrivyTokenValidationService);
+    thirdwebTokenValidationService = module.get(ThirdwebTokenValidationService);
   });
 
   afterEach(() => {
@@ -79,48 +80,48 @@ describe('ValidateTokenUseCase', () => {
   describe('execute', () => {
     const validRequest = {
       token: 'valid-token',
-      appId: 'test-app-id',
+      clientId: 'test-app-id',
     };
 
     it('should return valid response for successful validation', async () => {
-      privyTokenValidationService.validateToken.mockResolvedValue({
+      thirdwebTokenValidationService.validateToken.mockResolvedValue({
         isValid: true,
-        claims: mockClaimsData,
+        claims: validClaimsData,
       });
 
       tokenValidationService.validateTokenClaims.mockReturnValue({
         isValid: true,
         claims: {
-          getUserId: 'privy_123',
-          getAppId: 'test-app-id',
-          getIssuer: 'privy.io',
-          getIssuedAt: new Date(),
-          getExpiration: new Date(),
-          getSessionId: 'test-session-id',
+          getUserId: 'user-123',
+          getWalletAddress: '0x1234567890123456789012345678901234567890',
+          getChainId: '1',
+          getIssuer: 'https://thirdweb.com',
+          getIssuedAt: new Date(validClaimsData.iat),
+          getExpiration: new Date(validClaimsData.exp),
           isExpired: () => false,
-          toJSON: () => mockClaimsData,
+          toJSON: () => validClaimsData,
         } as any,
       });
 
-      userRepository.findByPrivyId.mockResolvedValue(mockUser);
+      userRepository.findByThirdwebId.mockResolvedValue(mockUser);
 
       const result = await useCase.execute(validRequest);
 
       expect(result.isValid).toBe(true);
       expect(result.user).toBe(mockUser);
       expect(result.internalError).toBeUndefined();
-      expect(privyTokenValidationService.validateToken).toHaveBeenCalledWith(
+      expect(thirdwebTokenValidationService.validateToken).toHaveBeenCalledWith(
         'valid-token',
       );
       expect(tokenValidationService.validateTokenClaims).toHaveBeenCalledWith(
-        mockClaimsData,
+        validClaimsData,
         'test-app-id',
       );
-      expect(userRepository.findByPrivyId).toHaveBeenCalledWith('privy_123');
+      expect(userRepository.findByThirdwebId).toHaveBeenCalledWith('user-123');
     });
 
-    it('should return invalid response when privy token validation fails', async () => {
-      privyTokenValidationService.validateToken.mockResolvedValue({
+    it('should return invalid response when thirdweb token validation fails', async () => {
+      thirdwebTokenValidationService.validateToken.mockResolvedValue({
         isValid: false,
         error: 'Invalid token',
       });
@@ -131,11 +132,11 @@ describe('ValidateTokenUseCase', () => {
       expect(result.user).toBeUndefined();
       expect(result.internalError).toBe('Invalid token');
       expect(tokenValidationService.validateTokenClaims).not.toHaveBeenCalled();
-      expect(userRepository.findByPrivyId).not.toHaveBeenCalled();
+      expect(userRepository.findByThirdwebId).not.toHaveBeenCalled();
     });
 
-    it('should return invalid response when privy token validation returns no claims', async () => {
-      privyTokenValidationService.validateToken.mockResolvedValue({
+    it('should return invalid response when thirdweb token validation returns no claims', async () => {
+      thirdwebTokenValidationService.validateToken.mockResolvedValue({
         isValid: true,
         claims: undefined,
       });
@@ -146,32 +147,32 @@ describe('ValidateTokenUseCase', () => {
       expect(result.user).toBeUndefined();
       expect(result.internalError).toBe('Token validation failed');
       expect(tokenValidationService.validateTokenClaims).not.toHaveBeenCalled();
-      expect(userRepository.findByPrivyId).not.toHaveBeenCalled();
+      expect(userRepository.findByThirdwebId).not.toHaveBeenCalled();
     });
 
     it('should return invalid response when domain validation fails', async () => {
-      privyTokenValidationService.validateToken.mockResolvedValue({
+      thirdwebTokenValidationService.validateToken.mockResolvedValue({
         isValid: true,
-        claims: mockClaimsData,
+        claims: validClaimsData,
       });
 
       tokenValidationService.validateTokenClaims.mockReturnValue({
         isValid: false,
-        error: 'Invalid app ID',
+        error: 'Invalid client ID',
       });
 
       const result = await useCase.execute(validRequest);
 
       expect(result.isValid).toBe(false);
       expect(result.user).toBeUndefined();
-      expect(result.internalError).toBe('Invalid app ID');
-      expect(userRepository.findByPrivyId).not.toHaveBeenCalled();
+      expect(result.internalError).toBe('Invalid client ID');
+      expect(userRepository.findByThirdwebId).not.toHaveBeenCalled();
     });
 
     it('should return invalid response when domain validation returns no claims', async () => {
-      privyTokenValidationService.validateToken.mockResolvedValue({
+      thirdwebTokenValidationService.validateToken.mockResolvedValue({
         isValid: true,
-        claims: mockClaimsData,
+        claims: validClaimsData,
       });
 
       tokenValidationService.validateTokenClaims.mockReturnValue({
@@ -184,30 +185,30 @@ describe('ValidateTokenUseCase', () => {
       expect(result.isValid).toBe(false);
       expect(result.user).toBeUndefined();
       expect(result.internalError).toBe('Claims validation failed');
-      expect(userRepository.findByPrivyId).not.toHaveBeenCalled();
+      expect(userRepository.findByThirdwebId).not.toHaveBeenCalled();
     });
 
     it('should return invalid response when user is not found', async () => {
-      privyTokenValidationService.validateToken.mockResolvedValue({
+      thirdwebTokenValidationService.validateToken.mockResolvedValue({
         isValid: true,
-        claims: mockClaimsData,
+        claims: validClaimsData,
       });
 
       tokenValidationService.validateTokenClaims.mockReturnValue({
         isValid: true,
         claims: {
-          getUserId: 'privy_123',
-          getAppId: 'test-app-id',
-          getIssuer: 'privy.io',
-          getIssuedAt: new Date(),
-          getExpiration: new Date(),
-          getSessionId: 'test-session-id',
+          getUserId: 'user-123',
+          getWalletAddress: '0x1234567890123456789012345678901234567890',
+          getChainId: '1',
+          getIssuer: 'https://thirdweb.com',
+          getIssuedAt: new Date(validClaimsData.iat),
+          getExpiration: new Date(validClaimsData.exp),
           isExpired: () => false,
-          toJSON: () => mockClaimsData,
+          toJSON: () => validClaimsData,
         } as any,
       });
 
-      userRepository.findByPrivyId.mockResolvedValue(null);
+      userRepository.findByThirdwebId.mockResolvedValue(null);
 
       const result = await useCase.execute(validRequest);
 
@@ -222,26 +223,26 @@ describe('ValidateTokenUseCase', () => {
         isActive: false,
       });
 
-      privyTokenValidationService.validateToken.mockResolvedValue({
+      thirdwebTokenValidationService.validateToken.mockResolvedValue({
         isValid: true,
-        claims: mockClaimsData,
+        claims: validClaimsData,
       });
 
       tokenValidationService.validateTokenClaims.mockReturnValue({
         isValid: true,
         claims: {
-          getUserId: 'privy_123',
-          getAppId: 'test-app-id',
-          getIssuer: 'privy.io',
-          getIssuedAt: new Date(),
-          getExpiration: new Date(),
-          getSessionId: 'test-session-id',
+          getUserId: 'user-123',
+          getWalletAddress: '0x1234567890123456789012345678901234567890',
+          getChainId: '1',
+          getIssuer: 'https://thirdweb.com',
+          getIssuedAt: new Date(validClaimsData.iat),
+          getExpiration: new Date(validClaimsData.exp),
           isExpired: () => false,
-          toJSON: () => mockClaimsData,
+          toJSON: () => validClaimsData,
         } as any,
       });
 
-      userRepository.findByPrivyId.mockResolvedValue(inactiveUser);
+      userRepository.findByThirdwebId.mockResolvedValue(inactiveUser);
 
       const result = await useCase.execute(validRequest);
 
@@ -251,7 +252,7 @@ describe('ValidateTokenUseCase', () => {
     });
 
     it('should handle unexpected errors gracefully', async () => {
-      privyTokenValidationService.validateToken.mockRejectedValue(
+      thirdwebTokenValidationService.validateToken.mockRejectedValue(
         new Error('Unexpected error'),
       );
 
@@ -263,7 +264,7 @@ describe('ValidateTokenUseCase', () => {
     });
 
     it('should handle non-Error exceptions gracefully', async () => {
-      privyTokenValidationService.validateToken.mockRejectedValue(
+      thirdwebTokenValidationService.validateToken.mockRejectedValue(
         'String error',
       );
 

@@ -31,10 +31,20 @@ export class UserRepository implements UserRepositoryInterface {
     >('users');
   }
 
-  async findByPrivyId(privyId: string): Promise<UserEntity | null> {
+  async findById(id: string): Promise<UserEntity | null> {
+    const dbUser = await this.repository.findById(id);
+
+    if (!dbUser) {
+      return null;
+    }
+
+    return this.toDomainEntity(dbUser);
+  }
+
+  async findByThirdwebId(thirdwebId: string): Promise<UserEntity | null> {
     const result = await sql`
       SELECT * FROM users
-      WHERE privy_id = ${privyId}
+      WHERE thirdweb_id = ${thirdwebId}
       LIMIT 1
     `.execute(this.db);
 
@@ -46,13 +56,18 @@ export class UserRepository implements UserRepositoryInterface {
     return this.toDomainEntity(dbUser);
   }
 
-  async findById(id: string): Promise<UserEntity | null> {
-    const dbUser = await this.repository.findById(id);
+  async findByWalletAddress(walletAddress: string): Promise<UserEntity | null> {
+    const result = await sql`
+      SELECT * FROM users
+      WHERE wallet_address = ${walletAddress}
+      LIMIT 1
+    `.execute(this.db);
 
-    if (!dbUser) {
+    if (result.rows.length === 0) {
       return null;
     }
 
+    const dbUser = result.rows[0] as DbUser;
     return this.toDomainEntity(dbUser);
   }
 
@@ -89,13 +104,13 @@ export class UserRepository implements UserRepositoryInterface {
   ): Promise<UserEntity> {
     const result = await sql`
       INSERT INTO users (
-        id, privy_id, nickname, avatar_url, experiments,
+        id, thirdweb_id, wallet_address, nickname, avatar_url, experiments,
         social_bluesky, social_discord, social_instagram,
         social_farcaster, social_twitch, social_youtube, social_x,
         is_active, created_at, updated_at
       )
       VALUES (
-        ${uuidv4()}, ${userData.privyId}, ${userData.nickname || null},
+        ${uuidv4()}, ${userData.thirdwebId || null}, ${userData.walletAddress || null}, ${userData.nickname || null},
         ${userData.avatarUrl || null}, ${userData.experiments ? JSON.stringify(userData.experiments) : null},
         ${userData.socialBluesky || null}, ${userData.socialDiscord || null},
         ${userData.socialInstagram || null}, ${userData.socialFarcaster || null},
@@ -112,7 +127,8 @@ export class UserRepository implements UserRepositoryInterface {
   private toDomainEntity(dbUser: DbUser): UserEntity {
     const userProps: UserProps = {
       id: dbUser.id,
-      privyId: dbUser.privy_id,
+      thirdwebId: dbUser.thirdweb_id || undefined,
+      walletAddress: dbUser.wallet_address || undefined,
       nickname: dbUser.nickname || undefined,
       avatarUrl: dbUser.avatar_url || undefined,
       experiments: dbUser.experiments

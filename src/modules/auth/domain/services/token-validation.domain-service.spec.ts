@@ -1,5 +1,5 @@
 import { TokenValidationDomainService } from './token-validation.domain-service';
-import { PrivyTokenClaimsData } from '../value-objects/privy-token-claims.value-object';
+import { ThirdwebTokenClaimsData } from '../value-objects/thirdweb-token-claims.value-object';
 
 describe('TokenValidationDomainService', () => {
   let service: TokenValidationDomainService;
@@ -9,13 +9,14 @@ describe('TokenValidationDomainService', () => {
     service = new TokenValidationDomainService();
   });
 
-  const validClaimsData: PrivyTokenClaimsData = {
-    appId: expectedAppId,
-    userId: 'test-user-id',
-    issuer: 'privy.io',
-    issuedAt: new Date(Date.now() - 60000).toISOString(), // 1 minute ago
-    expiration: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
-    sessionId: 'test-session-id',
+  const validClaimsData: ThirdwebTokenClaimsData = {
+    iss: 'thirdweb.com',
+    sub: 'test-user-id',
+    aud: expectedAppId,
+    iat: new Date(Date.now() - 60000).toISOString(),
+    exp: new Date(Date.now() + 3600000).toISOString(),
+    walletAddress: '0x1234567890123456789012345678901234567890',
+    chainId: '1',
   };
 
   describe('validateTokenClaims', () => {
@@ -28,23 +29,26 @@ describe('TokenValidationDomainService', () => {
       expect(result.isValid).toBe(true);
       expect(result.claims).toBeDefined();
       expect(result.error).toBeUndefined();
-      expect(result.claims?.getAppId).toBe(expectedAppId);
-      expect(result.claims?.getUserId).toBe(validClaimsData.userId);
+      expect(result.claims?.getAudience).toBe(expectedAppId);
+      expect(result.claims?.getUserId).toBe(validClaimsData.sub);
     });
 
-    it('should return invalid result for wrong app ID', () => {
-      const wrongAppIdData = { ...validClaimsData, appId: 'wrong-app-id' };
-      const result = service.validateTokenClaims(wrongAppIdData, expectedAppId);
+    it('should return invalid result for wrong client ID', () => {
+      const wrongClientIdData = { ...validClaimsData, aud: 'wrong-client-id' };
+      const result = service.validateTokenClaims(
+        wrongClientIdData,
+        expectedAppId,
+      );
 
       expect(result.isValid).toBe(false);
       expect(result.claims).toBeUndefined();
-      expect(result.error).toBe('Invalid app ID in token claims');
+      expect(result.error).toBe('Invalid client ID in token claims');
     });
 
     it('should return invalid result for expired token', () => {
       const expiredData = {
         ...validClaimsData,
-        expiration: new Date(Date.now() - 60000).toISOString(), // 1 minute ago
+        exp: new Date(Date.now() - 60000).toISOString(), // 1 minute ago
       };
       const result = service.validateTokenClaims(expiredData, expectedAppId);
 
@@ -54,18 +58,18 @@ describe('TokenValidationDomainService', () => {
     });
 
     it('should return invalid result for invalid claims data', () => {
-      const invalidData = { ...validClaimsData, appId: '' };
+      const invalidData = { ...validClaimsData, aud: '' };
       const result = service.validateTokenClaims(invalidData, expectedAppId);
 
       expect(result.isValid).toBe(false);
       expect(result.claims).toBeUndefined();
-      expect(result.error).toBe('Invalid app ID in token claims');
+      expect(result.error).toBe('Invalid audience in token claims');
     });
 
     it('should return invalid result for invalid issuer', () => {
       const invalidIssuerData = {
         ...validClaimsData,
-        issuer: 'invalid-issuer',
+        iss: 'invalid-issuer',
       };
       const result = service.validateTokenClaims(
         invalidIssuerData,
@@ -80,7 +84,7 @@ describe('TokenValidationDomainService', () => {
     it('should return invalid result for token issued in future', () => {
       const futureData = {
         ...validClaimsData,
-        issuedAt: new Date(Date.now() + 60000).toISOString(), // 1 minute from now
+        iat: new Date(Date.now() + 60000).toISOString(), // 1 minute from now
       };
       const result = service.validateTokenClaims(futureData, expectedAppId);
 
@@ -95,14 +99,14 @@ describe('TokenValidationDomainService', () => {
       expect(result.isValid).toBe(false);
       expect(result.claims).toBeUndefined();
       expect(result.error).toBe(
-        "Cannot read properties of null (reading 'appId')",
+        "Cannot read properties of null (reading 'iss')",
       );
     });
 
     it('should handle claims construction errors', () => {
       const invalidData = {
         ...validClaimsData,
-        userId: '', // This will cause PrivyTokenClaims constructor to throw
+        sub: '', // This will cause ThirdwebTokenClaims constructor to throw
       };
       const result = service.validateTokenClaims(invalidData, expectedAppId);
 
@@ -114,15 +118,16 @@ describe('TokenValidationDomainService', () => {
     it('should handle unexpected errors gracefully', () => {
       // Create a mock that throws an Error object
       const mockClaimsData = {
-        get appId() {
+        get aud() {
           throw new Error('Unexpected error');
         },
-        userId: 'test-user-id',
-        issuer: 'privy.io',
-        issuedAt: new Date(Date.now() - 60000).toISOString(),
-        expiration: new Date(Date.now() + 3600000).toISOString(),
-        sessionId: 'test-session-id',
-      } as unknown as PrivyTokenClaimsData;
+        iss: 'thirdweb.com',
+        sub: 'test-user-id',
+        iat: new Date(Date.now() - 60000).toISOString(),
+        exp: new Date(Date.now() + 3600000).toISOString(),
+        walletAddress: '0x1234567890123456789012345678901234567890',
+        chainId: '1',
+      } as unknown as ThirdwebTokenClaimsData;
 
       const result = service.validateTokenClaims(mockClaimsData, expectedAppId);
 
@@ -131,13 +136,13 @@ describe('TokenValidationDomainService', () => {
       expect(result.error).toBe('Unexpected error');
     });
 
-    it('should validate claims even if app ID matches but token is expired', () => {
-      const expiredButCorrectAppId = {
+    it('should validate claims even if client ID matches but token is expired', () => {
+      const expiredButCorrectClientId = {
         ...validClaimsData,
-        expiration: new Date(Date.now() - 60000).toISOString(), // 1 minute ago
+        exp: new Date(Date.now() - 60000).toISOString(), // 1 minute ago
       };
       const result = service.validateTokenClaims(
-        expiredButCorrectAppId,
+        expiredButCorrectClientId,
         expectedAppId,
       );
 
@@ -145,21 +150,21 @@ describe('TokenValidationDomainService', () => {
       expect(result.error).toBe('Token has expired');
     });
 
-    it('should validate in correct order - claims creation, then app ID, then expiration', () => {
-      const invalidClaimsData = { ...validClaimsData, userId: '' };
+    it('should validate in correct order - claims creation, then client ID, then expiration', () => {
+      const invalidClaimsData = { ...validClaimsData, sub: '' };
       let result = service.validateTokenClaims(
         invalidClaimsData,
-        'wrong-app-id',
+        'wrong-client-id',
       );
       expect(result.error).toBe('Invalid user ID in token claims');
 
-      const wrongAppIdData = { ...validClaimsData, appId: 'wrong-app-id' };
-      result = service.validateTokenClaims(wrongAppIdData, expectedAppId);
-      expect(result.error).toBe('Invalid app ID in token claims');
+      const wrongClientIdData = { ...validClaimsData, aud: 'wrong-client-id' };
+      result = service.validateTokenClaims(wrongClientIdData, expectedAppId);
+      expect(result.error).toBe('Invalid client ID in token claims');
 
       const expiredData = {
         ...validClaimsData,
-        expiration: new Date(Date.now() - 60000).toISOString(),
+        exp: new Date(Date.now() - 60000).toISOString(),
       };
       result = service.validateTokenClaims(expiredData, expectedAppId);
       expect(result.error).toBe('Token has expired');

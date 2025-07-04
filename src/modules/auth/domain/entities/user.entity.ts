@@ -1,6 +1,7 @@
 export interface UserProps {
   id: string;
-  privyId: string;
+  thirdwebId?: string; // Added for Thirdweb support
+  walletAddress?: string; // Added for wallet-based authentication
   nickname?: string;
   avatarUrl?: string;
   experiments?: Record<string, any>;
@@ -22,9 +23,11 @@ export class UserEntity {
   get id(): string {
     return this.props.id;
   }
-
-  get privyId(): string {
-    return this.props.privyId;
+  get thirdwebId(): string | undefined {
+    return this.props.thirdwebId;
+  }
+  get walletAddress(): string | undefined {
+    return this.props.walletAddress;
   }
 
   get nickname(): string | undefined {
