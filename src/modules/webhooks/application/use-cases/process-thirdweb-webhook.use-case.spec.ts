@@ -310,5 +310,163 @@ describe('ProcessThirdwebWebhookUseCase', () => {
         }),
       );
     });
+
+    it('should handle payload without proper mapping', async () => {
+      const unmappedPayload = JSON.stringify({
+        type: 'unknown_webhook_type',
+        timestamp: 1609459200000,
+        data: { wallet_address: '0x742d35Cc6635C0532925a3b8D6e4C2D16C6Db8c1' },
+      });
+
+      signatureValidationService.verifySignature.mockReturnValue({
+        isValid: true,
+      });
+      mapperService.mapToUserEvent.mockReturnValue(null);
+
+      const result = await useCase.execute({
+        payload: unmappedPayload,
+        headers: validHeaders,
+      });
+
+      expect(result).toEqual({
+        success: true,
+        message: 'Webhook received but not mapped to internal event',
+        eventType: 'unknown_webhook_type',
+      });
+    });
+
+    it('should extract wallet address from different payload fields', async () => {
+      const payloadWithFrom = JSON.stringify({
+        type: ThirdwebWebhookType.WALLET_CREATED,
+        timestamp: 1609459200000,
+        data: {
+          from: '0x742d35Cc6635C0532925a3b8D6e4C2D16C6Db8c1',
+        },
+      });
+
+      const mockUserEvent = {
+        type: UserEventType.USER_CREATED as const,
+        userId: '0x742d35cc6635c0532925a3b8d6e4c2d16c6db8c1',
+        timestamp: new Date(1609459200000),
+        isGuest: false,
+        hasAcceptedTerms: false,
+        linkedAccounts: [],
+        metadata: {
+          walletAddress: '0x742d35Cc6635C0532925a3b8D6e4C2D16C6Db8c1',
+        },
+      };
+
+      signatureValidationService.verifySignature.mockReturnValue({
+        isValid: true,
+      });
+      mapperService.mapToUserEvent.mockReturnValue(mockUserEvent);
+      eventBridgeService.sendUserEvent.mockResolvedValue(true);
+
+      const result = await useCase.execute({
+        payload: payloadWithFrom,
+        headers: validHeaders,
+      });
+
+      expect(result.success).toBe(true);
+    });
+
+    it('should extract wallet address from "to" field', async () => {
+      const payloadWithTo = JSON.stringify({
+        type: ThirdwebWebhookType.WALLET_CREATED,
+        timestamp: 1609459200000,
+        data: {
+          to: '0x742d35Cc6635C0532925a3b8D6e4C2D16C6Db8c1',
+        },
+      });
+
+      const mockUserEvent = {
+        type: UserEventType.USER_CREATED as const,
+        userId: '0x742d35cc6635c0532925a3b8d6e4c2d16c6db8c1',
+        timestamp: new Date(1609459200000),
+        isGuest: false,
+        hasAcceptedTerms: false,
+        linkedAccounts: [],
+        metadata: {
+          walletAddress: '0x742d35Cc6635C0532925a3b8D6e4C2D16C6Db8c1',
+        },
+      };
+
+      signatureValidationService.verifySignature.mockReturnValue({
+        isValid: true,
+      });
+      mapperService.mapToUserEvent.mockReturnValue(mockUserEvent);
+      eventBridgeService.sendUserEvent.mockResolvedValue(true);
+
+      const result = await useCase.execute({
+        payload: payloadWithTo,
+        headers: validHeaders,
+      });
+
+      expect(result.success).toBe(true);
+    });
+
+    it('should handle payload without wallet address gracefully', async () => {
+      const payloadWithoutWallet = JSON.stringify({
+        type: ThirdwebWebhookType.WALLET_CREATED,
+        timestamp: 1609459200000,
+        data: {
+          some_other_field: 'value',
+        },
+      });
+
+      const mockUserEvent = {
+        type: UserEventType.USER_CREATED as const,
+        userId: 'unknown',
+        timestamp: new Date(1609459200000),
+        isGuest: false,
+        hasAcceptedTerms: false,
+        linkedAccounts: [],
+        metadata: {},
+      };
+
+      signatureValidationService.verifySignature.mockReturnValue({
+        isValid: true,
+      });
+      mapperService.mapToUserEvent.mockReturnValue(mockUserEvent);
+      eventBridgeService.sendUserEvent.mockResolvedValue(true);
+
+      const result = await useCase.execute({
+        payload: payloadWithoutWallet,
+        headers: validHeaders,
+      });
+
+      expect(result.success).toBe(true);
+    });
+
+    it('should handle payload extraction error gracefully', async () => {
+      const malformedPayload = JSON.stringify({
+        type: ThirdwebWebhookType.WALLET_CREATED,
+        timestamp: 1609459200000,
+        data: null,
+      });
+
+      const mockUserEvent = {
+        type: UserEventType.USER_CREATED as const,
+        userId: 'unknown',
+        timestamp: new Date(1609459200000),
+        isGuest: false,
+        hasAcceptedTerms: false,
+        linkedAccounts: [],
+        metadata: {},
+      };
+
+      signatureValidationService.verifySignature.mockReturnValue({
+        isValid: true,
+      });
+      mapperService.mapToUserEvent.mockReturnValue(mockUserEvent);
+      eventBridgeService.sendUserEvent.mockResolvedValue(true);
+
+      const result = await useCase.execute({
+        payload: malformedPayload,
+        headers: validHeaders,
+      });
+
+      expect(result.success).toBe(true);
+    });
   });
 });

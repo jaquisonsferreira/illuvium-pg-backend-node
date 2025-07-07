@@ -224,4 +224,39 @@ export class ProcessThirdwebWebhookUseCase {
 
     return { isValid: true };
   }
+
+  /**
+   * Health check method for monitoring service status
+   * @returns Health check result
+   */
+  async healthCheck(): Promise<{
+    healthy: boolean;
+    details: Record<string, boolean>;
+  }> {
+    try {
+      // Check if essential services are available
+      const serviceChecks = {
+        signatureValidation: !!this.signatureValidationService,
+        mapper: !!this.mapperService,
+        eventBridge: !!this.eventBridgeService,
+      };
+
+      const allServicesHealthy = Object.values(serviceChecks).every(Boolean);
+
+      return {
+        healthy: allServicesHealthy,
+        details: serviceChecks,
+      };
+    } catch (error) {
+      this.logger.error('Health check failed', error);
+      return {
+        healthy: false,
+        details: {
+          signatureValidation: false,
+          mapper: false,
+          eventBridge: false,
+        },
+      };
+    }
+  }
 }

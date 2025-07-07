@@ -1,5 +1,5 @@
 import { Controller, Get, HttpCode, HttpStatus, Logger } from '@nestjs/common';
-import { ProcessPrivyWebhookUseCase } from '../../application/use-cases/process-privy-webhook.use-case';
+import { ProcessThirdwebWebhookUseCase } from '../../application/use-cases/process-thirdweb-webhook.use-case';
 
 export interface HealthCheckResponse {
   status: 'healthy' | 'unhealthy';
@@ -25,7 +25,7 @@ export class HealthController {
   private readonly logger = new Logger(HealthController.name);
 
   constructor(
-    private readonly processPrivyWebhookUseCase: ProcessPrivyWebhookUseCase,
+    private readonly processThirdwebWebhookUseCase: ProcessThirdwebWebhookUseCase,
   ) {}
 
   @Get()
@@ -34,7 +34,8 @@ export class HealthController {
     const startTime = Date.now();
 
     try {
-      const webhookHealth = await this.processPrivyWebhookUseCase.healthCheck();
+      const webhookHealth =
+        await this.processThirdwebWebhookUseCase.healthCheck();
 
       const environment = {
         nodeEnv: process.env.NODE_ENV || 'development',

@@ -56,7 +56,7 @@ describe('UpdateWebhookSubscriptionUseCase', () => {
       };
 
       const updatedSubscription = mockSubscription.updateEventTypes(
-        updateDto.eventTypes,
+        updateDto.eventTypes || [],
       );
 
       mockRepository.findById.mockResolvedValue(mockSubscription);
