@@ -76,7 +76,9 @@ describe('CurrentUser Decorator', () => {
     expect(result).toBe(anotherUser);
     expect(result.id).toBe('another-id');
     expect(result.thirdwebId).toBe('another-thirdweb-id');
-    expect(result.walletAddress).toBe('0x3333333333333333333333333333333333333333');
+    expect(result.walletAddress).toBe(
+      '0x3333333333333333333333333333333333333333',
+    );
     expect(result.isActive).toBe(false);
   });
 

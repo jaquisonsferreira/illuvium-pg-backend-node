@@ -86,12 +86,22 @@ describe('ValidateTokenUseCase', () => {
       expect(result.isValid).toBe(true);
       expect(result.user).toEqual(mockUser);
       expect(result.internalError).toBeUndefined();
-      expect(mockThirdwebTokenValidationService.validateToken).toHaveBeenCalledTimes(1);
-      expect(mockThirdwebTokenValidationService.validateToken).toHaveBeenCalledWith(request.token);
-      expect(mockTokenValidationService.validateTokenClaims).toHaveBeenCalledTimes(1);
-      expect(mockTokenValidationService.validateTokenClaims).toHaveBeenCalledWith(validTokenClaims, request.clientId);
+      expect(
+        mockThirdwebTokenValidationService.validateToken,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockThirdwebTokenValidationService.validateToken,
+      ).toHaveBeenCalledWith(request.token);
+      expect(
+        mockTokenValidationService.validateTokenClaims,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockTokenValidationService.validateTokenClaims,
+      ).toHaveBeenCalledWith(validTokenClaims, request.clientId);
       expect(mockUserRepository.findByThirdwebId).toHaveBeenCalledTimes(1);
-      expect(mockUserRepository.findByThirdwebId).toHaveBeenCalledWith('user-123');
+      expect(mockUserRepository.findByThirdwebId).toHaveBeenCalledWith(
+        'user-123',
+      );
     });
 
     it('should return invalid response when token validation fails', async () => {
