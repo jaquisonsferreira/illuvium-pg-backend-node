@@ -29,7 +29,6 @@ export class AssetsController {
     @Body() createAssetDto: CreateAssetDto,
     @CurrentUser() user: UserEntity,
   ) {
-    // You can use the user information here if needed
     console.log(`Asset being created by user: ${user.thirdwebId}`);
     return this.createAssetUseCase.execute(createAssetDto);
   }
