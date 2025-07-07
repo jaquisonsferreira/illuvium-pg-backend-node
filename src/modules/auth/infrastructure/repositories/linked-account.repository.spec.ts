@@ -1,8 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LinkedAccountRepository } from './linked-account.repository';
 import { DATABASE_CONNECTION } from '@shared/infrastructure/database';
-import { Kysely } from 'kysely';
-import { Database } from '@shared/infrastructure/database/database.types';
 import { LinkedAccountEntity } from '../../domain/entities/linked-account.entity';
 import { sql } from 'kysely';
 

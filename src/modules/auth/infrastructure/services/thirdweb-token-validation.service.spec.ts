@@ -40,14 +40,14 @@ describe('ThirdwebTokenValidationService', () => {
     // Setup mocks
     const thirdweb = require('thirdweb');
     const thirdwebAuth = require('thirdweb/auth');
-    
-    mockCreateThirdwebClient = thirdweb.createThirdwebClient as jest.MockedFunction<any>;
-    mockCreateAuth = thirdwebAuth.createAuth as jest.MockedFunction<any>;
-    
+
+    mockCreateThirdwebClient = thirdweb.createThirdwebClient;
+    mockCreateAuth = thirdwebAuth.createAuth;
+
     mockCreateThirdwebClient.mockReturnValue({
       clientId: 'test-client-id',
     });
-    
+
     mockCreateAuth.mockReturnValue({
       verifyJWT: mockVerifyJWT,
     });
@@ -68,7 +68,8 @@ describe('ThirdwebTokenValidationService', () => {
         parsedJWT: validTokenClaims,
       });
 
-      const result: ThirdwebTokenValidationResult = await service.validateToken('valid-jwt-token');
+      const result: ThirdwebTokenValidationResult =
+        await service.validateToken('valid-jwt-token');
 
       expect(result.isValid).toBe(true);
       expect(result.claims).toEqual(validTokenClaims);
@@ -84,7 +85,8 @@ describe('ThirdwebTokenValidationService', () => {
         parsedJWT: null,
       });
 
-      const result: ThirdwebTokenValidationResult = await service.validateToken('invalid-jwt-token');
+      const result: ThirdwebTokenValidationResult =
+        await service.validateToken('invalid-jwt-token');
 
       expect(result.isValid).toBe(false);
       expect(result.claims).toBeUndefined();
@@ -95,7 +97,8 @@ describe('ThirdwebTokenValidationService', () => {
       delete process.env.THIRDWEB_SECRET_KEY;
       service = new ThirdwebTokenValidationService();
 
-      const result: ThirdwebTokenValidationResult = await service.validateToken('some-token');
+      const result: ThirdwebTokenValidationResult =
+        await service.validateToken('some-token');
 
       expect(result.isValid).toBe(false);
       expect(result.claims).toBeUndefined();
@@ -106,7 +109,8 @@ describe('ThirdwebTokenValidationService', () => {
       delete process.env.THIRDWEB_CLIENT_ID;
       service = new ThirdwebTokenValidationService();
 
-      const result: ThirdwebTokenValidationResult = await service.validateToken('some-token');
+      const result: ThirdwebTokenValidationResult =
+        await service.validateToken('some-token');
 
       expect(result.isValid).toBe(false);
       expect(result.claims).toBeUndefined();
@@ -117,7 +121,8 @@ describe('ThirdwebTokenValidationService', () => {
       const errorMessage = 'JWT verification failed';
       mockVerifyJWT.mockRejectedValue(new Error(errorMessage));
 
-      const result: ThirdwebTokenValidationResult = await service.validateToken('error-token');
+      const result: ThirdwebTokenValidationResult =
+        await service.validateToken('error-token');
 
       expect(result.isValid).toBe(false);
       expect(result.claims).toBeUndefined();
@@ -127,7 +132,8 @@ describe('ThirdwebTokenValidationService', () => {
     it('should handle unknown errors gracefully', async () => {
       mockVerifyJWT.mockRejectedValue('unknown error');
 
-      const result: ThirdwebTokenValidationResult = await service.validateToken('error-token');
+      const result: ThirdwebTokenValidationResult =
+        await service.validateToken('error-token');
 
       expect(result.isValid).toBe(false);
       expect(result.claims).toBeUndefined();
@@ -145,7 +151,9 @@ describe('ThirdwebTokenValidationService', () => {
         parsedJWT: invalidStructureClaims,
       });
 
-      const result: ThirdwebTokenValidationResult = await service.validateToken('token-with-invalid-claims');
+      const result: ThirdwebTokenValidationResult = await service.validateToken(
+        'token-with-invalid-claims',
+      );
 
       expect(result.isValid).toBe(false);
       expect(result.claims).toBeUndefined();
@@ -161,7 +169,7 @@ describe('ThirdwebTokenValidationService', () => {
     it('should handle missing environment variables gracefully', () => {
       delete process.env.THIRDWEB_SECRET_KEY;
       delete process.env.THIRDWEB_CLIENT_ID;
-      
+
       expect(() => new ThirdwebTokenValidationService()).not.toThrow();
     });
   });

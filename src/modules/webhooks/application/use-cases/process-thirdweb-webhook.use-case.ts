@@ -143,17 +143,11 @@ export class ProcessThirdwebWebhookUseCase {
     }
   }
 
-  /**
-   * Sanitizes headers for logging by removing sensitive information
-   * @param headers - Request headers
-   * @returns Sanitized headers
-   */
   private sanitizeHeaders(
     headers: Record<string, string>,
   ): Record<string, string> {
     const sanitized = { ...headers };
 
-    // Remove sensitive headers
     const sensitiveHeaders = [
       'authorization',
       'x-webhook-signature',
@@ -174,67 +168,11 @@ export class ProcessThirdwebWebhookUseCase {
     return sanitized;
   }
 
-  /**
-   * Extracts wallet address from Thirdweb webhook payload
-   * @param payload - Thirdweb webhook payload
-   * @returns Wallet address if found
-   */
-  private extractWalletAddress(
-    payload: ThirdwebWebhookPayloadUnion,
-  ): string | null {
-    try {
-      if ('data' in payload && payload.data) {
-        return (
-          (payload.data as any).wallet_address ||
-          (payload.data as any).from ||
-          (payload.data as any).to ||
-          null
-        );
-      }
-      return null;
-    } catch (error) {
-      this.logger.warn('Failed to extract wallet address from payload', {
-        error: error.message,
-        payloadType: payload.type,
-      });
-      return null;
-    }
-  }
-
-  /**
-   * Validates Thirdweb webhook payload structure
-   * @param payload - Parsed payload
-   * @returns Validation result
-   */
-  private validatePayloadStructure(payload: any): {
-    isValid: boolean;
-    error?: string;
-  } {
-    if (!payload.type) {
-      return { isValid: false, error: 'Missing webhook type' };
-    }
-
-    if (!payload.data) {
-      return { isValid: false, error: 'Missing webhook data' };
-    }
-
-    if (typeof payload.timestamp !== 'number') {
-      return { isValid: false, error: 'Invalid or missing timestamp' };
-    }
-
-    return { isValid: true };
-  }
-
-  /**
-   * Health check method for monitoring service status
-   * @returns Health check result
-   */
   async healthCheck(): Promise<{
     healthy: boolean;
     details: Record<string, boolean>;
   }> {
     try {
-      // Check if essential services are available
       const serviceChecks = {
         signatureValidation: !!this.signatureValidationService,
         mapper: !!this.mapperService,

@@ -106,7 +106,7 @@ describe('TokenValidationDomainService', () => {
     it('should handle claims construction errors', () => {
       const invalidData = {
         ...validClaimsData,
-        sub: '', // This will cause ThirdwebTokenClaims constructor to throw
+        sub: '',
       };
       const result = service.validateTokenClaims(invalidData, expectedAppId);
 

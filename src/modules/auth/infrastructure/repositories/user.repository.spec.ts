@@ -104,7 +104,9 @@ describe('UserRepository', () => {
       expect(result).toBeInstanceOf(UserEntity);
       expect(result?.id).toBe('test-id');
       expect(result?.thirdwebId).toBe('test-thirdweb-id');
-      expect(result?.walletAddress).toBe('0x1234567890123456789012345678901234567890');
+      expect(result?.walletAddress).toBe(
+        '0x1234567890123456789012345678901234567890',
+      );
       expect(mockBaseRepository.findById).toHaveBeenCalledWith('test-id');
     });
 
@@ -231,7 +233,9 @@ describe('UserRepository', () => {
       expect(result).toBeInstanceOf(UserEntity);
       expect(result.id).toBe('mocked-uuid');
       expect(result.thirdwebId).toBe('new-thirdweb-id');
-      expect(result.walletAddress).toBe('0x1111111111111111111111111111111111111111');
+      expect(result.walletAddress).toBe(
+        '0x1111111111111111111111111111111111111111',
+      );
       expect(result.nickname).toBe('newuser');
       expect(result.avatarUrl).toBe('https://example.com/new-avatar.jpg');
       expect(result.isActive).toBe(true);
@@ -309,7 +313,9 @@ describe('UserRepository', () => {
       expect(result).toBeInstanceOf(UserEntity);
       expect(result.id).toBe('test-id');
       expect(result.thirdwebId).toBe('test-thirdweb-id');
-      expect(result.walletAddress).toBe('0x1234567890123456789012345678901234567890');
+      expect(result.walletAddress).toBe(
+        '0x1234567890123456789012345678901234567890',
+      );
       expect(result.nickname).toBe('testuser');
       expect(result.avatarUrl).toBe('https://example.com/avatar.jpg');
       expect(result.isActive).toBe(true);

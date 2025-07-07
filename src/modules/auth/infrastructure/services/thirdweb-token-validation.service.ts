@@ -24,15 +24,13 @@ export class ThirdwebTokenValidationService {
     this.secretKey = process.env.THIRDWEB_SECRET_KEY || '';
     this.clientId = process.env.THIRDWEB_CLIENT_ID || '';
     this.domain = process.env.THIRDWEB_AUTH_DOMAIN || 'localhost:3000';
-    
+
     if (this.secretKey && this.clientId) {
       this.thirdwebClient = createThirdwebClient({
         secretKey: this.secretKey,
         clientId: this.clientId,
       });
 
-      // Initialize auth with a dummy admin account for JWT verification
-      // In production, you might want to use a proper admin private key
       this.auth = createAuth({
         domain: this.domain,
         client: this.thirdwebClient,
@@ -72,7 +70,6 @@ export class ThirdwebTokenValidationService {
         };
       }
 
-      // Validate the token claims structure using our value object
       try {
         const tokenClaims = new ThirdwebTokenClaims(
           verificationResult.parsedJWT,
@@ -91,7 +88,6 @@ export class ThirdwebTokenValidationService {
               : 'Invalid token claims',
         };
       }
-
     } catch (error) {
       return {
         isValid: false,
@@ -114,7 +110,6 @@ export class ThirdwebTokenValidationService {
       return result;
     }
 
-    // Additional validation based on options
     if (options?.audience && result.claims.aud !== options.audience) {
       return {
         isValid: false,
