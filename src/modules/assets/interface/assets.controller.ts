@@ -7,7 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { CreateAssetUseCase } from '../application/use-cases/create-asset.use-case';
 import { CreateAssetDto } from '../application/dtos/create-asset.dto';
-import { PrivyAuthGuard } from '../../auth/interface/guards/privy-auth.guard';
+import { ThirdwebAuthGuard } from '../../auth/interface/guards/thirdweb-auth.guard';
 import { CurrentUser } from '../../auth/interface/decorators/current-user.decorator';
 import { UserEntity } from '../../auth/domain/entities/user.entity';
 
@@ -17,7 +17,7 @@ export class AssetsController {
   constructor(private readonly createAssetUseCase: CreateAssetUseCase) {}
 
   @Post()
-  @UseGuards(PrivyAuthGuard)
+  @UseGuards(ThirdwebAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new asset' })
   @ApiResponse({
@@ -30,7 +30,7 @@ export class AssetsController {
     @CurrentUser() user: UserEntity,
   ) {
     // You can use the user information here if needed
-    console.log(`Asset being created by user: ${user.privyId}`);
+    console.log(`Asset being created by user: ${user.thirdwebId}`);
     return this.createAssetUseCase.execute(createAssetDto);
   }
 
@@ -46,7 +46,7 @@ export class AssetsController {
   }
 
   @Get('protected')
-  @UseGuards(PrivyAuthGuard)
+  @UseGuards(ThirdwebAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user-specific assets (protected endpoint)' })
   @ApiResponse({
@@ -58,7 +58,7 @@ export class AssetsController {
     return {
       message: 'This would return assets for the authenticated user',
       userId: user.id,
-      privyId: user.privyId,
+      thirdwebId: user.thirdwebId,
     };
   }
 }

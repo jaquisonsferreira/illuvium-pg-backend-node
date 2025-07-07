@@ -5,24 +5,16 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { WebhooksController } from './webhooks.controller';
-import { ProcessPrivyWebhookUseCase } from '../../application/use-cases/process-privy-webhook.use-case';
 import { ProcessThirdwebWebhookUseCase } from '../../application/use-cases/process-thirdweb-webhook.use-case';
 
 describe('WebhooksController', () => {
   let controller: WebhooksController;
-  let processPrivyWebhookUseCase: jest.Mocked<ProcessPrivyWebhookUseCase>;
   let processThirdwebWebhookUseCase: jest.Mocked<ProcessThirdwebWebhookUseCase>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [WebhooksController],
       providers: [
-        {
-          provide: ProcessPrivyWebhookUseCase,
-          useValue: {
-            execute: jest.fn(),
-          },
-        },
         {
           provide: ProcessThirdwebWebhookUseCase,
           useValue: {
@@ -33,7 +25,6 @@ describe('WebhooksController', () => {
     }).compile();
 
     controller = module.get<WebhooksController>(WebhooksController);
-    processPrivyWebhookUseCase = module.get(ProcessPrivyWebhookUseCase);
     processThirdwebWebhookUseCase = module.get(ProcessThirdwebWebhookUseCase);
 
     jest.spyOn(Logger.prototype, 'log').mockImplementation();
@@ -43,106 +34,6 @@ describe('WebhooksController', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
-  });
-
-  describe('receivePrivyWebhook', () => {
-    const validHeaders = {
-      'svix-id': 'webhook-id',
-      'svix-timestamp': '1609459200',
-      'svix-signature': 'valid-signature',
-      'content-type': 'application/json',
-    };
-
-    const mockRequest = {
-      rawBody: Buffer.from(
-        '{"type": "user.created", "user": {"id": "user123"}}',
-      ),
-    } as any;
-
-    it('should process Privy webhook successfully', async () => {
-      const mockResult = {
-        success: true,
-        message: 'Webhook processed successfully',
-        eventType: 'user.created',
-        userId: 'user123',
-      };
-
-      processPrivyWebhookUseCase.execute.mockResolvedValue(mockResult);
-
-      const result = await controller.receivePrivyWebhook(
-        mockRequest,
-        validHeaders,
-      );
-
-      expect(result).toEqual({
-        message: 'Webhook processed successfully',
-        success: true,
-      });
-
-      expect(processPrivyWebhookUseCase.execute).toHaveBeenCalledWith({
-        payload: '{"type": "user.created", "user": {"id": "user123"}}',
-        headers: validHeaders,
-      });
-    });
-
-    it('should throw BadRequestException when raw body is missing', async () => {
-      const requestWithoutBody = { rawBody: null } as any;
-
-      await expect(
-        controller.receivePrivyWebhook(requestWithoutBody, validHeaders),
-      ).rejects.toThrow(BadRequestException);
-
-      expect(Logger.prototype.error).toHaveBeenCalledWith(
-        'Raw body not available for webhook signature verification',
-      );
-    });
-
-    it('should throw BadRequestException when required headers are missing', async () => {
-      const invalidHeaders = {
-        'content-type': 'application/json',
-      };
-
-      await expect(
-        controller.receivePrivyWebhook(mockRequest, invalidHeaders),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw InternalServerErrorException when use case fails', async () => {
-      const mockResult = {
-        success: false,
-        message: 'Processing failed',
-      };
-
-      processPrivyWebhookUseCase.execute.mockResolvedValue(mockResult);
-
-      await expect(
-        controller.receivePrivyWebhook(mockRequest, validHeaders),
-      ).rejects.toThrow(InternalServerErrorException);
-
-      expect(Logger.prototype.error).toHaveBeenCalledWith(
-        'Webhook processing failed',
-        expect.objectContaining({
-          message: 'Processing failed',
-        }),
-      );
-    });
-
-    it('should handle unexpected errors', async () => {
-      processPrivyWebhookUseCase.execute.mockRejectedValue(
-        new Error('Unexpected error'),
-      );
-
-      await expect(
-        controller.receivePrivyWebhook(mockRequest, validHeaders),
-      ).rejects.toThrow(InternalServerErrorException);
-
-      expect(Logger.prototype.error).toHaveBeenCalledWith(
-        'Error in webhook controller',
-        expect.objectContaining({
-          error: 'Unexpected error',
-        }),
-      );
-    });
   });
 
   describe('receiveThirdwebWebhook', () => {
@@ -319,32 +210,6 @@ describe('WebhooksController', () => {
           bodyKeys: [],
         }),
       );
-    });
-  });
-
-  describe('validateWebhookHeaders', () => {
-    it('should pass validation with all required Privy headers', () => {
-      const validHeaders = {
-        'svix-id': 'webhook-id',
-        'svix-timestamp': '1609459200',
-        'svix-signature': 'valid-signature',
-      };
-
-      expect(() => {
-        (controller as any).validateWebhookHeaders(validHeaders);
-      }).not.toThrow();
-    });
-
-    it('should pass validation with alternative header names', () => {
-      const validHeaders = {
-        'webhook-id': 'webhook-id',
-        'webhook-timestamp': '1609459200',
-        'webhook-signature': 'valid-signature',
-      };
-
-      expect(() => {
-        (controller as any).validateWebhookHeaders(validHeaders);
-      }).not.toThrow();
     });
   });
 
