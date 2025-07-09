@@ -100,7 +100,9 @@ describe('BurnNftUseCase', () => {
     const result = await useCase.execute(request);
 
     expect(result).toBe(mockOperation);
-    expect(mockApiKeyRepository.findById).toHaveBeenCalledWith(request.apiKeyId);
+    expect(mockApiKeyRepository.findById).toHaveBeenCalledWith(
+      request.apiKeyId,
+    );
     expect(mockNftOperationRepository.create).toHaveBeenCalledWith({
       apiKeyId: request.apiKeyId,
       operationType: NftOperationType.BURN,
@@ -152,7 +154,9 @@ describe('BurnNftUseCase', () => {
     };
 
     mockApiKeyRepository.findById.mockResolvedValue(mockApiKey);
-    mockNftOperationRepository.create.mockRejectedValue(new Error('Database error'));
+    mockNftOperationRepository.create.mockRejectedValue(
+      new Error('Database error'),
+    );
 
     await expect(useCase.execute(request)).rejects.toThrow('Database error');
   });

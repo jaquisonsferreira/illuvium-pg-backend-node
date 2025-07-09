@@ -24,37 +24,66 @@ export async function createChatNotificationsTable(db: Kysely<Database>) {
     .addColumn('metadata', 'jsonb')
     .execute();
 
-  // Create indexes
-  await db.schema
-    .createIndex('idx_chat_notifications_user_id')
-    .on('chat_notifications')
-    .column('user_id')
-    .execute();
+  // Create indexes only if they don't exist
+  try {
+    await db.schema
+      .createIndex('idx_chat_notifications_user_id')
+      .ifNotExists()
+      .on('chat_notifications')
+      .column('user_id')
+      .execute();
+  } catch {
+    console.log('idx_chat_notifications_user_id already exists, skipping...');
+  }
 
-  await db.schema
-    .createIndex('idx_chat_notifications_is_read')
-    .on('chat_notifications')
-    .column('is_read')
-    .execute();
+  try {
+    await db.schema
+      .createIndex('idx_chat_notifications_is_read')
+      .ifNotExists()
+      .on('chat_notifications')
+      .column('is_read')
+      .execute();
+  } catch {
+    console.log('idx_chat_notifications_is_read already exists, skipping...');
+  }
 
-  await db.schema
-    .createIndex('idx_chat_notifications_type')
-    .on('chat_notifications')
-    .column('type')
-    .execute();
+  try {
+    await db.schema
+      .createIndex('idx_chat_notifications_type')
+      .ifNotExists()
+      .on('chat_notifications')
+      .column('type')
+      .execute();
+  } catch {
+    console.log('idx_chat_notifications_type already exists, skipping...');
+  }
 
-  await db.schema
-    .createIndex('idx_chat_notifications_created_at')
-    .on('chat_notifications')
-    .column('created_at')
-    .execute();
+  try {
+    await db.schema
+      .createIndex('idx_chat_notifications_created_at')
+      .ifNotExists()
+      .on('chat_notifications')
+      .column('created_at')
+      .execute();
+  } catch {
+    console.log(
+      'idx_chat_notifications_created_at already exists, skipping...',
+    );
+  }
 
   // Composite index for user notifications
-  await db.schema
-    .createIndex('idx_chat_notifications_user_read_created')
-    .on('chat_notifications')
-    .columns(['user_id', 'is_read', 'created_at'])
-    .execute();
+  try {
+    await db.schema
+      .createIndex('idx_chat_notifications_user_read_created')
+      .ifNotExists()
+      .on('chat_notifications')
+      .columns(['user_id', 'is_read', 'created_at'])
+      .execute();
+  } catch {
+    console.log(
+      'idx_chat_notifications_user_read_created already exists, skipping...',
+    );
+  }
 
   console.log('✅ Chat notifications table created successfully');
 }

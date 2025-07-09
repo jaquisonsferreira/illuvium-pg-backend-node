@@ -1,8 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LinkedAccountRepository } from './linked-account.repository';
 import { DATABASE_CONNECTION } from '@shared/infrastructure/database';
-import { Kysely } from 'kysely';
-import { Database } from '@shared/infrastructure/database/database.types';
 import { LinkedAccountEntity } from '../../domain/entities/linked-account.entity';
 import { sql } from 'kysely';
 
@@ -117,7 +115,7 @@ describe('LinkedAccountRepository', () => {
 
   describe('findByTypeAndIdentifier', () => {
     it('should return linked account by type and identifier', async () => {
-      const mockQueryBuilder = mockDb.selectFrom('linked_accounts') as any;
+      const mockQueryBuilder = mockDb.selectFrom('linked_accounts');
       mockQueryBuilder.executeTakeFirst.mockResolvedValue(
         mockLinkedAccountData,
       );
@@ -147,7 +145,7 @@ describe('LinkedAccountRepository', () => {
     });
 
     it('should return null when account not found', async () => {
-      const mockQueryBuilder = mockDb.selectFrom('linked_accounts') as any;
+      const mockQueryBuilder = mockDb.selectFrom('linked_accounts');
       mockQueryBuilder.executeTakeFirst.mockResolvedValue(undefined);
 
       const result = await repository.findByTypeAndIdentifier(
@@ -161,7 +159,7 @@ describe('LinkedAccountRepository', () => {
 
   describe('findWalletsByOwner', () => {
     it('should return wallet accounts for a user', async () => {
-      const mockQueryBuilder = mockDb.selectFrom('linked_accounts') as any;
+      const mockQueryBuilder = mockDb.selectFrom('linked_accounts');
       mockQueryBuilder.execute.mockResolvedValue([mockLinkedAccountData]);
 
       const result = await repository.findWalletsByOwner('user123');
@@ -195,7 +193,7 @@ describe('LinkedAccountRepository', () => {
         identifier: 'test@example.com',
         email_address: 'test@example.com',
       };
-      const mockQueryBuilder = mockDb.selectFrom('linked_accounts') as any;
+      const mockQueryBuilder = mockDb.selectFrom('linked_accounts');
       mockQueryBuilder.executeTakeFirst.mockResolvedValue(emailData);
 
       const result = await repository.findEmailByOwner('user123');
@@ -213,7 +211,7 @@ describe('LinkedAccountRepository', () => {
     });
 
     it('should return null when no email account found', async () => {
-      const mockQueryBuilder = mockDb.selectFrom('linked_accounts') as any;
+      const mockQueryBuilder = mockDb.selectFrom('linked_accounts');
       mockQueryBuilder.executeTakeFirst.mockResolvedValue(undefined);
 
       const result = await repository.findEmailByOwner('user123');
@@ -224,7 +222,7 @@ describe('LinkedAccountRepository', () => {
 
   describe('save', () => {
     it('should save a new linked account', async () => {
-      const mockQueryBuilder = mockDb.insertInto('linked_accounts') as any;
+      const mockQueryBuilder = mockDb.insertInto('linked_accounts');
       mockQueryBuilder.executeTakeFirstOrThrow.mockResolvedValue(
         mockLinkedAccountData,
       );
@@ -249,7 +247,7 @@ describe('LinkedAccountRepository', () => {
         columns: jest.fn().mockReturnThis(),
         doUpdateSet: jest.fn().mockReturnThis(),
       };
-      const mockQueryBuilder = mockDb.insertInto('linked_accounts') as any;
+      const mockQueryBuilder = mockDb.insertInto('linked_accounts');
       mockQueryBuilder.onConflict.mockImplementation((callback) => {
         callback(mockConflictBuilder);
         return mockQueryBuilder;
@@ -274,7 +272,7 @@ describe('LinkedAccountRepository', () => {
 
   describe('delete', () => {
     it('should delete a linked account', async () => {
-      const mockQueryBuilder = mockDb.deleteFrom('linked_accounts') as any;
+      const mockQueryBuilder = mockDb.deleteFrom('linked_accounts');
       mockQueryBuilder.execute.mockResolvedValue({ numDeletedRows: BigInt(1) });
 
       await repository.delete(
@@ -304,7 +302,7 @@ describe('LinkedAccountRepository', () => {
 
   describe('deleteAllByOwner', () => {
     it('should delete all linked accounts for a user', async () => {
-      const mockQueryBuilder = mockDb.deleteFrom('linked_accounts') as any;
+      const mockQueryBuilder = mockDb.deleteFrom('linked_accounts');
       mockQueryBuilder.execute.mockResolvedValue({ numDeletedRows: BigInt(2) });
 
       await repository.deleteAllByOwner('user123');

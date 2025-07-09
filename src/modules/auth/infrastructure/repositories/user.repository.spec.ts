@@ -1,16 +1,13 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRepository } from './user.repository';
 import { UserEntity, UserProps } from '../../domain/entities/user.entity';
 import {
   User as DbUser,
-  Database,
   NewUser,
   UserUpdate,
   RepositoryFactory,
   BaseRepository,
   DATABASE_CONNECTION,
-  Kysely,
 } from '@shared/infrastructure/database';
 import { sql } from 'kysely';
 
@@ -35,7 +32,8 @@ describe('UserRepository', () => {
 
   const mockDbUser: DbUser = {
     id: 'test-id',
-    privy_id: 'test-privy-id',
+    thirdweb_id: 'test-thirdweb-id',
+    wallet_address: '0x1234567890123456789012345678901234567890',
     nickname: 'testuser',
     avatar_url: 'https://example.com/avatar.jpg',
     experiments: null,
@@ -53,7 +51,8 @@ describe('UserRepository', () => {
 
   const mockUserProps: UserProps = {
     id: 'test-id',
-    privyId: 'test-privy-id',
+    thirdwebId: 'test-thirdweb-id',
+    walletAddress: '0x1234567890123456789012345678901234567890',
     nickname: 'testuser',
     avatarUrl: 'https://example.com/avatar.jpg',
     isActive: true,
@@ -96,63 +95,6 @@ describe('UserRepository', () => {
     jest.clearAllMocks();
   });
 
-  describe('findByPrivyId', () => {
-    it('should return user entity when user is found', async () => {
-      const mockExecuteResult = {
-        rows: [mockDbUser],
-        numAffectedRows: BigInt(1),
-        insertId: BigInt(0),
-      };
-
-      const mockExecute = jest.fn().mockResolvedValue(mockExecuteResult);
-      mockSql.mockReturnValue({
-        execute: mockExecute,
-      } as any);
-
-      const result = await repository.findByPrivyId('test-privy-id');
-
-      expect(result).toBeInstanceOf(UserEntity);
-      expect(result?.id).toBe('test-id');
-      expect(result?.privyId).toBe('test-privy-id');
-      expect(result?.nickname).toBe('testuser');
-      expect(result?.avatarUrl).toBe('https://example.com/avatar.jpg');
-      expect(result?.isActive).toBe(true);
-      expect(mockExecute).toHaveBeenCalledWith(mockDb);
-    });
-
-    it('should return null when user is not found', async () => {
-      const mockExecuteResult = {
-        rows: [],
-        numAffectedRows: BigInt(0),
-        insertId: BigInt(0),
-      };
-
-      const mockExecute = jest.fn().mockResolvedValue(mockExecuteResult);
-      mockSql.mockReturnValue({
-        execute: mockExecute,
-      } as any);
-
-      const result = await repository.findByPrivyId('non-existent-privy-id');
-
-      expect(result).toBeNull();
-      expect(mockExecute).toHaveBeenCalledWith(mockDb);
-    });
-
-    it('should handle database errors', async () => {
-      const mockExecute = jest
-        .fn()
-        .mockRejectedValue(new Error('Database error'));
-      mockSql.mockReturnValue({
-        execute: mockExecute,
-      } as any);
-
-      await expect(repository.findByPrivyId('test-privy-id')).rejects.toThrow(
-        'Database error',
-      );
-      expect(mockExecute).toHaveBeenCalledWith(mockDb);
-    });
-  });
-
   describe('findById', () => {
     it('should return user entity when user is found', async () => {
       mockBaseRepository.findById.mockResolvedValue(mockDbUser);
@@ -161,7 +103,10 @@ describe('UserRepository', () => {
 
       expect(result).toBeInstanceOf(UserEntity);
       expect(result?.id).toBe('test-id');
-      expect(result?.privyId).toBe('test-privy-id');
+      expect(result?.thirdwebId).toBe('test-thirdweb-id');
+      expect(result?.walletAddress).toBe(
+        '0x1234567890123456789012345678901234567890',
+      );
       expect(mockBaseRepository.findById).toHaveBeenCalledWith('test-id');
     });
 
@@ -250,7 +195,8 @@ describe('UserRepository', () => {
   describe('create', () => {
     it('should create and return new user entity', async () => {
       const userData = {
-        privyId: 'new-privy-id',
+        thirdwebId: 'new-thirdweb-id',
+        walletAddress: '0x1111111111111111111111111111111111111111',
         nickname: 'newuser',
         avatarUrl: 'https://example.com/new-avatar.jpg',
         isActive: true,
@@ -258,7 +204,8 @@ describe('UserRepository', () => {
 
       const createdDbUser: DbUser = {
         id: 'mocked-uuid',
-        privy_id: 'new-privy-id',
+        thirdweb_id: 'new-thirdweb-id',
+        wallet_address: '0x1111111111111111111111111111111111111111',
         nickname: 'newuser',
         avatar_url: 'https://example.com/new-avatar.jpg',
         experiments: null,
@@ -285,7 +232,10 @@ describe('UserRepository', () => {
 
       expect(result).toBeInstanceOf(UserEntity);
       expect(result.id).toBe('mocked-uuid');
-      expect(result.privyId).toBe('new-privy-id');
+      expect(result.thirdwebId).toBe('new-thirdweb-id');
+      expect(result.walletAddress).toBe(
+        '0x1111111111111111111111111111111111111111',
+      );
       expect(result.nickname).toBe('newuser');
       expect(result.avatarUrl).toBe('https://example.com/new-avatar.jpg');
       expect(result.isActive).toBe(true);
@@ -295,13 +245,15 @@ describe('UserRepository', () => {
 
     it('should create user with optional fields as null', async () => {
       const userData = {
-        privyId: 'new-privy-id',
+        thirdwebId: 'new-thirdweb-id-2',
+        walletAddress: '0x2222222222222222222222222222222222222222',
         isActive: true,
       };
 
       const createdDbUser: DbUser = {
         id: 'mocked-uuid',
-        privy_id: 'new-privy-id',
+        thirdweb_id: 'new-thirdweb-id-2',
+        wallet_address: '0x2222222222222222222222222222222222222222',
         nickname: null,
         avatar_url: null,
         experiments: null,
@@ -335,7 +287,8 @@ describe('UserRepository', () => {
 
     it('should handle database errors during creation', async () => {
       const userData = {
-        privyId: 'new-privy-id',
+        thirdwebId: 'new-thirdweb-id-error',
+        walletAddress: '0x3333333333333333333333333333333333333333',
         isActive: true,
       };
 
@@ -359,7 +312,10 @@ describe('UserRepository', () => {
 
       expect(result).toBeInstanceOf(UserEntity);
       expect(result.id).toBe('test-id');
-      expect(result.privyId).toBe('test-privy-id');
+      expect(result.thirdwebId).toBe('test-thirdweb-id');
+      expect(result.walletAddress).toBe(
+        '0x1234567890123456789012345678901234567890',
+      );
       expect(result.nickname).toBe('testuser');
       expect(result.avatarUrl).toBe('https://example.com/avatar.jpg');
       expect(result.isActive).toBe(true);

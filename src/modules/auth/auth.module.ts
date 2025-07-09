@@ -5,8 +5,9 @@ import { ManageLinkedAccountsUseCase } from './application/use-cases/manage-link
 import { TokenValidationDomainService } from './domain/services/token-validation.domain-service';
 import { UserRepository } from './infrastructure/repositories/user.repository';
 import { LinkedAccountRepository } from './infrastructure/repositories/linked-account.repository';
-import { PrivyTokenValidationService } from './infrastructure/services/privy-token-validation.service';
-import { PrivyAuthGuard } from './interface/guards/privy-auth.guard';
+import { ThirdwebTokenValidationService } from './infrastructure/services/thirdweb-token-validation.service';
+import { ThirdwebAuthGuard } from './interface/guards/thirdweb-auth.guard';
+
 import {
   USER_REPOSITORY_TOKEN,
   LINKED_ACCOUNT_REPOSITORY_TOKEN,
@@ -24,7 +25,7 @@ import {
     TokenValidationDomainService,
 
     // Infrastructure Services
-    PrivyTokenValidationService,
+    ThirdwebTokenValidationService,
 
     // Repositories
     {
@@ -37,10 +38,10 @@ import {
     },
 
     // Guards
-    PrivyAuthGuard,
+    ThirdwebAuthGuard,
   ],
   exports: [
-    PrivyAuthGuard,
+    ThirdwebAuthGuard,
     ValidateTokenUseCase,
     ManageLinkedAccountsUseCase,
     USER_REPOSITORY_TOKEN,

@@ -12,19 +12,19 @@ import {
   Req,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { ProcessPrivyWebhookUseCase } from '../../application/use-cases/process-privy-webhook.use-case';
+import { ProcessThirdwebWebhookUseCase } from '../../application/use-cases/process-thirdweb-webhook.use-case';
 
 @Controller('webhooks')
 export class WebhooksController {
   private readonly logger = new Logger(WebhooksController.name);
 
   constructor(
-    private readonly processPrivyWebhookUseCase: ProcessPrivyWebhookUseCase,
+    private readonly processThirdwebWebhookUseCase: ProcessThirdwebWebhookUseCase,
   ) {}
 
-  @Post('privy')
+  @Post('thirdweb')
   @HttpCode(HttpStatus.OK)
-  async receivePrivyWebhook(
+  async receiveThirdwebWebhook(
     @Req() request: RawBodyRequest<Request>,
     @Headers() headers: Record<string, string>,
   ): Promise<{ message: string; success: boolean }> {
@@ -43,15 +43,15 @@ export class WebhooksController {
 
       const payload = rawBody.toString('utf8');
 
-      this.logger.log('Received Privy webhook', {
+      this.logger.log('Received Thirdweb webhook', {
         contentLength: payload.length,
         userAgent: headers['user-agent'],
         contentType: headers['content-type'],
       });
 
-      this.validateWebhookHeaders(headers);
+      this.validateThirdwebWebhookHeaders(headers);
 
-      const result = await this.processPrivyWebhookUseCase.execute({
+      const result = await this.processThirdwebWebhookUseCase.execute({
         payload,
         headers,
       });
@@ -59,14 +59,14 @@ export class WebhooksController {
       const processingTime = Date.now() - startTime;
 
       if (!result.success) {
-        this.logger.error('Webhook processing failed', {
+        this.logger.error('Thirdweb webhook processing failed', {
           message: result.message,
           processingTimeMs: processingTime,
         });
         throw new InternalServerErrorException(result.message);
       }
 
-      this.logger.log('Webhook processed successfully', {
+      this.logger.log('Thirdweb webhook processed successfully', {
         eventType: result.eventType,
         userId: result.userId,
         processingTimeMs: processingTime,
@@ -79,7 +79,7 @@ export class WebhooksController {
     } catch (error) {
       const processingTime = Date.now() - startTime;
 
-      this.logger.error('Error in webhook controller', {
+      this.logger.error('Error in Thirdweb webhook controller', {
         error: error.message,
         processingTimeMs: processingTime,
       });
@@ -92,23 +92,24 @@ export class WebhooksController {
       }
 
       throw new InternalServerErrorException(
-        'Internal server error processing webhook',
+        'Internal server error processing Thirdweb webhook',
       );
     }
   }
 
-  private validateWebhookHeaders(headers: Record<string, string>): void {
+  private validateThirdwebWebhookHeaders(
+    headers: Record<string, string>,
+  ): void {
     const requiredHeaders = [
-      ['svix-id', 'webhook-id'],
-      ['svix-timestamp', 'webhook-timestamp'],
-      ['svix-signature', 'webhook-signature'],
+      ['x-thirdweb-signature', 'x-signature'],
+      ['x-thirdweb-timestamp', 'timestamp'],
     ];
 
     for (const headerOptions of requiredHeaders) {
       const hasAnyHeader = headerOptions.some((header) => headers[header]);
       if (!hasAnyHeader) {
         throw new BadRequestException(
-          `Missing required webhook header. Expected one of: ${headerOptions.join(', ')}`,
+          `Missing required Thirdweb webhook header. Expected one of: ${headerOptions.join(', ')}`,
         );
       }
     }
