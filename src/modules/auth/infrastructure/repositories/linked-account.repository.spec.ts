@@ -15,7 +15,7 @@ const mockSql = sql as jest.MockedFunction<typeof sql>;
 
 describe('LinkedAccountRepository', () => {
   let repository: LinkedAccountRepository;
-  let mockDb: jest.Mocked<Kysely<Database>>;
+  let mockDb: any;
 
   const mockLinkedAccountData = {
     id: '123e4567-e89b-12d3-a456-426614174000',

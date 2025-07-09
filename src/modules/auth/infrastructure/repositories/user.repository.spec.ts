@@ -27,7 +27,7 @@ const mockSql = sql as jest.MockedFunction<typeof sql>;
 
 describe('UserRepository', () => {
   let repository: UserRepository;
-  let mockDb: jest.Mocked<Kysely<Database>>;
+  let mockDb: any;
   let mockRepositoryFactory: jest.Mocked<RepositoryFactory>;
   let mockBaseRepository: jest.Mocked<
     BaseRepository<'users', DbUser, NewUser, UserUpdate>
@@ -62,7 +62,7 @@ describe('UserRepository', () => {
   };
 
   beforeEach(async () => {
-    mockDb = {} as any;
+    mockDb = {};
 
     mockBaseRepository = {
       findById: jest.fn(),

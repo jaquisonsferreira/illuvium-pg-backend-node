@@ -10,6 +10,7 @@ import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './shared/infrastructure/database/database.module';
 import { CacheModule } from './shared/infrastructure/cache/cache.module';
 import { ConfigModule, RateLimitModule } from './shared/infrastructure/config';
+import { DeveloperModule } from './modules/developer/developer.module';
 
 import { ObservabilityModule } from './modules/observability/observability.module';
 
@@ -28,6 +29,7 @@ import { ObservabilityModule } from './modules/observability/observability.modul
     ObservabilityModule,
     AuthModule,
     AuditModule,
+    DeveloperModule,
   ],
   controllers: [AppController],
   providers: [AppService, AssetsModule, WebhooksModule],
