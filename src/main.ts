@@ -73,7 +73,7 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api');
 
-  const port = configService.get<number>('PORT', 3000);
+  const port = configService.get<number>('PORT', 5000);
 
   // Configure and verify the database schema
   try {

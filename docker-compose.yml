@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   cockroachdb:
     image: cockroachdb/cockroach:v22.2.8
