@@ -16,13 +16,28 @@ export class BlockchainEventBridgeService {
   private readonly logger = new Logger(BlockchainEventBridgeService.name);
   private readonly eventBridgeClient: EventBridgeClient;
   private readonly eventBusName: string;
+  private readonly isDisabled: boolean;
 
   constructor(private readonly configService: ConfigService) {
+    const isDisabled = this.configService.get('IS_DISABLED_EVENTBRIDGE', false);
+
+    this.isDisabled = isDisabled;
+
+    if (this.isDisabled) {
+      this.logger.warn(
+        'EventBridge disabled - running in development mode without valid AWS credentials',
+      );
+      return;
+    }
+
+    const accessKeyId = this.configService.get('AWS_ACCESS_KEY_ID');
+    const secretAccessKey = this.configService.get('AWS_SECRET_ACCESS_KEY');
+
     this.eventBridgeClient = new EventBridgeClient({
       region: this.configService.get('AWS_REGION', 'us-east-1'),
       credentials: {
-        accessKeyId: this.configService.get('AWS_ACCESS_KEY_ID')!,
-        secretAccessKey: this.configService.get('AWS_SECRET_ACCESS_KEY')!,
+        accessKeyId: accessKeyId!,
+        secretAccessKey: secretAccessKey!,
       },
     });
 
@@ -33,6 +48,18 @@ export class BlockchainEventBridgeService {
   }
 
   async publishEvent(event: BlockchainEvent): Promise<EventProcessingResult> {
+    if (this.isDisabled) {
+      this.logger.debug(
+        `EventBridge disabled - skipping event: ${event.eventType}`,
+      );
+      return {
+        success: true,
+        eventId: 'disabled-mode',
+        eventType: event.eventType,
+        processedAt: new Date(),
+      };
+    }
+
     try {
       const eventEntry = this.createEventEntry(event);
 
@@ -76,6 +103,18 @@ export class BlockchainEventBridgeService {
   async publishEvents(
     events: BlockchainEvent[],
   ): Promise<EventProcessingResult[]> {
+    if (this.isDisabled) {
+      this.logger.debug(
+        `EventBridge disabled - skipping ${events.length} events`,
+      );
+      return events.map((event) => ({
+        success: true,
+        eventId: 'disabled-mode',
+        eventType: event.eventType,
+        processedAt: new Date(),
+      }));
+    }
+
     const batchSize = 10;
     const results: EventProcessingResult[] = [];
 
@@ -91,6 +130,15 @@ export class BlockchainEventBridgeService {
   private async publishEventBatch(
     events: BlockchainEvent[],
   ): Promise<EventProcessingResult[]> {
+    if (this.isDisabled) {
+      return events.map((event) => ({
+        success: true,
+        eventId: 'disabled-mode',
+        eventType: event.eventType,
+        processedAt: new Date(),
+      }));
+    }
+
     try {
       const eventEntries = events.map((event) => this.createEventEntry(event));
 
@@ -193,6 +241,13 @@ export class BlockchainEventBridgeService {
   }
 
   async testConnection(): Promise<boolean> {
+    if (this.isDisabled) {
+      this.logger.log(
+        'EventBridge connection test: DISABLED (development mode)',
+      );
+      return true; // Considera sucesso em modo desabilitado
+    }
+
     try {
       const testEvent: BlockchainEvent = {
         eventType: 'blockchain.contract.discovered',
