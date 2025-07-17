@@ -396,8 +396,7 @@ describe('ThirdwebWebhookMapperService', () => {
         walletAddress: '0x742d35Cc6635C0532925a3b8D6e4C2D16C6Db8c1',
         chainId: '137',
         network: 'polygon',
-        accountFactoryAddress:
-          '0x1234567890123456789012345678901234567890',
+        accountFactoryAddress: '0x1234567890123456789012345678901234567890',
       });
     });
 
@@ -409,8 +408,10 @@ describe('ThirdwebWebhookMapperService', () => {
           wallet_address: '0x742d35Cc6635C0532925a3b8D6e4C2D16C6Db8c1',
           chain_id: '137',
           network: 'polygon',
-          signature: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1b',
-          message: 'I am signing this message to authenticate with the dApp. Nonce: 12345 Chain ID: 137',
+          signature:
+            '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1b',
+          message:
+            'I am signing this message to authenticate with the dApp. Nonce: 12345 Chain ID: 137',
         },
       };
 
@@ -423,8 +424,10 @@ describe('ThirdwebWebhookMapperService', () => {
         walletAddress: '0x742d35Cc6635C0532925a3b8D6e4C2D16C6Db8c1',
         chainId: '137',
         network: 'polygon',
-        signature: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1b',
-        message: 'I am signing this message to authenticate with the dApp. Nonce: 12345 Chain ID: 137',
+        signature:
+          '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1b',
+        message:
+          'I am signing this message to authenticate with the dApp. Nonce: 12345 Chain ID: 137',
       });
     });
   });
