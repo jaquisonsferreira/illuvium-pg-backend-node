@@ -12,6 +12,12 @@ import { createChatRoomsTable } from './tables/create-chat-rooms-table';
 import { createChatMessagesTable } from './tables/create-chat-messages-table';
 import { createChatNotificationsTable } from './tables/create-chat-notifications-table';
 import { createWebhookSubscriptionsTable } from './tables/create-webhook-subscriptions-table';
+import { createSeasonsTable } from './tables/create-seasons-table';
+import { createShardBalancesTable } from './tables/create-shard-balances-table';
+import { createShardEarningHistoryTable } from './tables/create-shard-earning-history-table';
+import { createReferralsTable } from './tables/create-referrals-table';
+import { createVaultPositionsTable } from './tables/create-vault-positions-table';
+import { createDeveloperContributionsTable } from './tables/create-developer-contributions-table';
 
 export const migrations = [
   createAssetsTable,
@@ -28,4 +34,10 @@ export const migrations = [
   createChatMessagesTable,
   createChatNotificationsTable,
   createWebhookSubscriptionsTable,
+  createSeasonsTable,
+  createShardBalancesTable,
+  createShardEarningHistoryTable,
+  createReferralsTable,
+  createVaultPositionsTable,
+  createDeveloperContributionsTable,
 ];
