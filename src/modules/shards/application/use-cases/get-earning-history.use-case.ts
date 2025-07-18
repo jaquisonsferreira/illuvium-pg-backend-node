@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { IShardEarningHistoryRepository } from '../../domain/repositories/shard-earning-history.repository.interface';
 import { ISeasonRepository } from '../../domain/repositories/season.repository.interface';
 
@@ -65,7 +65,9 @@ interface DailyAveragesDto {
 @Injectable()
 export class GetEarningHistoryUseCase {
   constructor(
+    @Inject('IShardEarningHistoryRepository')
     private readonly shardEarningHistoryRepository: IShardEarningHistoryRepository,
+    @Inject('ISeasonRepository')
     private readonly seasonRepository: ISeasonRepository,
   ) {}
 

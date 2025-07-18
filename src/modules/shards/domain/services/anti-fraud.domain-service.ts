@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IShardEarningHistoryRepository } from '../repositories/shard-earning-history.repository.interface';
 import { ANTI_FRAUD_CONFIG } from '../../constants';
@@ -28,6 +28,7 @@ export class AntiFraudDomainService {
 
   constructor(
     private readonly configService: ConfigService,
+    @Inject('IShardEarningHistoryRepository')
     private readonly shardEarningHistoryRepo: IShardEarningHistoryRepository,
   ) {
     this.minTransactions = this.configService.get(

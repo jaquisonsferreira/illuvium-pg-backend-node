@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ISeasonRepository } from '../../domain/repositories/season.repository.interface';
 import { SeasonEntity } from '../../domain/entities/season.entity';
 
@@ -46,7 +46,10 @@ interface SeasonStats {
 export class ManageSeasonUseCase {
   private readonly logger = new Logger(ManageSeasonUseCase.name);
 
-  constructor(private readonly seasonRepository: ISeasonRepository) {}
+  constructor(
+    @Inject('ISeasonRepository')
+    private readonly seasonRepository: ISeasonRepository,
+  ) {}
 
   async createSeason(dto: CreateSeasonDto): Promise<SeasonEntity> {
     const { name, chain, startDate, endDate, config } = dto;

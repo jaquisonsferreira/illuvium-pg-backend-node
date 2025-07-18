@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { IReferralRepository } from '../../domain/repositories/referral.repository.interface';
 import { IShardBalanceRepository } from '../../domain/repositories/shard-balance.repository.interface';
 import { ReferralEntity } from '../../domain/entities/referral.entity';
@@ -38,7 +38,9 @@ export class ManageReferralUseCase {
   private readonly logger = new Logger(ManageReferralUseCase.name);
 
   constructor(
+    @Inject('IReferralRepository')
     private readonly referralRepository: IReferralRepository,
+    @Inject('IShardBalanceRepository')
     private readonly shardBalanceRepository: IShardBalanceRepository,
   ) {}
 

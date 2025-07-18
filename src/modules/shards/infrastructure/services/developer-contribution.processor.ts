@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { IDeveloperContributionRepository } from '../../domain/repositories/developer-contribution.repository.interface';
 import { AntiFraudDomainService } from '../../domain/services/anti-fraud.domain-service';
@@ -40,6 +40,7 @@ export class DeveloperContributionProcessor {
   };
 
   constructor(
+    @Inject('IDeveloperContributionRepository')
     private readonly developerContributionRepository: IDeveloperContributionRepository,
     private readonly antiFraudService: AntiFraudDomainService,
     private readonly cacheService: CacheService,

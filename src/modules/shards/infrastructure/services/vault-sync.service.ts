@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { Cron, CronExpression } from '@shared/decorators/cron.decorator';
@@ -25,6 +25,7 @@ export class VaultSyncService {
     private readonly vaultSyncQueue: Queue,
     private readonly subgraphService: SubgraphService,
     private readonly coinGeckoService: CoinGeckoService,
+    @Inject('IVaultPositionRepository')
     private readonly vaultPositionRepository: IVaultPositionRepository,
   ) {}
 

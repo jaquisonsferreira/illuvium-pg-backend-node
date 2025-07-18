@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { IVaultPositionRepository } from '../../domain/repositories/vault-position.repository.interface';
 import { ISeasonRepository } from '../../domain/repositories/season.repository.interface';
 import { VaultSyncService } from '../../infrastructure/services/vault-sync.service';
@@ -29,7 +29,9 @@ export class SyncVaultPositionsUseCase {
   private readonly logger = new Logger(SyncVaultPositionsUseCase.name);
 
   constructor(
+    @Inject('IVaultPositionRepository')
     private readonly vaultPositionRepository: IVaultPositionRepository,
+    @Inject('ISeasonRepository')
     private readonly seasonRepository: ISeasonRepository,
     private readonly vaultSyncService: VaultSyncService,
   ) {}
@@ -129,7 +131,7 @@ export class SyncVaultPositionsUseCase {
     this.logger.log(`Found ${uniqueWallets.length} unique wallets to sync`);
 
     for (const wallet of uniqueWallets) {
-      await this.syncWalletPositions(wallet as string, seasonId, chain, result);
+      await this.syncWalletPositions(wallet, seasonId, chain, result);
     }
   }
 

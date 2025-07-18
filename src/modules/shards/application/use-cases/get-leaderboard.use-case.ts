@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { IShardBalanceRepository } from '../../domain/repositories/shard-balance.repository.interface';
 import { ISeasonRepository } from '../../domain/repositories/season.repository.interface';
 
@@ -43,7 +43,9 @@ interface LeaderboardResult {
 @Injectable()
 export class GetLeaderboardUseCase {
   constructor(
+    @Inject('IShardBalanceRepository')
     private readonly shardBalanceRepository: IShardBalanceRepository,
+    @Inject('ISeasonRepository')
     private readonly seasonRepository: ISeasonRepository,
   ) {}
 

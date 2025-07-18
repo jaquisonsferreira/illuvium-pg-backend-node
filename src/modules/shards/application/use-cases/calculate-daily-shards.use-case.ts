@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ISeasonRepository } from '../../domain/repositories/season.repository.interface';
 import { IShardBalanceRepository } from '../../domain/repositories/shard-balance.repository.interface';
 import { IShardEarningHistoryRepository } from '../../domain/repositories/shard-earning-history.repository.interface';
@@ -45,11 +45,17 @@ export class CalculateDailyShardsUseCase {
   private readonly logger = new Logger(CalculateDailyShardsUseCase.name);
 
   constructor(
+    @Inject('ISeasonRepository')
     private readonly seasonRepository: ISeasonRepository,
+    @Inject('IShardBalanceRepository')
     private readonly shardBalanceRepository: IShardBalanceRepository,
+    @Inject('IShardEarningHistoryRepository')
     private readonly shardEarningHistoryRepository: IShardEarningHistoryRepository,
+    @Inject('IVaultPositionRepository')
     private readonly vaultPositionRepository: IVaultPositionRepository,
+    @Inject('IReferralRepository')
     private readonly referralRepository: IReferralRepository,
+    @Inject('IDeveloperContributionRepository')
     private readonly developerContributionRepository: IDeveloperContributionRepository,
     private readonly shardCalculationService: ShardCalculationDomainService,
     private readonly antiFraudService: AntiFraudDomainService,
