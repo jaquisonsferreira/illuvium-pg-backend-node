@@ -14,6 +14,24 @@ import { EventSyncJobProcessor } from './infrastructure/jobs/event-sync.job';
 import { BlockchainController } from './interface/controllers/blockchain.controller';
 import { BLOCKCHAIN_QUEUES } from './constants';
 
+// Infrastructure Services
+import { StakingSubgraphService } from './infrastructure/services/staking-subgraph.service';
+import { StakingBlockchainService } from './infrastructure/services/staking-blockchain.service';
+import { PriceFeedService } from './infrastructure/services/price-feed.service';
+import { VaultConfigService } from './infrastructure/config/vault-config.service';
+
+// Use Cases
+import { GetVaultPositionUseCase } from './application/use-cases/get-vault-position.use-case';
+import { GetUserPositionsUseCase } from './application/use-cases/get-user-positions.use-case';
+import { CalculateLPTokenPriceUseCase } from './application/use-cases/calculate-lp-token-price.use-case';
+
+// Import type interfaces for dependency injection
+import {
+  IStakingSubgraphRepository,
+  IStakingBlockchainRepository,
+  IPriceFeedRepository,
+} from './domain/types/staking-types';
+
 @Module({
   imports: [
     ConfigModule,
@@ -34,6 +52,33 @@ import { BLOCKCHAIN_QUEUES } from './constants';
     ProcessBlockchainEventUseCase,
     BlockProcessorJobProcessor,
     EventSyncJobProcessor,
+    
+    // Configuration Services
+    VaultConfigService,
+    
+    // Repository Implementations
+    {
+      provide: 'IStakingSubgraphRepository',
+      useClass: StakingSubgraphService,
+    },
+    {
+      provide: 'IStakingBlockchainRepository', 
+      useClass: StakingBlockchainService,
+    },
+    {
+      provide: 'IPriceFeedRepository',
+      useClass: PriceFeedService,
+    },
+    
+    // Direct service providers for non-interface usage
+    StakingSubgraphService,
+    StakingBlockchainService,
+    PriceFeedService,
+    
+    // Use Cases
+    GetVaultPositionUseCase,
+    GetUserPositionsUseCase,
+    CalculateLPTokenPriceUseCase,
   ],
   exports: [
     EventListenerService,
@@ -42,6 +87,24 @@ import { BLOCKCHAIN_QUEUES } from './constants';
     ContractDiscoveryService,
     BlockchainEventIntegrationService,
     ProcessBlockchainEventUseCase,
+    
+    // Export configuration service
+    VaultConfigService,
+    
+    // Export repository interfaces
+    'IStakingSubgraphRepository',
+    'IStakingBlockchainRepository',
+    'IPriceFeedRepository',
+    
+    // Export concrete services
+    StakingSubgraphService,
+    StakingBlockchainService,
+    PriceFeedService,
+    
+    // Export use cases
+    GetVaultPositionUseCase,
+    GetUserPositionsUseCase,
+    CalculateLPTokenPriceUseCase,
   ],
 })
 export class BlockchainModule {}
