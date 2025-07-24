@@ -12,7 +12,14 @@ export async function setupDatabaseSchema(db: Kysely<Database>): Promise<void> {
 
     // Execute all migrations in sequence
     for (const migration of migrations) {
-      await migration(db);
+      // Check if migration is an object with up method or a function
+      if (typeof migration === 'function') {
+        await migration(db);
+      } else if (migration && typeof migration.up === 'function') {
+        await migration.up(db);
+      } else {
+        throw new Error('Invalid migration format');
+      }
     }
 
     console.log('Database schema configuration completed successfully');
