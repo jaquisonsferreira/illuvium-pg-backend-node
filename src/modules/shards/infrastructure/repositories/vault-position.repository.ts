@@ -44,6 +44,7 @@ export class VaultPositionRepository implements IVaultPositionRepository {
       dbPosition.balance,
       dbPosition.shares,
       parseFloat(dbPosition.usd_value),
+      dbPosition.lock_weeks || 4,
       dbPosition.snapshot_date,
       parseInt(dbPosition.block_number),
       dbPosition.created_at,
@@ -60,6 +61,7 @@ export class VaultPositionRepository implements IVaultPositionRepository {
       balance: entity.balance,
       shares: entity.shares,
       usd_value: entity.usdValue.toString(),
+      lock_weeks: entity.lockWeeks,
       snapshot_date: entity.snapshotDate,
       block_number: entity.blockNumber.toString(),
     };

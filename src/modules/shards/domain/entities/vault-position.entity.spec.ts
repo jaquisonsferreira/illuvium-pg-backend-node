@@ -14,6 +14,7 @@ describe('VaultPositionEntity', () => {
         balance: '1000000000000000000', // 1 ETH
         shares: '1000000000000000000',
         usdValue: 1500.75,
+        lockWeeks: 12,
         snapshotDate: new Date('2024-01-15T15:30:00Z'),
         blockNumber: 18500000,
       };
@@ -28,6 +29,7 @@ describe('VaultPositionEntity', () => {
       expect(position.balance).toBe('1000000000000000000');
       expect(position.shares).toBe('1000000000000000000');
       expect(position.usdValue).toBe(1500.75);
+      expect(position.lockWeeks).toBe(12);
       expect(position.blockNumber).toBe(18500000);
       expect(position.createdAt).toBeInstanceOf(Date);
     });
@@ -41,6 +43,7 @@ describe('VaultPositionEntity', () => {
         balance: '1000000',
         shares: '1000000',
         usdValue: 1000,
+        lockWeeks: 4,
         snapshotDate: new Date('2024-01-15T15:30:45Z'),
         blockNumber: 18500000,
       };
@@ -61,6 +64,7 @@ describe('VaultPositionEntity', () => {
         balance: '1000000000000000000',
         shares: '1000000000000000000',
         usdValue: 1500,
+        lockWeeks: 4,
         snapshotDate: new Date('2024-01-15'),
         blockNumber: 18500000,
       };
@@ -80,6 +84,7 @@ describe('VaultPositionEntity', () => {
         balance: '0',
         shares: '0',
         usdValue: 0,
+        lockWeeks: 4,
         snapshotDate: new Date('2024-01-15'),
         blockNumber: 18500000,
       };
@@ -102,6 +107,7 @@ describe('VaultPositionEntity', () => {
         balance: '1000000000000000000',
         shares: '1000000000000000000',
         usdValue: 1500,
+        lockWeeks: 4,
         snapshotDate: new Date('2024-01-15'),
         blockNumber: 18500000,
       });
@@ -118,6 +124,7 @@ describe('VaultPositionEntity', () => {
         balance: '0',
         shares: '0',
         usdValue: 0,
+        lockWeeks: 4,
         snapshotDate: new Date('2024-01-15'),
         blockNumber: 18500000,
       });
@@ -134,6 +141,7 @@ describe('VaultPositionEntity', () => {
         balance: '0',
         shares: '1000000000000000000',
         usdValue: 0,
+        lockWeeks: 4,
         snapshotDate: new Date('2024-01-15'),
         blockNumber: 18500000,
       });
@@ -146,6 +154,7 @@ describe('VaultPositionEntity', () => {
         balance: '1000000000000000000',
         shares: '0',
         usdValue: 0,
+        lockWeeks: 4,
         snapshotDate: new Date('2024-01-15'),
         blockNumber: 18500000,
       });
@@ -165,6 +174,7 @@ describe('VaultPositionEntity', () => {
         balance: '1000000000000000000',
         shares: '1000000000000000000',
         usdValue: 1500,
+        lockWeeks: 4,
         snapshotDate: new Date('2024-01-15T15:30:00Z'),
         blockNumber: 18500000,
       });
@@ -185,6 +195,7 @@ describe('VaultPositionEntity', () => {
         balance: '1000000000000000000',
         shares: '1000000000000000000',
         usdValue: 1500,
+        lockWeeks: 4,
         snapshotDate: new Date('2024-01-15'),
         blockNumber: 18500000,
       });
@@ -214,21 +225,52 @@ describe('VaultPositionEntity', () => {
         balance: '1000000000000000000',
         shares: '1000000000000000000',
         usdValue: 5000, // $5000
+        lockWeeks: 4,
         snapshotDate: new Date('2024-01-15'),
         blockNumber: 18500000,
       });
     });
 
-    it('should calculate shards correctly', () => {
-      // 100 shards per $1000
+    it('should calculate shards correctly with default lock (4 weeks)', () => {
+      // 100 shards per $1000, 1x multiplier for 4 weeks
       const shards = position.calculateShards(100);
-      expect(shards).toBe(500); // 5000/1000 * 100
+      expect(shards).toBe(500); // (5000/1000 * 100) * 1
     });
 
-    it('should handle different rates', () => {
-      // 150 shards per $1000
-      const shards = position.calculateShards(150);
-      expect(shards).toBe(750); // 5000/1000 * 150
+    it('should apply lock multiplier for 48 weeks', () => {
+      const longLockPosition = VaultPositionEntity.create({
+        walletAddress: validWallet,
+        vaultAddress: vaultAddress,
+        assetSymbol: 'ETH',
+        chain: 'ethereum',
+        balance: '1000000000000000000',
+        shares: '1000000000000000000',
+        usdValue: 5000,
+        lockWeeks: 48,
+        snapshotDate: new Date('2024-01-15'),
+        blockNumber: 18500000,
+      });
+
+      const shards = longLockPosition.calculateShards(100);
+      expect(shards).toBe(1000); // (5000/1000 * 100) * 2
+    });
+
+    it('should apply linear multiplier for 26 weeks', () => {
+      const midLockPosition = VaultPositionEntity.create({
+        walletAddress: validWallet,
+        vaultAddress: vaultAddress,
+        assetSymbol: 'ETH',
+        chain: 'ethereum',
+        balance: '1000000000000000000',
+        shares: '1000000000000000000',
+        usdValue: 5000,
+        lockWeeks: 26,
+        snapshotDate: new Date('2024-01-15'),
+        blockNumber: 18500000,
+      });
+
+      const shards = midLockPosition.calculateShards(100);
+      expect(shards).toBe(750); // (5000/1000 * 100) * 1.5
     });
 
     it('should handle fractional USD values', () => {
@@ -240,6 +282,7 @@ describe('VaultPositionEntity', () => {
         balance: '1000000000000000000',
         shares: '1000000000000000000',
         usdValue: 1234.56,
+        lockWeeks: 4,
         snapshotDate: new Date('2024-01-15'),
         blockNumber: 18500000,
       });
@@ -257,12 +300,66 @@ describe('VaultPositionEntity', () => {
         balance: '0',
         shares: '0',
         usdValue: 0,
+        lockWeeks: 4,
         snapshotDate: new Date('2024-01-15'),
         blockNumber: 18500000,
       });
 
       const shards = zeroValuePosition.calculateShards(100);
       expect(shards).toBe(0);
+    });
+  });
+
+  describe('calculateLockMultiplier', () => {
+    it('should return 1x for 4 weeks lock', () => {
+      const position = VaultPositionEntity.create({
+        walletAddress: validWallet,
+        vaultAddress: vaultAddress,
+        assetSymbol: 'ETH',
+        chain: 'ethereum',
+        balance: '1000000000000000000',
+        shares: '1000000000000000000',
+        usdValue: 5000,
+        lockWeeks: 4,
+        snapshotDate: new Date('2024-01-15'),
+        blockNumber: 18500000,
+      });
+
+      expect(position.calculateLockMultiplier()).toBe(1);
+    });
+
+    it('should return 2x for 48 weeks lock', () => {
+      const position = VaultPositionEntity.create({
+        walletAddress: validWallet,
+        vaultAddress: vaultAddress,
+        assetSymbol: 'ETH',
+        chain: 'ethereum',
+        balance: '1000000000000000000',
+        shares: '1000000000000000000',
+        usdValue: 5000,
+        lockWeeks: 48,
+        snapshotDate: new Date('2024-01-15'),
+        blockNumber: 18500000,
+      });
+
+      expect(position.calculateLockMultiplier()).toBe(2);
+    });
+
+    it('should calculate linear interpolation', () => {
+      const position = VaultPositionEntity.create({
+        walletAddress: validWallet,
+        vaultAddress: vaultAddress,
+        assetSymbol: 'ETH',
+        chain: 'ethereum',
+        balance: '1000000000000000000',
+        shares: '1000000000000000000',
+        usdValue: 5000,
+        lockWeeks: 26,
+        snapshotDate: new Date('2024-01-15'),
+        blockNumber: 18500000,
+      });
+
+      expect(position.calculateLockMultiplier()).toBe(1.5);
     });
   });
 
@@ -277,6 +374,7 @@ describe('VaultPositionEntity', () => {
         '1000000000000000000',
         '1000000000000000000',
         1500.75,
+        12,
         new Date('2024-01-15T00:00:00.000Z'),
         18500000,
         new Date('2024-01-15T10:00:00Z'),
@@ -293,6 +391,8 @@ describe('VaultPositionEntity', () => {
         balance: '1000000000000000000',
         shares: '1000000000000000000',
         usdValue: 1500.75,
+        lockWeeks: 12,
+        lockMultiplier: 1.1818181818181819,
         snapshotDate: '2024-01-15',
         blockNumber: 18500000,
         createdAt: new Date('2024-01-15T10:00:00Z'),

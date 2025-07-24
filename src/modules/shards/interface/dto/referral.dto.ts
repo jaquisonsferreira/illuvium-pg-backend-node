@@ -14,12 +14,12 @@ export class ReferralQueryDto {
 
   @ApiPropertyOptional({
     description: 'Chain override (defaults based on season)',
-    enum: ['base', 'ethereum', 'obelisk'],
+    enum: ['base', 'ethereum', 'o'],
     example: 'base',
   })
   @IsOptional()
-  @IsIn(['base', 'ethereum', 'obelisk'])
-  chain?: 'base' | 'ethereum' | 'obelisk';
+  @IsIn(['base', 'ethereum', 'o'])
+  chain?: 'base' | 'ethereum' | 'o';
 }
 
 export class ActiveReferralDto {

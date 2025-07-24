@@ -18,6 +18,7 @@ import { createShardEarningHistoryTable } from './tables/create-shard-earning-hi
 import { createReferralsTable } from './tables/create-referrals-table';
 import { createVaultPositionsTable } from './tables/create-vault-positions-table';
 import { createDeveloperContributionsTable } from './tables/create-developer-contributions-table';
+import { addLockWeeksToVaultPositions } from './tables/add-lock-weeks-to-vault-positions';
 
 export const migrations = [
   createAssetsTable,
@@ -40,4 +41,5 @@ export const migrations = [
   createReferralsTable,
   createVaultPositionsTable,
   createDeveloperContributionsTable,
+  addLockWeeksToVaultPositions,
 ];

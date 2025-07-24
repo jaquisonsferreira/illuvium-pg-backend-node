@@ -92,14 +92,14 @@ export class SeasonDto {
 export class CreateSeasonDto {
   @ApiProperty({
     description: 'Season name',
-    example: 'Season 2 - Obelisk Expansion',
+    example: 'Season 2 - O Expansion',
   })
   @IsString()
   name: string;
 
   @ApiProperty({
     description: 'Season description',
-    example: 'Second season expanding to Obelisk chain',
+    example: 'Second season expanding to O chain',
   })
   @IsString()
   description: string;
@@ -120,7 +120,7 @@ export class CreateSeasonDto {
 
   @ApiProperty({
     description: 'Primary chain for this season',
-    example: 'obelisk',
+    example: 'o',
   })
   @IsString()
   primary_chain: string;

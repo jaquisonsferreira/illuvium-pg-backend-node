@@ -14,14 +14,29 @@ export class ShardCalculationDomainService {
     tokenSymbol: string,
     usdValue: number,
     season: SeasonEntity,
+    lockWeeks: number = 4,
   ): number {
     if (usdValue <= 0) return 0;
 
     const rates = season.getVaultRates();
     const rate = rates[tokenSymbol] || 100; // Default rate if not found
 
-    // Formula: (USD Value / 1000) * Daily Rate
-    return (usdValue / 1000) * rate;
+    // Base shards calculation
+    const baseShards = (usdValue / 1000) * rate;
+
+    // Apply lock multiplier
+    const lockMultiplier = this.calculateLockMultiplier(lockWeeks);
+
+    return baseShards * lockMultiplier;
+  }
+
+  calculateLockMultiplier(lockWeeks: number): number {
+    // Linear curve: 1x at 4 weeks, 2x at 48 weeks
+    // Formula: multiplier = 1 + (lockWeeks - 4) / 44
+    if (lockWeeks < 4) return 1; // Minimum lock period
+    if (lockWeeks > 48) return 2; // Maximum multiplier
+
+    return 1 + (lockWeeks - 4) / 44;
   }
 
   calculateSocialShards(yapPoints: number, season: SeasonEntity): number {

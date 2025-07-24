@@ -380,7 +380,7 @@ describe('ReferralsController', () => {
 
     it('should validate season 2+ chains', () => {
       expect(() =>
-        (controller as any).validateSeasonChain(2, 'obelisk'),
+        (controller as any).validateSeasonChain(2, 'o'),
       ).not.toThrow();
     });
 
@@ -400,9 +400,9 @@ describe('ReferralsController', () => {
       expect(chain).toBe('base');
     });
 
-    it('should return obelisk for season 2+', () => {
+    it('should return o for season 2+', () => {
       const chain = (controller as any).getChainForSeason(2);
-      expect(chain).toBe('obelisk');
+      expect(chain).toBe('o');
     });
   });
 

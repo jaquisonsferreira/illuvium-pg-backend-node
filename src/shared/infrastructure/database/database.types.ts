@@ -334,6 +334,7 @@ export interface VaultPositionTable {
   balance: string; // Decimal as string
   shares: string; // Decimal as string
   usd_value: string; // Decimal as string
+  lock_weeks: number; // Lock duration in weeks (4-48)
   snapshot_date: Date;
   block_number: string; // BigInt as string
   created_at: Generated<Date>;

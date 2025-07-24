@@ -10,6 +10,7 @@ export class VaultPositionEntity {
     public readonly balance: string, // BigNumber as string
     public readonly shares: string, // BigNumber as string
     public readonly usdValue: number,
+    public readonly lockWeeks: number, // Lock duration in weeks (4-48)
     public readonly snapshotDate: Date,
     public readonly blockNumber: number,
     public readonly createdAt: Date,
@@ -23,6 +24,7 @@ export class VaultPositionEntity {
     balance: string;
     shares: string;
     usdValue: number;
+    lockWeeks: number;
     snapshotDate: Date;
     blockNumber: number;
   }): VaultPositionEntity {
@@ -39,6 +41,7 @@ export class VaultPositionEntity {
       params.balance,
       params.shares,
       params.usdValue,
+      params.lockWeeks,
       normalizedDate,
       params.blockNumber,
       new Date(),
@@ -58,7 +61,18 @@ export class VaultPositionEntity {
   }
 
   calculateShards(ratePerThousandUsd: number): number {
-    return (this.usdValue / 1000) * ratePerThousandUsd;
+    const baseShards = (this.usdValue / 1000) * ratePerThousandUsd;
+    const lockMultiplier = this.calculateLockMultiplier();
+    return baseShards * lockMultiplier;
+  }
+
+  calculateLockMultiplier(): number {
+    // Linear curve: 1x at 4 weeks, 2x at 48 weeks
+    // Formula: multiplier = 1 + (lockWeeks - 4) / 44
+    if (this.lockWeeks < 4) return 1; // Minimum lock period
+    if (this.lockWeeks > 48) return 2; // Maximum multiplier
+
+    return 1 + (this.lockWeeks - 4) / 44;
   }
 
   toJSON() {
@@ -71,6 +85,8 @@ export class VaultPositionEntity {
       balance: this.balance,
       shares: this.shares,
       usdValue: this.usdValue,
+      lockWeeks: this.lockWeeks,
+      lockMultiplier: this.calculateLockMultiplier(),
       snapshotDate: this.getSnapshotDateString(),
       blockNumber: this.blockNumber,
       createdAt: this.createdAt,

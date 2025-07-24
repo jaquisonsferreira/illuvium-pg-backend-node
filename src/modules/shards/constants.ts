@@ -86,7 +86,7 @@ export const SUPPORTED_CHAINS = [
 
 export const SEASON_CHAINS = {
   SEASON_1: ['base', 'ethereum'], // Season 1 supports both Base and Ethereum
-  SEASON_2_PLUS: 'obelisk',
+  SEASON_2_PLUS: 'o',
 } as const;
 
 export const SEASON_1_CHAINS = ['base', 'ethereum'] as const;

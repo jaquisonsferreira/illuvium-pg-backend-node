@@ -466,7 +466,7 @@ describe('ShardsController', () => {
 
     it('should validate season 2+ chains', () => {
       expect(() =>
-        (controller as any).validateSeasonChain(2, 'obelisk'),
+        (controller as any).validateSeasonChain(2, 'o'),
       ).not.toThrow();
     });
 

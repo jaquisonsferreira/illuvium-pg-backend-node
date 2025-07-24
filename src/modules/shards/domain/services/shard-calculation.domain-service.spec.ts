@@ -2,7 +2,6 @@ import { ShardCalculationDomainService } from './shard-calculation.domain-servic
 import { SeasonEntity } from '../entities/season.entity';
 import { ReferralEntity } from '../entities/referral.entity';
 import { DeveloperActionType } from '../entities/developer-contribution.entity';
-import { VaultPositionEntity } from '../entities/vault-position.entity';
 import {
   REFERRAL_CONFIG,
   KAITO_CONFIG,
@@ -36,19 +35,54 @@ describe('ShardCalculationDomainService', () => {
   });
 
   describe('calculateStakingShards', () => {
-    it('should calculate shards correctly for USDC', () => {
+    it('should calculate shards correctly for USDC with default lock', () => {
       const result = service.calculateStakingShards('usdc', 1000, mockSeason);
-      expect(result).toBe(1);
+      expect(result).toBe(1); // 1x multiplier at 4 weeks
     });
 
-    it('should calculate shards correctly for ETH', () => {
+    it('should calculate shards correctly for ETH with default lock', () => {
       const result = service.calculateStakingShards('eth', 1000, mockSeason);
-      expect(result).toBe(2);
+      expect(result).toBe(2); // 2x rate, 1x multiplier
     });
 
-    it('should calculate shards correctly for WETH', () => {
-      const result = service.calculateStakingShards('weth', 1000, mockSeason);
-      expect(result).toBe(2);
+    it('should apply lock multiplier correctly for 48 weeks', () => {
+      const result = service.calculateStakingShards(
+        'usdc',
+        1000,
+        mockSeason,
+        48,
+      );
+      expect(result).toBe(2); // 1 base * 2x multiplier
+    });
+
+    it('should apply linear lock multiplier for 26 weeks', () => {
+      const result = service.calculateStakingShards(
+        'usdc',
+        1000,
+        mockSeason,
+        26,
+      );
+      expect(result).toBe(1.5); // 1 base * 1.5x multiplier
+    });
+
+    it('should use minimum multiplier for lock < 4 weeks', () => {
+      const result = service.calculateStakingShards(
+        'usdc',
+        1000,
+        mockSeason,
+        2,
+      );
+      expect(result).toBe(1); // 1x multiplier
+    });
+
+    it('should cap multiplier at 2x for lock > 48 weeks', () => {
+      const result = service.calculateStakingShards(
+        'usdc',
+        1000,
+        mockSeason,
+        52,
+      );
+      expect(result).toBe(2); // Max 2x multiplier
     });
 
     it('should use default rate for unknown token', () => {
@@ -70,14 +104,24 @@ describe('ShardCalculationDomainService', () => {
       expect(result).toBe(0);
     });
 
-    it('should handle fractional shards', () => {
-      const result = service.calculateStakingShards('usdc', 500, mockSeason);
-      expect(result).toBe(0.5);
+    it('should handle fractional shards with lock multiplier', () => {
+      const result = service.calculateStakingShards(
+        'usdc',
+        500,
+        mockSeason,
+        48,
+      );
+      expect(result).toBe(1); // 0.5 base * 2x multiplier
     });
 
-    it('should handle large USD values', () => {
-      const result = service.calculateStakingShards('eth', 1000000, mockSeason);
-      expect(result).toBe(2000);
+    it('should handle large USD values with lock multiplier', () => {
+      const result = service.calculateStakingShards(
+        'eth',
+        1000000,
+        mockSeason,
+        48,
+      );
+      expect(result).toBe(4000); // 2000 base * 2x multiplier
     });
   });
 
@@ -273,6 +317,38 @@ describe('ShardCalculationDomainService', () => {
     it('should handle zero base amount', () => {
       const result = service.applyRefereeMultiplier(0, 2);
       expect(result).toBe(0);
+    });
+  });
+
+  describe('calculateLockMultiplier', () => {
+    it('should return 1x for 4 weeks lock', () => {
+      const result = service.calculateLockMultiplier(4);
+      expect(result).toBe(1);
+    });
+
+    it('should return 2x for 48 weeks lock', () => {
+      const result = service.calculateLockMultiplier(48);
+      expect(result).toBe(2);
+    });
+
+    it('should return 1.5x for 26 weeks lock', () => {
+      const result = service.calculateLockMultiplier(26);
+      expect(result).toBe(1.5);
+    });
+
+    it('should return 1x for lock < 4 weeks', () => {
+      const result = service.calculateLockMultiplier(2);
+      expect(result).toBe(1);
+    });
+
+    it('should return 2x for lock > 48 weeks', () => {
+      const result = service.calculateLockMultiplier(52);
+      expect(result).toBe(2);
+    });
+
+    it('should calculate linear interpolation correctly', () => {
+      const result = service.calculateLockMultiplier(15);
+      expect(result).toBeCloseTo(1.25, 2);
     });
   });
 
