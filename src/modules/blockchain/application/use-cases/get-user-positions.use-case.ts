@@ -90,19 +90,23 @@ export class GetUserPositionsUseCase {
         );
 
         allPositions = allPositions.concat(chainPositions.positions);
-        
+
         // Update metadata based on chain results
         if (chainPositions.metadata.source === 'blockchain') {
           source = source === 'subgraph' ? 'hybrid' : 'blockchain';
         }
-        
+
         if (chainPositions.metadata.isStale) {
           overallIsStale = true;
         }
 
         // Use the most recent sync status
-        if (!syncStatus || (chainPositions.metadata.syncStatus && 
-            chainPositions.metadata.syncStatus.lastSyncTime > syncStatus.lastSyncTime)) {
+        if (
+          !syncStatus ||
+          (chainPositions.metadata.syncStatus &&
+            chainPositions.metadata.syncStatus.lastSyncTime >
+              syncStatus.lastSyncTime)
+        ) {
           syncStatus = chainPositions.metadata.syncStatus;
         }
       }
@@ -121,7 +125,10 @@ export class GetUserPositionsUseCase {
         },
       };
     } catch (error) {
-      this.logger.error(`Failed to get user positions for ${userAddress}:`, error);
+      this.logger.error(
+        `Failed to get user positions for ${userAddress}:`,
+        error,
+      );
       throw new Error(`Failed to retrieve user positions: ${error.message}`);
     }
   }
@@ -141,7 +148,7 @@ export class GetUserPositionsUseCase {
   private getActiveChainsForUser(): ChainType[] {
     // Get all chains that have active vaults
     const activeVaults = this.vaultConfigService.getActiveVaults();
-    const activeChains = [...new Set(activeVaults.map(vault => vault.chain))];
+    const activeChains = [...new Set(activeVaults.map((vault) => vault.chain))];
     return activeChains;
   }
 
@@ -164,9 +171,11 @@ export class GetUserPositionsUseCase {
     try {
       // Get vault configurations for the chain and type filter
       let vaultsToQuery = this.vaultConfigService.getVaultsByChain(chain);
-      
+
       if (vaultType) {
-        vaultsToQuery = vaultsToQuery.filter(vault => vault.type === vaultType);
+        vaultsToQuery = vaultsToQuery.filter(
+          (vault) => vault.type === vaultType,
+        );
       }
 
       // Try subgraph first for bulk query
@@ -178,22 +187,23 @@ export class GetUserPositionsUseCase {
       };
 
       let positions: EnhancedVaultPosition[] = [];
-             let metadata: {
-         source: 'subgraph' | 'blockchain';
-         isStale: boolean;
-         syncStatus?: any;
-       } = {
-         source: 'subgraph',
-         isStale: false,
-         syncStatus: undefined,
-       };
+      let metadata: {
+        source: 'subgraph' | 'blockchain';
+        isStale: boolean;
+        syncStatus?: any;
+      } = {
+        source: 'subgraph',
+        isStale: false,
+        syncStatus: undefined,
+      };
 
       try {
-        const subgraphResult = await this.subgraphRepository.getUserPositions(subgraphParams);
-        
+        const subgraphResult =
+          await this.subgraphRepository.getUserPositions(subgraphParams);
+
         // Check if subgraph data is fresh
         const isSubgraphFresh = this.isSubgraphDataFresh(subgraphResult);
-        
+
         if (isSubgraphFresh) {
           // Process and enhance subgraph positions
           positions = await this.processSubgraphPositions(
@@ -202,7 +212,7 @@ export class GetUserPositionsUseCase {
             includeUsdValue,
             includeEmptyPositions,
           );
-          
+
           metadata = {
             source: 'subgraph',
             isStale: subgraphResult.metadata.isStale,
@@ -210,14 +220,16 @@ export class GetUserPositionsUseCase {
           };
         } else {
           // Fallback to individual blockchain queries
-          this.logger.warn(`Subgraph data is stale for chain ${chain}, falling back to blockchain`);
+          this.logger.warn(
+            `Subgraph data is stale for chain ${chain}, falling back to blockchain`,
+          );
           positions = await this.getPositionsFromBlockchain(
             userAddress,
             vaultsToQuery,
             includeUsdValue,
             includeEmptyPositions,
           );
-          
+
           metadata = {
             source: 'blockchain',
             isStale: false,
@@ -225,14 +237,17 @@ export class GetUserPositionsUseCase {
         }
       } catch (subgraphError) {
         // Fallback to blockchain if subgraph fails
-        this.logger.warn(`Subgraph query failed for chain ${chain}, falling back to blockchain:`, subgraphError);
+        this.logger.warn(
+          `Subgraph query failed for chain ${chain}, falling back to blockchain:`,
+          subgraphError,
+        );
         positions = await this.getPositionsFromBlockchain(
           userAddress,
           vaultsToQuery,
           includeUsdValue,
           includeEmptyPositions,
         );
-        
+
         metadata = {
           source: 'blockchain',
           isStale: false,
@@ -255,18 +270,27 @@ export class GetUserPositionsUseCase {
     const enhancedPositions: EnhancedVaultPosition[] = [];
 
     for (const position of rawPositions) {
-      const vaultConfig = vaultConfigs.find(v => v.address.toLowerCase() === position.vault.toLowerCase());
+      const vaultConfig = vaultConfigs.find(
+        (v) => v.address.toLowerCase() === position.vault.toLowerCase(),
+      );
       if (!vaultConfig) {
         this.logger.warn(`Vault config not found for ${position.vault}`);
         continue;
       }
 
       // Skip empty positions if not requested
-      if (!includeEmptyPositions && (position.shares === '0' || position.assets === '0')) {
+      if (
+        !includeEmptyPositions &&
+        (position.shares === '0' || position.assets === '0')
+      ) {
         continue;
       }
 
-      const enhancedPosition = await this.enhancePosition(position, vaultConfig, includeUsdValue);
+      const enhancedPosition = await this.enhancePosition(
+        position,
+        vaultConfig,
+        includeUsdValue,
+      );
       enhancedPositions.push(enhancedPosition);
     }
 
@@ -291,18 +315,24 @@ export class GetUserPositionsUseCase {
           includeUsdValue,
         });
 
-        if (result.position && (includeEmptyPositions || result.position.assets !== '0')) {
+        if (
+          result.position &&
+          (includeEmptyPositions || result.position.assets !== '0')
+        ) {
           return result.position;
         }
         return null;
       } catch (error) {
-        this.logger.warn(`Failed to get position for vault ${vaultConfig.address}:`, error);
+        this.logger.warn(
+          `Failed to get position for vault ${vaultConfig.address}:`,
+          error,
+        );
         return null;
       }
     });
 
     const results = await Promise.all(positionPromises);
-    
+
     for (const position of results) {
       if (position) {
         positions.push(position);
@@ -312,7 +342,9 @@ export class GetUserPositionsUseCase {
     return positions;
   }
 
-  private isSubgraphDataFresh(subgraphResult: DataResponse<VaultPosition[]>): boolean {
+  private isSubgraphDataFresh(
+    subgraphResult: DataResponse<VaultPosition[]>,
+  ): boolean {
     if (!subgraphResult.metadata.syncStatus) {
       return false;
     }
@@ -341,17 +373,29 @@ export class GetUserPositionsUseCase {
         isLP: vaultConfig.tokenConfig.isLP,
       },
       formattedBalances: {
-        shares: this.formatBalance(position.shares, vaultConfig.tokenConfig.decimals),
-        assets: this.formatBalance(position.assets, vaultConfig.tokenConfig.decimals),
+        shares: this.formatBalance(
+          position.shares,
+          vaultConfig.tokenConfig.decimals,
+        ),
+        assets: this.formatBalance(
+          position.assets,
+          vaultConfig.tokenConfig.decimals,
+        ),
       },
     };
 
     // Add USD value if requested
     if (includeUsdValue) {
       try {
-        enhancedPosition.usdValue = await this.calculateUsdValue(enhancedPosition, vaultConfig);
+        enhancedPosition.usdValue = await this.calculateUsdValue(
+          enhancedPosition,
+          vaultConfig,
+        );
       } catch (error) {
-        this.logger.warn(`Failed to calculate USD value for position in ${vaultConfig.address}:`, error);
+        this.logger.warn(
+          `Failed to calculate USD value for position in ${vaultConfig.address}:`,
+          error,
+        );
         enhancedPosition.usdValue = 0;
       }
     }
@@ -359,25 +403,45 @@ export class GetUserPositionsUseCase {
     // Add LP token data if applicable
     if (vaultConfig.type === VaultType.LP_TOKEN) {
       try {
-        const lpData = await this.subgraphRepository.getLPTokenData(vaultConfig.asset, vaultConfig.chain);
+        const lpData = await this.subgraphRepository.getLPTokenData(
+          vaultConfig.asset,
+          vaultConfig.chain,
+        );
         if (lpData.data) {
           enhancedPosition.lpTokenData = lpData.data;
         }
       } catch (error) {
-        this.logger.warn(`Failed to get LP token data for ${vaultConfig.asset}:`, error);
+        this.logger.warn(
+          `Failed to get LP token data for ${vaultConfig.asset}:`,
+          error,
+        );
       }
     }
 
     return enhancedPosition;
   }
 
-  private async calculateUsdValue(position: EnhancedVaultPosition, vaultConfig: any): Promise<number> {
+  private async calculateUsdValue(
+    position: EnhancedVaultPosition,
+    vaultConfig: any,
+  ): Promise<number> {
     try {
       if (vaultConfig.type === VaultType.SINGLE_TOKEN) {
-        const tokenPrice = await this.priceFeedRepository.getTokenPrice(vaultConfig.asset, vaultConfig.chain);
-        return parseFloat(position.formattedBalances.assets) * tokenPrice.priceUsd;
-      } else if (vaultConfig.type === VaultType.LP_TOKEN && position.lpTokenData) {
-        const lpTokenPrice = await this.calculateLPTokenPrice(position.lpTokenData, vaultConfig.chain);
+        const tokenPrice = await this.priceFeedRepository.getTokenPrice(
+          vaultConfig.asset,
+          vaultConfig.chain,
+        );
+        return (
+          parseFloat(position.formattedBalances.assets) * tokenPrice.priceUsd
+        );
+      } else if (
+        vaultConfig.type === VaultType.LP_TOKEN &&
+        position.lpTokenData
+      ) {
+        const lpTokenPrice = await this.calculateLPTokenPrice(
+          position.lpTokenData,
+          vaultConfig.chain,
+        );
         return parseFloat(position.formattedBalances.assets) * lpTokenPrice;
       }
 
@@ -388,7 +452,10 @@ export class GetUserPositionsUseCase {
     }
   }
 
-  private async calculateLPTokenPrice(lpTokenData: any, chain: ChainType): Promise<number> {
+  private async calculateLPTokenPrice(
+    lpTokenData: any,
+    chain: ChainType,
+  ): Promise<number> {
     try {
       const [token0Price, token1Price] = await Promise.all([
         this.priceFeedRepository.getTokenPrice(lpTokenData.token0, chain),
@@ -400,10 +467,18 @@ export class GetUserPositionsUseCase {
         this.blockchainRepository.getTokenMetadata(lpTokenData.token1, chain),
       ]);
 
-      const reserve0Value = parseFloat(this.formatBalance(lpTokenData.reserve0, token0Metadata.decimals)) * token0Price.priceUsd;
-      const reserve1Value = parseFloat(this.formatBalance(lpTokenData.reserve1, token1Metadata.decimals)) * token1Price.priceUsd;
+      const reserve0Value =
+        parseFloat(
+          this.formatBalance(lpTokenData.reserve0, token0Metadata.decimals),
+        ) * token0Price.priceUsd;
+      const reserve1Value =
+        parseFloat(
+          this.formatBalance(lpTokenData.reserve1, token1Metadata.decimals),
+        ) * token1Price.priceUsd;
       const totalLiquidity = reserve0Value + reserve1Value;
-      const totalSupply = parseFloat(this.formatBalance(lpTokenData.totalSupply, 18));
+      const totalSupply = parseFloat(
+        this.formatBalance(lpTokenData.totalSupply, 18),
+      );
 
       return totalSupply > 0 ? totalLiquidity / totalSupply : 0;
     } catch (error) {
@@ -423,7 +498,9 @@ export class GetUserPositionsUseCase {
     }
   }
 
-  private calculateSummary(positions: EnhancedVaultPosition[]): GetUserPositionsOutput['summary'] {
+  private calculateSummary(
+    positions: EnhancedVaultPosition[],
+  ): GetUserPositionsOutput['summary'] {
     const summary = {
       totalPositions: positions.length,
       totalValueUsd: 0,
@@ -444,7 +521,8 @@ export class GetUserPositionsUseCase {
 
       // Count positions by chain
       const chain = position.vaultInfo.chain;
-      summary.positionsByChain[chain] = (summary.positionsByChain[chain] || 0) + 1;
+      summary.positionsByChain[chain] =
+        (summary.positionsByChain[chain] || 0) + 1;
 
       // Sum USD values
       if (position.usdValue) {
@@ -454,4 +532,4 @@ export class GetUserPositionsUseCase {
 
     return summary;
   }
-} 
+}

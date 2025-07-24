@@ -13,10 +13,10 @@ import {
 } from '../../domain/types/staking-types';
 import { VaultPositionEntity } from '../../domain/entities/vault-position.entity';
 import { LPToken } from '../../domain/entities/lp-token.entity';
-import { 
-  OBELISK_SEASONAL_VAULT_ABI, 
-  ERC20_ABI, 
-  LP_TOKEN_ABI 
+import {
+  OBELISK_SEASONAL_VAULT_ABI,
+  ERC20_ABI,
+  LP_TOKEN_ABI,
 } from '../../domain/contracts/obelisk-seasonal-vault.abi';
 
 interface ChainConfig {
@@ -39,11 +39,17 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
   constructor(private readonly configService: ConfigService) {
     this.config = {
       [ChainType.BASE]: {
-        rpcUrl: this.configService.get<string>('BASE_RPC_URL', 'https://mainnet.base.org'),
+        rpcUrl: this.configService.get<string>(
+          'BASE_RPC_URL',
+          'https://mainnet.base.org',
+        ),
         chainId: 8453,
       },
       [ChainType.OBELISK]: {
-        rpcUrl: this.configService.get<string>('OBELISK_RPC_URL', 'https://rpc.obelisk.gg'),
+        rpcUrl: this.configService.get<string>(
+          'OBELISK_RPC_URL',
+          'https://rpc.obelisk.gg',
+        ),
         chainId: 1001, // Placeholder for Obelisk chain ID
       },
     };
@@ -95,7 +101,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     }
   }
 
-  async getBlockTimestamp(blockNumber: number, chain: ChainType): Promise<number> {
+  async getBlockTimestamp(
+    blockNumber: number,
+    chain: ChainType,
+  ): Promise<number> {
     try {
       const provider = this.getProvider(chain);
       const block = await provider.getBlock(blockNumber);
@@ -104,7 +113,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
       }
       return block.timestamp;
     } catch (error) {
-      this.logger.error(`Failed to get block timestamp for block ${blockNumber} on ${chain}:`, error);
+      this.logger.error(
+        `Failed to get block timestamp for block ${blockNumber} on ${chain}:`,
+        error,
+      );
       throw new Error(`Failed to get block timestamp`);
     }
   }
@@ -135,7 +147,7 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
         return null;
       }
 
-      const currentBlock = blockNumber || await this.getCurrentBlock(chain);
+      const currentBlock = blockNumber || (await this.getCurrentBlock(chain));
       const timestamp = await this.getBlockTimestamp(currentBlock, chain);
 
       return new VaultPositionEntity(
@@ -147,7 +159,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
         timestamp,
       );
     } catch (error) {
-      this.logger.error(`Failed to get vault position for ${userAddress} in ${vaultAddress}:`, error);
+      this.logger.error(
+        `Failed to get vault position for ${userAddress} in ${vaultAddress}:`,
+        error,
+      );
       throw new Error(`Failed to get vault position from blockchain`);
     }
   }
@@ -159,14 +174,19 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     blockNumber?: number,
   ): Promise<VaultPosition[]> {
     try {
-      const positionPromises = vaultAddresses.map(vaultAddress =>
-        this.getVaultPosition(userAddress, vaultAddress, chain, blockNumber)
+      const positionPromises = vaultAddresses.map((vaultAddress) =>
+        this.getVaultPosition(userAddress, vaultAddress, chain, blockNumber),
       );
 
       const positions = await Promise.all(positionPromises);
-      return positions.filter((position): position is VaultPosition => position !== null);
+      return positions.filter(
+        (position): position is VaultPosition => position !== null,
+      );
     } catch (error) {
-      this.logger.error(`Failed to get user vault positions for ${userAddress}:`, error);
+      this.logger.error(
+        `Failed to get user vault positions for ${userAddress}:`,
+        error,
+      );
       throw new Error(`Failed to get user vault positions from blockchain`);
     }
   }
@@ -192,7 +212,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
       // Calculate share price: totalAssets / totalSupply (in wei)
       let sharePrice = '0';
       if (totalSupply > 0n) {
-        sharePrice = ((totalAssets * ethers.parseEther('1')) / totalSupply).toString();
+        sharePrice = (
+          (totalAssets * ethers.parseEther('1')) /
+          totalSupply
+        ).toString();
       }
 
       return {
@@ -201,12 +224,18 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
         sharePrice,
       };
     } catch (error) {
-      this.logger.error(`Failed to get vault totals for ${vaultAddress}:`, error);
+      this.logger.error(
+        `Failed to get vault totals for ${vaultAddress}:`,
+        error,
+      );
       throw new Error(`Failed to get vault totals from blockchain`);
     }
   }
 
-  async getTokenMetadata(tokenAddress: string, chain: ChainType): Promise<TokenMetadata> {
+  async getTokenMetadata(
+    tokenAddress: string,
+    chain: ChainType,
+  ): Promise<TokenMetadata> {
     try {
       const tokenContract = this.getERC20Contract(tokenAddress, chain);
 
@@ -242,7 +271,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
         token1: token1?.toLowerCase(),
       };
     } catch (error) {
-      this.logger.error(`Failed to get token metadata for ${tokenAddress}:`, error);
+      this.logger.error(
+        `Failed to get token metadata for ${tokenAddress}:`,
+        error,
+      );
       throw new Error(`Failed to get token metadata from blockchain`);
     }
   }
@@ -252,8 +284,8 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     chain: ChainType,
   ): Promise<TokenMetadata[]> {
     try {
-      const metadataPromises = tokenAddresses.map(address =>
-        this.getTokenMetadata(address, chain)
+      const metadataPromises = tokenAddresses.map((address) =>
+        this.getTokenMetadata(address, chain),
       );
 
       return await Promise.all(metadataPromises);
@@ -279,7 +311,7 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
         lpContract.totalSupply({ blockTag }),
       ]);
 
-      const currentBlock = blockNumber || await this.getCurrentBlock(chain);
+      const currentBlock = blockNumber || (await this.getCurrentBlock(chain));
       const timestamp = await this.getBlockTimestamp(currentBlock, chain);
 
       return new LPToken(
@@ -293,7 +325,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
         timestamp,
       );
     } catch (error) {
-      this.logger.error(`Failed to get LP token data for ${tokenAddress}:`, error);
+      this.logger.error(
+        `Failed to get LP token data for ${tokenAddress}:`,
+        error,
+      );
       throw new Error(`Failed to get LP token data from blockchain`);
     }
   }
@@ -304,8 +339,8 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     blockNumber?: number,
   ): Promise<LPTokenData[]> {
     try {
-      const lpDataPromises = tokenAddresses.map(address =>
-        this.getLPTokenData(address, chain, blockNumber)
+      const lpDataPromises = tokenAddresses.map((address) =>
+        this.getLPTokenData(address, chain, blockNumber),
       );
 
       return await Promise.all(lpDataPromises);
@@ -315,28 +350,43 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     }
   }
 
-  async getVaultSeasonStatus(vaultAddress: string, chain: ChainType): Promise<SeasonStatus> {
+  async getVaultSeasonStatus(
+    vaultAddress: string,
+    chain: ChainType,
+  ): Promise<SeasonStatus> {
     try {
       const vaultContract = this.getVaultContract(vaultAddress, chain);
       const status = await vaultContract.getSeasonStatus();
       return status as SeasonStatus;
     } catch (error) {
-      this.logger.error(`Failed to get vault season status for ${vaultAddress}:`, error);
+      this.logger.error(
+        `Failed to get vault season status for ${vaultAddress}:`,
+        error,
+      );
       throw new Error(`Failed to get vault season status from blockchain`);
     }
   }
 
-  async isMainnetLaunched(vaultAddress: string, chain: ChainType): Promise<boolean> {
+  async isMainnetLaunched(
+    vaultAddress: string,
+    chain: ChainType,
+  ): Promise<boolean> {
     try {
       const vaultContract = this.getVaultContract(vaultAddress, chain);
       return await vaultContract.mainnetLaunched();
     } catch (error) {
-      this.logger.error(`Failed to check mainnet launch status for ${vaultAddress}:`, error);
+      this.logger.error(
+        `Failed to check mainnet launch status for ${vaultAddress}:`,
+        error,
+      );
       throw new Error(`Failed to check mainnet launch status from blockchain`);
     }
   }
 
-  async getVaultConfig(vaultAddress: string, chain: ChainType): Promise<{
+  async getVaultConfig(
+    vaultAddress: string,
+    chain: ChainType,
+  ): Promise<{
     asset: string;
     name: string;
     symbol: string;
@@ -361,7 +411,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
         minShareAmount: minimumAmounts.minShareAmount_.toString(),
       };
     } catch (error) {
-      this.logger.error(`Failed to get vault config for ${vaultAddress}:`, error);
+      this.logger.error(
+        `Failed to get vault config for ${vaultAddress}:`,
+        error,
+      );
       throw new Error(`Failed to get vault config from blockchain`);
     }
   }
@@ -370,20 +423,26 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     userAddress: string,
     vaultAddress: string,
     chain: ChainType,
-  ): Promise<{
-    withdrawalId: number;
-    shares: string;
-    assets: string;
-    requestTime: number;
-    unlockTime: number;
-    finalized: boolean;
-  }[]> {
+  ): Promise<
+    {
+      withdrawalId: number;
+      shares: string;
+      assets: string;
+      requestTime: number;
+      unlockTime: number;
+      finalized: boolean;
+    }[]
+  > {
     try {
       const vaultContract = this.getVaultContract(vaultAddress, chain);
-      const withdrawalIds = await vaultContract.getPendingWithdrawalIds(userAddress);
+      const withdrawalIds =
+        await vaultContract.getPendingWithdrawalIds(userAddress);
 
       const withdrawalPromises = withdrawalIds.map(async (id: bigint) => {
-        const withdrawal = await vaultContract.getPendingWithdrawal(userAddress, id);
+        const withdrawal = await vaultContract.getPendingWithdrawal(
+          userAddress,
+          id,
+        );
         return {
           withdrawalId: Number(id),
           shares: withdrawal.shares.toString(),
@@ -396,7 +455,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
 
       return await Promise.all(withdrawalPromises);
     } catch (error) {
-      this.logger.error(`Failed to get pending withdrawals for ${userAddress}:`, error);
+      this.logger.error(
+        `Failed to get pending withdrawals for ${userAddress}:`,
+        error,
+      );
       throw new Error(`Failed to get pending withdrawals from blockchain`);
     }
   }
@@ -481,7 +543,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
       const maxAssets = await vaultContract.maxWithdraw(userAddress);
       return maxAssets.toString();
     } catch (error) {
-      this.logger.error(`Failed to get max withdraw for ${userAddress}:`, error);
+      this.logger.error(
+        `Failed to get max withdraw for ${userAddress}:`,
+        error,
+      );
       throw new Error(`Failed to get max withdraw from blockchain`);
     }
   }
@@ -498,7 +563,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
       const balance = await tokenContract.balanceOf(userAddress, { blockTag });
       return balance.toString();
     } catch (error) {
-      this.logger.error(`Failed to get token balance for ${userAddress}:`, error);
+      this.logger.error(
+        `Failed to get token balance for ${userAddress}:`,
+        error,
+      );
       throw new Error(`Failed to get token balance from blockchain`);
     }
   }
@@ -510,8 +578,13 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     blockNumber?: number,
   ): Promise<Map<string, string>> {
     try {
-      const balancePromises = userAddresses.map(async userAddress => {
-        const balance = await this.getUserTokenBalance(userAddress, tokenAddress, chain, blockNumber);
+      const balancePromises = userAddresses.map(async (userAddress) => {
+        const balance = await this.getUserTokenBalance(
+          userAddress,
+          tokenAddress,
+          chain,
+          blockNumber,
+        );
         return [userAddress.toLowerCase(), balance] as const;
       });
 
@@ -519,7 +592,9 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
       return new Map(balances);
     } catch (error) {
       this.logger.error(`Failed to get multiple users token balances:`, error);
-      throw new Error(`Failed to get multiple users token balances from blockchain`);
+      throw new Error(
+        `Failed to get multiple users token balances from blockchain`,
+      );
     }
   }
 
@@ -533,7 +608,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     }
   }
 
-  async isValidLPToken(tokenAddress: string, chain: ChainType): Promise<boolean> {
+  async isValidLPToken(
+    tokenAddress: string,
+    chain: ChainType,
+  ): Promise<boolean> {
     try {
       const lpContract = this.getLPTokenContract(tokenAddress, chain);
       await Promise.all([lpContract.token0(), lpContract.token1()]);
@@ -549,12 +627,18 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
       const asset = await vaultContract.asset();
       return asset.toLowerCase();
     } catch (error) {
-      this.logger.error(`Failed to get vault asset for ${vaultAddress}:`, error);
+      this.logger.error(
+        `Failed to get vault asset for ${vaultAddress}:`,
+        error,
+      );
       throw new Error(`Failed to get vault asset from blockchain`);
     }
   }
 
-  async getLPTokenComponents(tokenAddress: string, chain: ChainType): Promise<{
+  async getLPTokenComponents(
+    tokenAddress: string,
+    chain: ChainType,
+  ): Promise<{
     token0: string;
     token1: string;
   }> {
@@ -570,7 +654,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
         token1: token1.toLowerCase(),
       };
     } catch (error) {
-      this.logger.error(`Failed to get LP token components for ${tokenAddress}:`, error);
+      this.logger.error(
+        `Failed to get LP token components for ${tokenAddress}:`,
+        error,
+      );
       throw new Error(`Failed to get LP token components from blockchain`);
     }
   }
@@ -585,12 +672,18 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     throw new Error('Method not implemented yet');
   }
 
-  async areWithdrawalsAllowed(vaultAddress: string, chain: ChainType): Promise<boolean> {
+  async areWithdrawalsAllowed(
+    vaultAddress: string,
+    chain: ChainType,
+  ): Promise<boolean> {
     try {
       const vaultContract = this.getVaultContract(vaultAddress, chain);
       return await vaultContract.withdrawalsAllowed();
     } catch (error) {
-      this.logger.error(`Failed to check if withdrawals are allowed for ${vaultAddress}:`, error);
+      this.logger.error(
+        `Failed to check if withdrawals are allowed for ${vaultAddress}:`,
+        error,
+      );
       throw new Error(`Failed to check withdrawals allowed from blockchain`);
     }
   }
@@ -607,7 +700,7 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     try {
       const vaultContract = this.getVaultContract(vaultAddress, chain);
       const lockInfo = await vaultContract.getLockInfo(userAddress);
-      
+
       if (lockInfo.depositTime === 0n) {
         return null;
       }
@@ -618,7 +711,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
         lastUpdateTime: Number(lockInfo.lastUpdateTime),
       };
     } catch (error) {
-      this.logger.error(`Failed to get user lock info for ${userAddress}:`, error);
+      this.logger.error(
+        `Failed to get user lock info for ${userAddress}:`,
+        error,
+      );
       throw new Error(`Failed to get user lock info from blockchain`);
     }
   }
@@ -631,10 +727,12 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     }[],
     chain: ChainType,
     blockNumber?: number,
-  ): Promise<{
-    success: boolean;
-    returnData: string;
-  }[]> {
+  ): Promise<
+    {
+      success: boolean;
+      returnData: string;
+    }[]
+  > {
     throw new Error('Method not implemented yet');
   }
 
@@ -645,7 +743,7 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     chainId: number;
   }> {
     const startTime = Date.now();
-    
+
     try {
       const provider = this.getProvider(chain);
       const [blockNumber, network] = await Promise.all([
@@ -664,7 +762,7 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     } catch (error) {
       const latency = Date.now() - startTime;
       this.logger.error(`Health check failed for ${chain}:`, error);
-      
+
       return {
         isHealthy: false,
         latency,
@@ -673,4 +771,4 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
       };
     }
   }
-} 
+}

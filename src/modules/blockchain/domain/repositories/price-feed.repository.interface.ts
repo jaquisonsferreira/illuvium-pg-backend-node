@@ -4,10 +4,7 @@ export interface IPriceFeedRepository {
   /**
    * Gets current USD price for a single token
    */
-  getTokenPrice(
-    tokenAddress: string,
-    chain: ChainType,
-  ): Promise<TokenPrice>;
+  getTokenPrice(tokenAddress: string, chain: ChainType): Promise<TokenPrice>;
 
   /**
    * Gets current USD prices for multiple tokens
@@ -20,9 +17,7 @@ export interface IPriceFeedRepository {
   /**
    * Gets token price by CoinGecko ID
    */
-  getTokenPriceByCoinGeckoId(
-    coinGeckoId: string,
-  ): Promise<TokenPrice>;
+  getTokenPriceByCoinGeckoId(coinGeckoId: string): Promise<TokenPrice>;
 
   /**
    * Gets multiple token prices by CoinGecko IDs
@@ -40,10 +35,12 @@ export interface IPriceFeedRepository {
     fromTimestamp: number,
     toTimestamp: number,
     granularity?: 'hourly' | 'daily',
-  ): Promise<{
-    timestamp: number;
-    price: number;
-  }[]>;
+  ): Promise<
+    {
+      timestamp: number;
+      price: number;
+    }[]
+  >;
 
   /**
    * Gets historical price data by CoinGecko ID
@@ -53,10 +50,12 @@ export interface IPriceFeedRepository {
     fromTimestamp: number,
     toTimestamp: number,
     granularity?: 'hourly' | 'daily',
-  ): Promise<{
-    timestamp: number;
-    price: number;
-  }[]>;
+  ): Promise<
+    {
+      timestamp: number;
+      price: number;
+    }[]
+  >;
 
   /**
    * Gets token metadata including icons and CoinGecko ID
@@ -80,23 +79,27 @@ export interface IPriceFeedRepository {
   searchToken(
     query: string,
     chain?: ChainType,
-  ): Promise<{
-    id: string;
-    symbol: string;
-    name: string;
-    address?: string;
-    iconUrl?: string;
-    chain?: string;
-  }[]>;
+  ): Promise<
+    {
+      id: string;
+      symbol: string;
+      name: string;
+      address?: string;
+      iconUrl?: string;
+      chain?: string;
+    }[]
+  >;
 
   /**
    * Gets supported platforms/chains from CoinGecko
    */
-  getSupportedPlatforms(): Promise<{
-    id: string;
-    name: string;
-    chainId?: number;
-  }[]>;
+  getSupportedPlatforms(): Promise<
+    {
+      id: string;
+      name: string;
+      chainId?: number;
+    }[]
+  >;
 
   /**
    * Gets token contract address for a CoinGecko ID on a specific platform
@@ -136,14 +139,16 @@ export interface IPriceFeedRepository {
   /**
    * Gets trending tokens
    */
-  getTrendingTokens(): Promise<{
-    id: string;
-    symbol: string;
-    name: string;
-    priceUsd: number;
-    priceChangePercentage24h: number;
-    marketCapRank: number;
-  }[]>;
+  getTrendingTokens(): Promise<
+    {
+      id: string;
+      symbol: string;
+      name: string;
+      priceUsd: number;
+      priceChangePercentage24h: number;
+      marketCapRank: number;
+    }[]
+  >;
 
   /**
    * Gets simple price with 24h change for display
@@ -166,20 +171,22 @@ export interface IPriceFeedRepository {
     tokenAddresses: string[],
     chain: ChainType,
     includePriceChange?: boolean,
-  ): Promise<Map<string, {
-    price: number;
-    priceChange24h?: number;
-    priceChangePercentage24h?: number;
-    lastUpdated: Date;
-  }>>;
+  ): Promise<
+    Map<
+      string,
+      {
+        price: number;
+        priceChange24h?: number;
+        priceChangePercentage24h?: number;
+        lastUpdated: Date;
+      }
+    >
+  >;
 
   /**
    * Validates if a token exists on CoinGecko
    */
-  validateToken(
-    tokenAddress: string,
-    chain: ChainType,
-  ): Promise<boolean>;
+  validateToken(tokenAddress: string, chain: ChainType): Promise<boolean>;
 
   /**
    * Gets API rate limit status
@@ -203,9 +210,7 @@ export interface IPriceFeedRepository {
   /**
    * Gets DeFi protocols data (for LP token price validation)
    */
-  getDeFiProtocolData(
-    protocolId: string,
-  ): Promise<{
+  getDeFiProtocolData(protocolId: string): Promise<{
     name: string;
     tvl: number;
     tokenAddress?: string;
@@ -233,10 +238,7 @@ export interface IPriceFeedRepository {
   /**
    * Refreshes cached data for a token
    */
-  refreshTokenData(
-    tokenAddress: string,
-    chain: ChainType,
-  ): Promise<void>;
+  refreshTokenData(tokenAddress: string, chain: ChainType): Promise<void>;
 
   /**
    * Clears cache for all tokens
@@ -253,4 +255,4 @@ export interface IPriceFeedRepository {
     oldestCacheEntry: Date;
     newestCacheEntry: Date;
   }>;
-} 
+}

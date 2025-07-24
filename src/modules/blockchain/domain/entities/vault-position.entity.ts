@@ -60,4 +60,4 @@ export class VaultPositionEntity implements IVaultPosition {
       data.timestamp,
     );
   }
-} 
+}

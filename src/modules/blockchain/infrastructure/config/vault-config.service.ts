@@ -30,8 +30,8 @@ interface TokenConfig {
   decimals: number;
   coingeckoId: string;
   isLP: boolean;
-  token0?: string; // For LP tokens
-  token1?: string; // For LP tokens
+  token0?: string;
+  token1?: string;
 }
 
 @Injectable()
@@ -54,12 +54,17 @@ export class VaultConfigService {
   }
 
   private initializeChainConfigs(): void {
-    // Base Chain Configuration (Season 1)
     const baseConfig: ChainConfig = {
       chainId: 8453,
       name: 'Base',
-      rpcUrl: this.configService.get<string>('BASE_RPC_URL', 'https://mainnet.base.org'),
-      subgraphUrl: this.configService.get<string>('SUBGRAPH_BASE_URL', 'https://api.thegraph.com/subgraphs/name/obelisk/base-staking'),
+      rpcUrl: this.configService.get<string>(
+        'BASE_RPC_URL',
+        'https://mainnet.base.org',
+      ),
+      subgraphUrl: this.configService.get<string>(
+        'SUBGRAPH_BASE_URL',
+        'https://api.thegraph.com/subgraphs/name/obelisk/base-staking',
+      ),
       blockExplorerUrl: 'https://basescan.org',
       nativeCurrency: {
         name: 'Ethereum',
@@ -72,19 +77,26 @@ export class VaultConfigService {
       avgBlockTimeMs: 2000,
     };
 
-    // Obelisk Chain Configuration (Season 2+)
     const obeliskConfig: ChainConfig = {
-      chainId: 1001, // Placeholder
+      chainId: 1001,
       name: 'Obelisk',
-      rpcUrl: this.configService.get<string>('OBELISK_RPC_URL', 'https://rpc.obelisk.gg'),
-      subgraphUrl: this.configService.get<string>('SUBGRAPH_OBELISK_URL', 'https://api.thegraph.com/subgraphs/name/obelisk/obelisk-staking'),
+      rpcUrl: this.configService.get<string>(
+        'OBELISK_RPC_URL',
+        'https://rpc.obelisk.gg',
+      ),
+      subgraphUrl: this.configService.get<string>(
+        'SUBGRAPH_OBELISK_URL',
+        'https://api.thegraph.com/subgraphs/name/obelisk/obelisk-staking',
+      ),
       blockExplorerUrl: 'https://explorer.obelisk.gg',
       nativeCurrency: {
         name: 'Obelisk',
         symbol: 'OBL',
         decimals: 18,
       },
-      multicallAddress: this.configService.get<string>('OBELISK_MULTICALL_ADDRESS'),
+      multicallAddress: this.configService.get<string>(
+        'OBELISK_MULTICALL_ADDRESS',
+      ),
       isTestnet: false,
       confirmationsRequired: 3,
       avgBlockTimeMs: 1000,
@@ -95,28 +107,26 @@ export class VaultConfigService {
   }
 
   private initializeSeasonConfigs(): void {
-    // Season 1 Configuration (Base Chain)
     const season1: SeasonConfig = {
       seasonNumber: 1,
       primaryChain: ChainType.BASE,
-      vaults: [], // Will be populated by initializeVaultConfigs
+      vaults: [],
       isActive: true,
-      startTimestamp: 1704067200, // 2024-01-01T00:00:00Z
-      endTimestamp: 1735689600,   // 2025-01-01T00:00:00Z
+      startTimestamp: 1704067200,
+      endTimestamp: 1735689600,
     };
 
-    // Season 2 Configuration (Obelisk Chain)
     const season2: SeasonConfig = {
       seasonNumber: 2,
       primaryChain: ChainType.OBELISK,
-      vaults: [], // Will be populated later
+      vaults: [],
       isActive: false,
-      startTimestamp: 1735689600, // 2025-01-01T00:00:00Z
+      startTimestamp: 1735689600,
       migrationConfig: {
         fromChain: ChainType.BASE,
         toChain: ChainType.OBELISK,
-        migrationStartTime: 1735603200, // 2024-12-31T00:00:00Z
-        migrationEndTime: 1735689600,   // 2025-01-01T00:00:00Z
+        migrationStartTime: 1735603200,
+        migrationEndTime: 1735689600,
       },
     };
 
@@ -125,7 +135,6 @@ export class VaultConfigService {
   }
 
   private initializeTokenConfigs(): void {
-    // ILV Token Configuration
     this.tokenConfigs.set('ilv', {
       address: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
       symbol: 'ILV',
@@ -135,35 +144,35 @@ export class VaultConfigService {
       isLP: false,
     });
 
-    // ILV/ETH LP Token Configuration (Base)
     this.tokenConfigs.set('ilv-eth-lp-base', {
-      address: '0x6A9865aDE2B6207dAAC49f8bCBa9705dEB0B0e6D', // Placeholder
+      address: '0x6A9865aDE2B6207dAAC49f8bCBa9705dEB0B0e6D',
       symbol: 'ILV-ETH-LP',
       name: 'ILV/ETH Liquidity Pool',
       decimals: 18,
       coingeckoId: '',
       isLP: true,
-      token0: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E', // ILV
-      token1: '0x4200000000000000000000000000000000000006', // WETH on Base
+      token0: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
+      token1: '0x4200000000000000000000000000000000000006',
     });
 
-    // ETH/USDC LP Token Configuration (Base)
     this.tokenConfigs.set('eth-usdc-lp-base', {
-      address: '0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640', // Placeholder
+      address: '0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640',
       symbol: 'ETH-USDC-LP',
       name: 'ETH/USDC Liquidity Pool',
       decimals: 18,
       coingeckoId: '',
       isLP: true,
-      token0: '0x4200000000000000000000000000000000000006', // WETH on Base
-      token1: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // USDC on Base
+      token0: '0x4200000000000000000000000000000000000006',
+      token1: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     });
   }
 
   private initializeVaultConfigs(): void {
-    // ILV Single Token Vault (Season 1 - Base)
     const ilvVaultBase: VaultConfig = {
-      address: this.configService.get<string>('ILV_VAULT_BASE_ADDRESS', '0x742d35Cc4Bf3b4A5b5b8e10a4E1F0e8C6F8D9E0A'),
+      address: this.configService.get<string>(
+        'ILV_VAULT_BASE_ADDRESS',
+        '0x742d35Cc4Bf3b4A5b5b8e10a4E1F0e8C6F8D9E0A',
+      ),
       name: 'ILV Staking Vault',
       symbol: 'sILV',
       asset: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
@@ -175,18 +184,20 @@ export class VaultConfigService {
       totalSupply: '0',
       depositEnabled: true,
       withdrawalEnabled: true,
-      minimumDeposit: '1000000000000000000', // 1 ILV
-      maximumDeposit: '1000000000000000000000000', // 1M ILV
-      lockDuration: 0, // No lock for Season 1
-      aprBase: 0.05, // 5% base APR
+      minimumDeposit: '1000000000000000000',
+      maximumDeposit: '1000000000000000000000000',
+      lockDuration: 0,
+      aprBase: 0.05,
       tokenConfig: this.tokenConfigs.get('ilv')!,
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date(),
     };
 
-    // ILV/ETH LP Vault (Season 1 - Base)
     const ilvEthLpVaultBase: VaultConfig = {
-      address: this.configService.get<string>('ILV_ETH_LP_VAULT_BASE_ADDRESS', '0x893E8a50Bc3c4b5b8d8F23A4b5c8D8F9E1a2b3c4'),
+      address: this.configService.get<string>(
+        'ILV_ETH_LP_VAULT_BASE_ADDRESS',
+        '0x893E8a50Bc3c4b5b8d8F23A4b5c8D8F9E1a2b3c4',
+      ),
       name: 'ILV/ETH LP Staking Vault',
       symbol: 'sILV-ETH-LP',
       asset: '0x6A9865aDE2B6207dAAC49f8bCBa9705dEB0B0e6D',
@@ -198,25 +209,25 @@ export class VaultConfigService {
       totalSupply: '0',
       depositEnabled: true,
       withdrawalEnabled: true,
-      minimumDeposit: '1000000000000000000', // 1 LP token
-      maximumDeposit: '100000000000000000000000', // 100K LP tokens
+      minimumDeposit: '1000000000000000000',
+      maximumDeposit: '100000000000000000000000',
       lockDuration: 0,
-      aprBase: 0.08, // 8% base APR for LP tokens
+      aprBase: 0.08,
       tokenConfig: this.tokenConfigs.get('ilv-eth-lp-base')!,
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date(),
     };
 
     this.vaultConfigs.set(ilvVaultBase.address.toLowerCase(), ilvVaultBase);
-    this.vaultConfigs.set(ilvEthLpVaultBase.address.toLowerCase(), ilvEthLpVaultBase);
+    this.vaultConfigs.set(
+      ilvEthLpVaultBase.address.toLowerCase(),
+      ilvEthLpVaultBase,
+    );
 
-    // Update season configs with vault references
     const season1 = this.seasonConfigs.get(1)!;
     season1.vaults = [ilvVaultBase, ilvEthLpVaultBase];
     this.seasonConfigs.set(1, season1);
   }
-
-  // Public API Methods
 
   getChainConfig(chain: ChainType): ChainConfig | undefined {
     return this.chainConfigs.get(chain);
@@ -235,19 +246,21 @@ export class VaultConfigService {
   }
 
   getVaultsByChain(chain: ChainType): VaultConfig[] {
-    return this.getAllVaultConfigs().filter(vault => vault.chain === chain);
+    return this.getAllVaultConfigs().filter((vault) => vault.chain === chain);
   }
 
   getVaultsBySeason(seasonNumber: number): VaultConfig[] {
-    return this.getAllVaultConfigs().filter(vault => vault.seasonNumber === seasonNumber);
+    return this.getAllVaultConfigs().filter(
+      (vault) => vault.seasonNumber === seasonNumber,
+    );
   }
 
   getActiveVaults(): VaultConfig[] {
-    return this.getAllVaultConfigs().filter(vault => vault.isActive);
+    return this.getAllVaultConfigs().filter((vault) => vault.isActive);
   }
 
   getVaultsByType(type: VaultType): VaultConfig[] {
-    return this.getAllVaultConfigs().filter(vault => vault.type === type);
+    return this.getAllVaultConfigs().filter((vault) => vault.type === type);
   }
 
   getSeasonConfig(seasonNumber: number): SeasonConfig | undefined {
@@ -256,14 +269,18 @@ export class VaultConfigService {
 
   getCurrentSeason(): SeasonConfig | undefined {
     const now = Date.now() / 1000;
-    return Array.from(this.seasonConfigs.values())
-      .find(season => season.isActive && season.startTimestamp <= now && (!season.endTimestamp || season.endTimestamp > now));
+    return Array.from(this.seasonConfigs.values()).find(
+      (season) =>
+        season.isActive &&
+        season.startTimestamp <= now &&
+        (!season.endTimestamp || season.endTimestamp > now),
+    );
   }
 
   getNextSeason(): SeasonConfig | undefined {
     const currentSeason = this.getCurrentSeason();
     if (!currentSeason) return undefined;
-    
+
     return this.seasonConfigs.get(currentSeason.seasonNumber + 1);
   }
 
@@ -271,9 +288,13 @@ export class VaultConfigService {
     return this.tokenConfigs.get(tokenKey);
   }
 
-  getTokenConfigByAddress(address: string, chain: ChainType): TokenConfig | undefined {
-    return Array.from(this.tokenConfigs.values())
-      .find(token => token.address.toLowerCase() === address.toLowerCase());
+  getTokenConfigByAddress(
+    address: string,
+    chain: ChainType,
+  ): TokenConfig | undefined {
+    return Array.from(this.tokenConfigs.values()).find(
+      (token) => token.address.toLowerCase() === address.toLowerCase(),
+    );
   }
 
   getAllTokenConfigs(): TokenConfig[] {
@@ -281,26 +302,28 @@ export class VaultConfigService {
   }
 
   getLPTokenConfigs(): TokenConfig[] {
-    return this.getAllTokenConfigs().filter(token => token.isLP);
+    return this.getAllTokenConfigs().filter((token) => token.isLP);
   }
 
   getSingleTokenConfigs(): TokenConfig[] {
-    return this.getAllTokenConfigs().filter(token => !token.isLP);
+    return this.getAllTokenConfigs().filter((token) => !token.isLP);
   }
 
   isMainnetLaunched(): boolean {
     const currentSeason = this.getCurrentSeason();
-    return currentSeason?.seasonNumber === 1; // Season 1 is considered mainnet launch
+    return currentSeason?.seasonNumber === 1;
   }
 
   isMigrationPeriod(): boolean {
     const now = Date.now() / 1000;
     const nextSeason = this.getNextSeason();
-    
+
     if (!nextSeason?.migrationConfig) return false;
-    
-    return now >= nextSeason.migrationConfig.migrationStartTime && 
-           now <= nextSeason.migrationConfig.migrationEndTime;
+
+    return (
+      now >= nextSeason.migrationConfig.migrationStartTime &&
+      now <= nextSeason.migrationConfig.migrationEndTime
+    );
   }
 
   getMigrationConfig(): SeasonConfig['migrationConfig'] | undefined {
@@ -357,7 +380,6 @@ export class VaultConfigService {
     return vault?.maximumDeposit ?? '0';
   }
 
-  // Configuration updates
   updateVaultConfig(vaultAddress: string, updates: Partial<VaultConfig>): void {
     const vault = this.getVaultConfig(vaultAddress);
     if (!vault) {
@@ -367,7 +389,7 @@ export class VaultConfigService {
 
     const updatedVault = { ...vault, ...updates, updatedAt: new Date() };
     this.vaultConfigs.set(vaultAddress.toLowerCase(), updatedVault);
-    
+
     this.logger.log(`Updated vault config for ${vaultAddress}`);
   }
 
@@ -381,7 +403,6 @@ export class VaultConfigService {
     this.logger.log(`Removed vault config: ${vaultAddress}`);
   }
 
-  // Validation methods
   validateVaultAddress(vaultAddress: string): boolean {
     return this.vaultConfigs.has(vaultAddress.toLowerCase());
   }
@@ -391,11 +412,11 @@ export class VaultConfigService {
   }
 
   validateTokenAddress(tokenAddress: string, chain: ChainType): boolean {
-    return Array.from(this.tokenConfigs.values())
-      .some(token => token.address.toLowerCase() === tokenAddress.toLowerCase());
+    return Array.from(this.tokenConfigs.values()).some(
+      (token) => token.address.toLowerCase() === tokenAddress.toLowerCase(),
+    );
   }
 
-  // Helper methods for frontend
   getVaultDisplayInfo(vaultAddress: string): {
     name: string;
     symbol: string;
@@ -423,7 +444,6 @@ export class VaultConfigService {
     };
   }
 
-  // Performance monitoring
   getConfigStats(): {
     totalVaults: number;
     activeVaults: number;
@@ -437,11 +457,13 @@ export class VaultConfigService {
 
     return {
       totalVaults: allVaults.length,
-      activeVaults: allVaults.filter(v => v.isActive).length,
+      activeVaults: allVaults.filter((v) => v.isActive).length,
       supportedChains: this.chainConfigs.size,
       currentSeason: currentSeason?.seasonNumber ?? null,
-      lpVaults: allVaults.filter(v => v.type === VaultType.LP_TOKEN).length,
-      singleTokenVaults: allVaults.filter(v => v.type === VaultType.SINGLE_TOKEN).length,
+      lpVaults: allVaults.filter((v) => v.type === VaultType.LP_TOKEN).length,
+      singleTokenVaults: allVaults.filter(
+        (v) => v.type === VaultType.SINGLE_TOKEN,
+      ).length,
     };
   }
-} 
+}

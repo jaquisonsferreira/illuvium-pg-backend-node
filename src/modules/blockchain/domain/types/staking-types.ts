@@ -327,4 +327,4 @@ export const CACHE_KEYS = {
     ttlSeconds: 60, // 1 minute
     namespace: 'staking:sync',
   },
-} as const; 
+} as const;

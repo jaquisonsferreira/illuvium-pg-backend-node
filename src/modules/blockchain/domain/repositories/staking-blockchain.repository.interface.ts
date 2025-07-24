@@ -97,10 +97,7 @@ export interface IStakingBlockchainRepository {
   /**
    * Checks if mainnet is launched for a vault
    */
-  isMainnetLaunched(
-    vaultAddress: string,
-    chain: ChainType,
-  ): Promise<boolean>;
+  isMainnetLaunched(vaultAddress: string, chain: ChainType): Promise<boolean>;
 
   /**
    * Gets vault configuration from contract
@@ -124,14 +121,16 @@ export interface IStakingBlockchainRepository {
     userAddress: string,
     vaultAddress: string,
     chain: ChainType,
-  ): Promise<{
-    withdrawalId: number;
-    shares: string;
-    assets: string;
-    requestTime: number;
-    unlockTime: number;
-    finalized: boolean;
-  }[]>;
+  ): Promise<
+    {
+      withdrawalId: number;
+      shares: string;
+      assets: string;
+      requestTime: number;
+      unlockTime: number;
+      finalized: boolean;
+    }[]
+  >;
 
   /**
    * Gets events from blockchain for a specific block range
@@ -213,26 +212,17 @@ export interface IStakingBlockchainRepository {
   /**
    * Validates if an address is a valid vault contract
    */
-  isValidVault(
-    vaultAddress: string,
-    chain: ChainType,
-  ): Promise<boolean>;
+  isValidVault(vaultAddress: string, chain: ChainType): Promise<boolean>;
 
   /**
    * Validates if an address is a valid LP token contract
    */
-  isValidLPToken(
-    tokenAddress: string,
-    chain: ChainType,
-  ): Promise<boolean>;
+  isValidLPToken(tokenAddress: string, chain: ChainType): Promise<boolean>;
 
   /**
    * Gets the underlying asset address for a vault
    */
-  getVaultAsset(
-    vaultAddress: string,
-    chain: ChainType,
-  ): Promise<string>;
+  getVaultAsset(vaultAddress: string, chain: ChainType): Promise<string>;
 
   /**
    * Gets LP token component tokens (token0, token1)
@@ -288,10 +278,12 @@ export interface IStakingBlockchainRepository {
     }[],
     chain: ChainType,
     blockNumber?: number,
-  ): Promise<{
-    success: boolean;
-    returnData: string;
-  }[]>;
+  ): Promise<
+    {
+      success: boolean;
+      returnData: string;
+    }[]
+  >;
 
   /**
    * Health check for RPC endpoint
@@ -302,4 +294,4 @@ export interface IStakingBlockchainRepository {
     blockNumber: number;
     chainId: number;
   }>;
-} 
+}

@@ -1,7 +1,7 @@
-import { 
-  VaultTransaction as IVaultTransaction, 
-  TransactionType, 
-  TransactionStatus 
+import {
+  VaultTransaction as IVaultTransaction,
+  TransactionType,
+  TransactionStatus,
 } from '../types/staking-types';
 
 export class VaultTransaction implements IVaultTransaction {
@@ -29,9 +29,6 @@ export class VaultTransaction implements IVaultTransaction {
     this.validateStatus(status);
   }
 
-  /**
-   * Creates a VaultTransaction from raw subgraph data
-   */
   static fromSubgraphData(data: {
     id: string;
     vault: string;
@@ -58,9 +55,6 @@ export class VaultTransaction implements IVaultTransaction {
     );
   }
 
-  /**
-   * Creates a transaction from blockchain event data
-   */
   static fromBlockchainEvent(data: {
     eventName: string;
     vaultAddress: string;
@@ -71,7 +65,7 @@ export class VaultTransaction implements IVaultTransaction {
   }): VaultTransaction {
     const type = VaultTransaction.mapEventNameToType(data.eventName);
     const id = `${data.transactionHash}-${data.args.logIndex || 0}`;
-    
+
     return new VaultTransaction(
       id,
       data.vaultAddress.toLowerCase(),
@@ -86,9 +80,6 @@ export class VaultTransaction implements IVaultTransaction {
     );
   }
 
-  /**
-   * Maps blockchain event names to transaction types
-   */
   private static mapEventNameToType(eventName: string): TransactionType {
     switch (eventName.toLowerCase()) {
       case 'deposit':
@@ -105,111 +96,72 @@ export class VaultTransaction implements IVaultTransaction {
     }
   }
 
-  /**
-   * Checks if this is a deposit transaction
-   */
   isDeposit(): boolean {
     return this.type === TransactionType.DEPOSIT;
   }
 
-  /**
-   * Checks if this is a withdrawal transaction
-   */
   isWithdrawal(): boolean {
     return this.type === TransactionType.WITHDRAWAL;
   }
 
-  /**
-   * Checks if this is a transfer transaction
-   */
   isTransfer(): boolean {
     return this.type === TransactionType.TRANSFER;
   }
 
-  /**
-   * Checks if the transaction is pending
-   */
   isPending(): boolean {
     return this.status === TransactionStatus.PENDING;
   }
 
-  /**
-   * Checks if the transaction is confirmed
-   */
   isConfirmed(): boolean {
     return this.status === TransactionStatus.CONFIRMED;
   }
 
-  /**
-   * Checks if the transaction failed
-   */
   isFailed(): boolean {
     return this.status === TransactionStatus.FAILED;
   }
 
-  /**
-   * Gets the asset amount as BigInt for calculations
-   */
   getAssetsBigInt(): bigint {
     return BigInt(this.assets);
   }
 
-  /**
-   * Gets the shares amount as BigInt for calculations
-   */
   getSharesBigInt(): bigint {
     return BigInt(this.shares);
   }
 
-  /**
-   * Formats asset amount for display with specified decimals
-   */
   formatAssets(decimals: number, displayDecimals: number = 2): string {
     const divisor = BigInt(10) ** BigInt(decimals);
     const wholePart = this.getAssetsBigInt() / divisor;
     const fractionalPart = this.getAssetsBigInt() % divisor;
-    
+
     const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
     const trimmedFractional = fractionalStr.slice(0, displayDecimals);
-    
+
     return `${wholePart}.${trimmedFractional}`;
   }
 
-  /**
-   * Formats shares amount for display with specified decimals
-   */
   formatShares(decimals: number, displayDecimals: number = 2): string {
     const divisor = BigInt(10) ** BigInt(decimals);
     const wholePart = this.getSharesBigInt() / divisor;
     const fractionalPart = this.getSharesBigInt() % divisor;
-    
+
     const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
     const trimmedFractional = fractionalStr.slice(0, displayDecimals);
-    
+
     return `${wholePart}.${trimmedFractional}`;
   }
 
-  /**
-   * Calculates USD value of the transaction
-   */
   calculateUsdValue(pricePerToken: number, decimals: number): number {
     const assetAmount = parseFloat(this.formatAssets(decimals, 8));
     return assetAmount * pricePerToken;
   }
 
-  /**
-   * Gets the transaction age in seconds
-   */
   getAgeInSeconds(): number {
     return Math.floor(Date.now() / 1000) - this.timestamp;
   }
 
-  /**
-   * Gets the transaction age in a human-readable format
-   */
   getFormattedAge(): string {
     const ageInSeconds = this.getAgeInSeconds();
-    
+
     if (ageInSeconds < 60) {
       return `${ageInSeconds}s ago`;
     } else if (ageInSeconds < 3600) {
@@ -221,9 +173,6 @@ export class VaultTransaction implements IVaultTransaction {
     }
   }
 
-  /**
-   * Creates a copy with updated status
-   */
   withStatus(newStatus: TransactionStatus): VaultTransaction {
     return new VaultTransaction(
       this.id,
@@ -239,9 +188,6 @@ export class VaultTransaction implements IVaultTransaction {
     );
   }
 
-  /**
-   * Converts to plain object for serialization
-   */
   toJSON(): IVaultTransaction {
     return {
       id: this.id,
@@ -267,7 +213,7 @@ export class VaultTransaction implements IVaultTransaction {
     if (!address || typeof address !== 'string') {
       throw new Error(`${fieldName} is required and must be a string`);
     }
-    
+
     if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
       throw new Error(`${fieldName} must be a valid Ethereum address`);
     }
@@ -310,7 +256,7 @@ export class VaultTransaction implements IVaultTransaction {
     if (!hash || typeof hash !== 'string') {
       throw new Error('Transaction hash is required and must be a string');
     }
-    
+
     if (!/^0x[a-fA-F0-9]{64}$/.test(hash)) {
       throw new Error('Transaction hash must be a valid 32-byte hex string');
     }
@@ -321,4 +267,4 @@ export class VaultTransaction implements IVaultTransaction {
       throw new Error('Invalid transaction status');
     }
   }
-} 
+}

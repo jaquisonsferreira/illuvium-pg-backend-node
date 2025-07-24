@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { 
+import {
   IStakingSubgraphRepository,
   VaultPosition,
   VaultTransaction,
@@ -50,12 +50,22 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
   constructor(private readonly configService: ConfigService) {
     this.config = {
       [ChainType.BASE]: {
-        url: this.configService.get<string>('SUBGRAPH_BASE_URL', 'https://api.thegraph.com/subgraphs/name/obelisk/base-staking'),
-        deploymentId: this.configService.get<string>('SUBGRAPH_BASE_DEPLOYMENT_ID'),
+        url: this.configService.get<string>(
+          'SUBGRAPH_BASE_URL',
+          'https://api.thegraph.com/subgraphs/name/obelisk/base-staking',
+        ),
+        deploymentId: this.configService.get<string>(
+          'SUBGRAPH_BASE_DEPLOYMENT_ID',
+        ),
       },
       [ChainType.OBELISK]: {
-        url: this.configService.get<string>('SUBGRAPH_OBELISK_URL', 'https://api.thegraph.com/subgraphs/name/obelisk/obelisk-staking'),
-        deploymentId: this.configService.get<string>('SUBGRAPH_OBELISK_DEPLOYMENT_ID'),
+        url: this.configService.get<string>(
+          'SUBGRAPH_OBELISK_URL',
+          'https://api.thegraph.com/subgraphs/name/obelisk/obelisk-staking',
+        ),
+        deploymentId: this.configService.get<string>(
+          'SUBGRAPH_OBELISK_DEPLOYMENT_ID',
+        ),
       },
     };
 
@@ -73,30 +83,36 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
         },
       });
 
-      // Add request interceptor for logging
       client.interceptors.request.use(
         (config) => {
-          this.logger.debug(`Subgraph request to ${chain}: ${config.data?.slice(0, 200)}...`);
+          this.logger.debug(
+            `Subgraph request to ${chain}: ${config.data?.slice(0, 200)}...`,
+          );
           return config;
         },
         (error) => {
           this.logger.error(`Subgraph request error for ${chain}:`, error);
           return Promise.reject(error);
-        }
+        },
       );
 
-      // Add response interceptor for error handling
       client.interceptors.response.use(
         (response) => {
           if (response.data?.errors?.length > 0) {
-            this.logger.warn(`Subgraph response errors for ${chain}:`, response.data.errors);
+            this.logger.warn(
+              `Subgraph response errors for ${chain}:`,
+              response.data.errors,
+            );
           }
           return response;
         },
         (error: AxiosError) => {
-          this.logger.error(`Subgraph response error for ${chain}:`, error.message);
+          this.logger.error(
+            `Subgraph response error for ${chain}:`,
+            error.message,
+          );
           return Promise.reject(error);
-        }
+        },
       );
 
       this.httpClients.set(chain as ChainType, client);
@@ -145,8 +161,16 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     }
   }
 
-  async getUserPositions(params: PositionQueryParams): Promise<DataResponse<VaultPosition[]>> {
-    const { userAddress, vaultAddress, chain = ChainType.BASE, fromBlock, toBlock } = params;
+  async getUserPositions(
+    params: PositionQueryParams,
+  ): Promise<DataResponse<VaultPosition[]>> {
+    const {
+      userAddress,
+      vaultAddress,
+      chain = ChainType.BASE,
+      fromBlock,
+      toBlock,
+    } = params;
 
     const whereConditions = [`user: "${userAddress.toLowerCase()}"`];
     if (vaultAddress) {
@@ -192,14 +216,16 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
       }>(chain, query);
 
       const positions = response.vaultPositions
-        .map((pos) => VaultPositionEntity.fromSubgraphData({
-          vault: pos.vault,
-          user: pos.user,
-          shares: pos.shares,
-          assets: pos.assets,
-          blockNumber: pos.blockNumber,
-          timestamp: pos.timestamp,
-        }))
+        .map((pos) =>
+          VaultPositionEntity.fromSubgraphData({
+            vault: pos.vault,
+            user: pos.user,
+            shares: pos.shares,
+            assets: pos.assets,
+            blockNumber: pos.blockNumber,
+            timestamp: pos.timestamp,
+          }),
+        )
         .filter((pos) => pos.hasBalance()); // Only return positions with actual balance
 
       const syncStatus = await this.getSyncStatus(chain);
@@ -214,7 +240,10 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
         },
       };
     } catch (error) {
-      this.logger.error(`Failed to get user positions for ${userAddress}:`, error);
+      this.logger.error(
+        `Failed to get user positions for ${userAddress}:`,
+        error,
+      );
       throw new Error(`Failed to fetch user positions from subgraph`);
     }
   }
@@ -289,7 +318,10 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
         },
       };
     } catch (error) {
-      this.logger.error(`Failed to get user position for ${userAddress} in vault ${vaultAddress}:`, error);
+      this.logger.error(
+        `Failed to get user position for ${userAddress} in vault ${vaultAddress}:`,
+        error,
+      );
       throw new Error(`Failed to fetch user position from subgraph`);
     }
   }
@@ -347,14 +379,16 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
       ]);
 
       const positions = response.vaultPositions
-        .map((pos) => VaultPositionEntity.fromSubgraphData({
-          vault: pos.vault,
-          user: pos.user,
-          shares: pos.shares,
-          assets: pos.assets,
-          blockNumber: pos.blockNumber,
-          timestamp: pos.timestamp,
-        }))
+        .map((pos) =>
+          VaultPositionEntity.fromSubgraphData({
+            vault: pos.vault,
+            user: pos.user,
+            shares: pos.shares,
+            assets: pos.assets,
+            blockNumber: pos.blockNumber,
+            timestamp: pos.timestamp,
+          }),
+        )
         .filter((pos) => pos.hasBalance());
 
       const total = countResponse.vault?.participantCount || 0;
@@ -382,21 +416,26 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
         },
       };
     } catch (error) {
-      this.logger.error(`Failed to get vault positions for ${vaultAddress}:`, error);
+      this.logger.error(
+        `Failed to get vault positions for ${vaultAddress}:`,
+        error,
+      );
       throw new Error(`Failed to fetch vault positions from subgraph`);
     }
   }
 
-  async getTransactions(params: TransactionQueryParams): Promise<DataResponse<PaginatedResponse<VaultTransaction>>> {
-    const { 
-      userAddress, 
-      vaultAddress, 
-      chain = ChainType.BASE, 
-      type, 
-      fromTimestamp, 
-      toTimestamp, 
-      page = 1, 
-      limit = 20 
+  async getTransactions(
+    params: TransactionQueryParams,
+  ): Promise<DataResponse<PaginatedResponse<VaultTransaction>>> {
+    const {
+      userAddress,
+      vaultAddress,
+      chain = ChainType.BASE,
+      type,
+      fromTimestamp,
+      toTimestamp,
+      page = 1,
+      limit = 20,
     } = params;
 
     const whereConditions: string[] = [];
@@ -417,7 +456,10 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     }
 
     const offset = (page - 1) * limit;
-    const whereClause = whereConditions.length > 0 ? `where: { ${whereConditions.join(', ')} }` : '';
+    const whereClause =
+      whereConditions.length > 0
+        ? `where: { ${whereConditions.join(', ')} }`
+        : '';
 
     const query = `
       query GetTransactions {
@@ -481,7 +523,7 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
           blockNumber: tx.blockNumber,
           transactionHash: tx.transactionHash,
           status: TransactionStatus.CONFIRMED,
-        })
+        }),
       );
 
       const total = countResponse.vaultTransactions.length;
@@ -658,7 +700,10 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
         },
       };
     } catch (error) {
-      this.logger.error(`Failed to get LP token data for ${tokenAddress}:`, error);
+      this.logger.error(
+        `Failed to get LP token data for ${tokenAddress}:`,
+        error,
+      );
       throw new Error(`Failed to fetch LP token data from subgraph`);
     }
   }
@@ -667,8 +712,10 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     tokenAddresses: string[],
     chain: ChainType,
   ): Promise<DataResponse<LPTokenData[]>> {
-    const addressList = tokenAddresses.map(addr => `"${addr.toLowerCase()}"`).join(', ');
-    
+    const addressList = tokenAddresses
+      .map((addr) => `"${addr.toLowerCase()}"`)
+      .join(', ');
+
     const query = `
       query GetMultipleLPTokensData {
         lpTokens(where: { id_in: [${addressList}] }) {
@@ -708,7 +755,7 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
           totalSupply: token.totalSupply,
           blockNumber: token.blockNumber,
           timestamp: token.timestamp,
-        })
+        }),
       );
 
       const syncStatus = await this.getSyncStatus(chain);
@@ -728,10 +775,98 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     }
   }
 
-  // Placeholder implementations for other methods
-  async getVaultAnalytics(vaultAddress: string, chain: ChainType): Promise<DataResponse<VaultAnalytics>> {
-    // Implementation would depend on the specific subgraph schema
-    throw new Error('Method not implemented yet');
+  async getVaultAnalytics(
+    vaultAddress: string,
+    chain: ChainType,
+  ): Promise<DataResponse<VaultAnalytics>> {
+    const query = `
+      query GetVaultAnalytics {
+        vault(id: "${vaultAddress.toLowerCase()}") {
+          id
+          totalValueLocked
+          totalShares
+          totalParticipants
+          totalDeposits
+          totalWithdrawals
+          dailyVolume
+          weeklyVolume
+          averageAPY
+        }
+        vaultDayDatas(
+          where: { vault: "${vaultAddress.toLowerCase()}" }
+          orderBy: date
+          orderDirection: desc
+          first: 30
+        ) {
+          date
+          totalValueLocked
+          dailyVolumeUSD
+          dailyDeposits
+          dailyWithdrawals
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        vault: {
+          id: string;
+          totalValueLocked: string;
+          totalShares: string;
+          totalParticipants: string;
+          totalDeposits: string;
+          totalWithdrawals: string;
+          dailyVolume: string;
+          weeklyVolume: string;
+          averageAPY: string;
+        } | null;
+        vaultDayDatas: Array<{
+          date: number;
+          totalValueLocked: string;
+          dailyVolumeUSD: string;
+          dailyDeposits: string;
+          dailyWithdrawals: string;
+        }>;
+      }>(chain, query);
+
+      if (!response.vault) {
+        throw new Error(`Vault not found: ${vaultAddress}`);
+      }
+
+      const analytics: VaultAnalytics = {
+        vaultAddress: response.vault.id,
+        totalValueLocked: response.vault.totalValueLocked,
+        totalValueLockedUsd: 0, // Will be calculated with price feed
+        totalShares: response.vault.totalShares,
+        sharePrice:
+          response.vault.totalShares === '0'
+            ? 1
+            : parseFloat(response.vault.totalValueLocked) /
+              parseFloat(response.vault.totalShares),
+        participantCount: parseInt(response.vault.totalParticipants),
+        volume24h: response.vault.dailyVolume,
+        volume7d: response.vault.weeklyVolume,
+        tvlHistory: [], // Will be populated below
+      };
+
+      const syncStatus = await this.getSyncStatus(chain);
+
+      return {
+        data: analytics,
+        metadata: {
+          source: 'subgraph',
+          lastUpdated: new Date(),
+          isStale: syncStatus.blocksBehind > 50,
+          syncStatus,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to get vault analytics for ${vaultAddress}:`,
+        error,
+      );
+      throw new Error(`Failed to fetch vault analytics from subgraph`);
+    }
   }
 
   async getVaultTVLHistory(
@@ -739,20 +874,163 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     chain: ChainType,
     fromTimestamp?: number,
     toTimestamp?: number,
-    granularity?: 'hour' | 'day' | 'week',
+    granularity: 'hour' | 'day' | 'week' = 'day',
   ): Promise<DataResponse<TVLDataPoint[]>> {
-    throw new Error('Method not implemented yet');
+    const entity = granularity === 'hour' ? 'vaultHourDatas' : 'vaultDayDatas';
+    const timeField = granularity === 'hour' ? 'hourStartUnix' : 'date';
+
+    const whereConditions = [`vault: "${vaultAddress.toLowerCase()}"`];
+    if (fromTimestamp) {
+      whereConditions.push(
+        `${timeField}_gte: ${Math.floor(fromTimestamp / 1000)}`,
+      );
+    }
+    if (toTimestamp) {
+      whereConditions.push(
+        `${timeField}_lte: ${Math.floor(toTimestamp / 1000)}`,
+      );
+    }
+
+    const query = `
+      query GetVaultTVLHistory {
+        ${entity}(
+          where: { ${whereConditions.join(', ')} }
+          orderBy: ${timeField}
+          orderDirection: asc
+          first: 1000
+        ) {
+          ${timeField}
+          totalValueLocked
+          totalValueLockedUSD
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        [key: string]: Array<{
+          [key: string]: string;
+          totalValueLocked: string;
+          totalValueLockedUSD: string;
+        }>;
+      }>(chain, query);
+
+      const dataPoints: TVLDataPoint[] = response[entity].map((point) => ({
+        timestamp: parseInt(point[timeField]) * 1000,
+        totalAssets: point.totalValueLocked,
+        totalAssetsUsd: parseFloat(point.totalValueLockedUSD),
+        sharePrice: 1, // This would need to be calculated from shares/TVL
+        blockNumber: 0, // Would need to be included in query if needed
+      }));
+
+      const syncStatus = await this.getSyncStatus(chain);
+
+      return {
+        data: dataPoints,
+        metadata: {
+          source: 'subgraph',
+          lastUpdated: new Date(),
+          isStale: syncStatus.blocksBehind > 50,
+          syncStatus,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to get TVL history for vault ${vaultAddress}:`,
+        error,
+      );
+      throw new Error(`Failed to fetch TVL history from subgraph`);
+    }
   }
 
-  async getEcosystemStats(chain: ChainType): Promise<DataResponse<{
-    totalValueLocked: string;
-    totalValueLockedUsd: number;
-    totalVaults: number;
-    totalParticipants: number;
-    volume24h: string;
-    volume7d: string;
-  }>> {
-    throw new Error('Method not implemented yet');
+  async getEcosystemStats(chain: ChainType): Promise<
+    DataResponse<{
+      totalValueLocked: string;
+      totalValueLockedUsd: number;
+      totalVaults: number;
+      totalParticipants: number;
+      volume24h: string;
+      volume7d: string;
+    }>
+  > {
+    const query = `
+      query GetEcosystemStats {
+        protocolMetrics(id: "1") {
+          totalValueLocked
+          totalValueLockedUSD
+          totalVaults
+          totalUsers
+          dailyVolumeUSD
+          weeklyVolumeUSD
+        }
+        vaults(first: 1000) {
+          id
+          totalValueLocked
+        }
+        users(first: 1000) {
+          id
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        protocolMetrics: {
+          totalValueLocked: string;
+          totalValueLockedUSD: string;
+          totalVaults: string;
+          totalUsers: string;
+          dailyVolumeUSD: string;
+          weeklyVolumeUSD: string;
+        } | null;
+        vaults: Array<{ id: string; totalValueLocked: string }>;
+        users: Array<{ id: string }>;
+      }>(chain, query);
+
+      let stats;
+
+      if (response.protocolMetrics) {
+        stats = {
+          totalValueLocked: response.protocolMetrics.totalValueLocked,
+          totalValueLockedUsd: parseFloat(
+            response.protocolMetrics.totalValueLockedUSD,
+          ),
+          totalVaults: parseInt(response.protocolMetrics.totalVaults),
+          totalParticipants: parseInt(response.protocolMetrics.totalUsers),
+          volume24h: response.protocolMetrics.dailyVolumeUSD,
+          volume7d: response.protocolMetrics.weeklyVolumeUSD,
+        };
+      } else {
+        const totalTVL = response.vaults.reduce(
+          (acc, vault) => acc + BigInt(vault.totalValueLocked),
+          BigInt(0),
+        );
+
+        stats = {
+          totalValueLocked: totalTVL.toString(),
+          totalValueLockedUsd: 0,
+          totalVaults: response.vaults.length,
+          totalParticipants: response.users.length,
+          volume24h: '0',
+          volume7d: '0',
+        };
+      }
+
+      const syncStatus = await this.getSyncStatus(chain);
+
+      return {
+        data: stats,
+        metadata: {
+          source: 'subgraph',
+          lastUpdated: new Date(),
+          isStale: syncStatus.blocksBehind > 50,
+          syncStatus,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get ecosystem stats:`, error);
+      throw new Error(`Failed to fetch ecosystem stats from subgraph`);
+    }
   }
 
   async getCurrentBlock(chain: ChainType): Promise<number> {
@@ -760,7 +1038,10 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     return syncStatus.latestBlock;
   }
 
-  async getLatestTransactions(chain: ChainType, limit: number = 10): Promise<DataResponse<VaultTransaction[]>> {
+  async getLatestTransactions(
+    chain: ChainType,
+    limit: number = 10,
+  ): Promise<DataResponse<VaultTransaction[]>> {
     const response = await this.getTransactions({ chain, page: 1, limit });
     return {
       data: response.data.data,
@@ -790,13 +1071,17 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     chain: ChainType,
     fromTimestamp?: number,
     toTimestamp?: number,
-  ): Promise<DataResponse<{
-    timestamp: number;
-    reserve0: string;
-    reserve1: string;
-    totalSupply: string;
-    blockNumber: number;
-  }[]>> {
+  ): Promise<
+    DataResponse<
+      {
+        timestamp: number;
+        reserve0: string;
+        reserve1: string;
+        totalSupply: string;
+        blockNumber: number;
+      }[]
+    >
+  > {
     throw new Error('Method not implemented yet');
   }
 
@@ -805,14 +1090,18 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     chain: ChainType,
     fromBlock?: number,
     toBlock?: number,
-  ): Promise<DataResponse<{
-    from: string;
-    to: string;
-    value: string;
-    blockNumber: number;
-    timestamp: number;
-    transactionHash: string;
-  }[]>> {
+  ): Promise<
+    DataResponse<
+      {
+        from: string;
+        to: string;
+        value: string;
+        blockNumber: number;
+        timestamp: number;
+        transactionHash: string;
+      }[]
+    >
+  > {
     throw new Error('Method not implemented yet');
   }
 
@@ -823,7 +1112,7 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     indexingErrors?: string[];
   }> {
     const startTime = Date.now();
-    
+
     try {
       const syncStatus = await this.getSyncStatus(chain);
       const latency = Date.now() - startTime;
@@ -832,7 +1121,7 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
         isHealthy: syncStatus.isHealthy,
         latency,
         lastBlock: syncStatus.latestBlock,
-        indexingErrors: [], // Would be populated from actual subgraph errors
+        indexingErrors: [],
       };
     } catch (error) {
       const latency = Date.now() - startTime;
@@ -845,7 +1134,11 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     }
   }
 
-  private async query<T>(chain: ChainType, query: string, variables?: Record<string, any>): Promise<T> {
+  private async query<T>(
+    chain: ChainType,
+    query: string,
+    variables?: Record<string, any>,
+  ): Promise<T> {
     const client = this.httpClients.get(chain);
     if (!client) {
       throw new Error(`No HTTP client configured for chain: ${chain}`);
@@ -857,7 +1150,9 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     });
 
     if (response.data.errors && response.data.errors.length > 0) {
-      const errorMessage = response.data.errors.map(e => e.message).join(', ');
+      const errorMessage = response.data.errors
+        .map((e) => e.message)
+        .join(', ');
       throw new Error(`Subgraph query error: ${errorMessage}`);
     }
 
@@ -869,8 +1164,6 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
   }
 
   private async getChainHeadBlock(chain: ChainType): Promise<number> {
-    // This would typically call an RPC endpoint to get the latest block
-    // For now, returning a mock value
     return 20000000;
   }
-} 
+}

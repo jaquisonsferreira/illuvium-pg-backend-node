@@ -1,4 +1,7 @@
-import { LPTokenData as ILPTokenData, LPTokenPrice } from '../types/staking-types';
+import {
+  LPTokenData as ILPTokenData,
+  LPTokenPrice,
+} from '../types/staking-types';
 
 export class LPToken implements ILPTokenData {
   constructor(
@@ -19,25 +22,31 @@ export class LPToken implements ILPTokenData {
     token1Decimals: number = 18,
   ): LPTokenPrice {
     try {
-      const reserve0Decimal = parseFloat(this.reserve0) / Math.pow(10, token0Decimals);
-      const reserve1Decimal = parseFloat(this.reserve1) / Math.pow(10, token1Decimals);
-      const totalSupplyDecimal = parseFloat(this.totalSupply) / Math.pow(10, 18); // LP tokens typically have 18 decimals
+      const reserve0Decimal =
+        parseFloat(this.reserve0) / Math.pow(10, token0Decimals);
+      const reserve1Decimal =
+        parseFloat(this.reserve1) / Math.pow(10, token1Decimals);
+      const totalSupplyDecimal =
+        parseFloat(this.totalSupply) / Math.pow(10, 18);
 
       const reserve0ValueUsd = reserve0Decimal * token0Price.priceUsd;
       const reserve1ValueUsd = reserve1Decimal * token1Price.priceUsd;
       const totalLiquidityUsd = reserve0ValueUsd + reserve1ValueUsd;
 
-      const pricePerToken = totalSupplyDecimal > 0 ? totalLiquidityUsd / totalSupplyDecimal : 0;
+      const pricePerToken =
+        totalSupplyDecimal > 0 ? totalLiquidityUsd / totalSupplyDecimal : 0;
 
-      const token0Weight = totalLiquidityUsd > 0 ? reserve0ValueUsd / totalLiquidityUsd : 0;
-      const token1Weight = totalLiquidityUsd > 0 ? reserve1ValueUsd / totalLiquidityUsd : 0;
+      const token0Weight =
+        totalLiquidityUsd > 0 ? reserve0ValueUsd / totalLiquidityUsd : 0;
+      const token1Weight =
+        totalLiquidityUsd > 0 ? reserve1ValueUsd / totalLiquidityUsd : 0;
 
       return {
         lpTokenAddress: this.address,
         token0: this.token0,
         token1: this.token1,
-        token0Symbol: '', // Will be filled by caller if needed
-        token1Symbol: '', // Will be filled by caller if needed
+        token0Symbol: '',
+        token1Symbol: '',
         priceUsd: pricePerToken,
         reserve0: this.reserve0,
         reserve1: this.reserve1,
@@ -55,7 +64,6 @@ export class LPToken implements ILPTokenData {
         source: 'calculated',
       };
     } catch (error) {
-      // Return a safe default if calculation fails
       return {
         lpTokenAddress: this.address,
         token0: this.token0,
@@ -91,25 +99,26 @@ export class LPToken implements ILPTokenData {
     shareOfPool: number;
   } {
     try {
-      const providedAmount0 = parseFloat(token0Amount) / Math.pow(10, token0Decimals);
-      const providedAmount1 = parseFloat(token1Amount) / Math.pow(10, token1Decimals);
-      
+      const providedAmount0 =
+        parseFloat(token0Amount) / Math.pow(10, token0Decimals);
+      const providedAmount1 =
+        parseFloat(token1Amount) / Math.pow(10, token1Decimals);
+
       const reserve0 = parseFloat(this.reserve0) / Math.pow(10, token0Decimals);
       const reserve1 = parseFloat(this.reserve1) / Math.pow(10, token1Decimals);
       const totalSupply = parseFloat(this.totalSupply) / Math.pow(10, 18);
 
-      // Calculate LP tokens to mint (using minimum ratio to prevent arbitrage)
       const ratio0 = totalSupply > 0 ? providedAmount0 / reserve0 : 0;
       const ratio1 = totalSupply > 0 ? providedAmount1 / reserve1 : 0;
       const lpTokensToMint = Math.min(ratio0, ratio1) * totalSupply;
 
-      // Calculate share of pool
       const newTotalSupply = totalSupply + lpTokensToMint;
-      const shareOfPool = newTotalSupply > 0 ? lpTokensToMint / newTotalSupply : 0;
+      const shareOfPool =
+        newTotalSupply > 0 ? lpTokensToMint / newTotalSupply : 0;
 
       return {
-        lpTokenAmount: (lpTokensToMint * Math.pow(10, 18)).toString(), // Convert back to wei
-        shareOfPool: shareOfPool * 100, // Percentage
+        lpTokenAmount: (lpTokensToMint * Math.pow(10, 18)).toString(),
+        shareOfPool: shareOfPool * 100,
       };
     } catch (error) {
       return {
@@ -131,11 +140,9 @@ export class LPToken implements ILPTokenData {
     try {
       const lpTokens = parseFloat(lpTokenAmount) / Math.pow(10, 18);
       const totalSupply = parseFloat(this.totalSupply) / Math.pow(10, 18);
-      
-      // Calculate share of pool
+
       const shareOfPool = totalSupply > 0 ? lpTokens / totalSupply : 0;
 
-      // Calculate proportional amounts
       const reserve0 = parseFloat(this.reserve0) / Math.pow(10, token0Decimals);
       const reserve1 = parseFloat(this.reserve1) / Math.pow(10, token1Decimals);
 
@@ -145,7 +152,7 @@ export class LPToken implements ILPTokenData {
       return {
         token0Amount: (token0Amount * Math.pow(10, token0Decimals)).toString(),
         token1Amount: (token1Amount * Math.pow(10, token1Decimals)).toString(),
-        shareOfPool: shareOfPool * 100, // Percentage
+        shareOfPool: shareOfPool * 100,
       };
     } catch (error) {
       return {
@@ -156,18 +163,20 @@ export class LPToken implements ILPTokenData {
     }
   }
 
-  calculatePriceImpact(amountIn: string, isToken0: boolean, decimals: number = 18): number {
+  calculatePriceImpact(
+    amountIn: string,
+    isToken0: boolean,
+    decimals: number = 18,
+  ): number {
     try {
       const amount = parseFloat(amountIn) / Math.pow(10, decimals);
-      
+
       const reserve0 = parseFloat(this.reserve0) / Math.pow(10, decimals);
       const reserve1 = parseFloat(this.reserve1) / Math.pow(10, decimals);
 
       if (isToken0) {
-        // Price impact when trading token0 for token1
         return (amount / (reserve0 + amount)) * 100;
       } else {
-        // Price impact when trading token1 for token0
         return (amount / (reserve1 + amount)) * 100;
       }
     } catch (error) {
@@ -209,4 +218,4 @@ export class LPToken implements ILPTokenData {
       data.timestamp,
     );
   }
-} 
+}

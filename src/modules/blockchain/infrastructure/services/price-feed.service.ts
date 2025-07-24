@@ -1,12 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { 
+import {
   IPriceFeedRepository,
   TokenPrice,
   TokenMetadata,
   ChainType,
 } from '../../domain/types/staking-types';
+import { CacheService } from '../../../cache/application/services/cache.service';
 
 interface CoinGeckoConfig {
   baseUrl: string;
@@ -61,19 +62,29 @@ export class PriceFeedService implements IPriceFeedRepository {
     [ChainType.OBELISK, 'obelisk'], // Custom platform for Obelisk
   ]);
 
-  // Cache for rate limiting and performance
-  private readonly priceCache = new Map<string, { data: TokenPrice; timestamp: number }>();
-  private readonly metadataCache = new Map<string, { data: TokenMetadata; timestamp: number }>();
-  private readonly cacheTTL = 5 * 60 * 1000; // 5 minutes for prices
-  private readonly metadataCacheTTL = 24 * 60 * 60 * 1000; // 24 hours for metadata
+  private readonly CACHE_NAMESPACE = 'price-feed';
+  private readonly PRICE_CACHE_TTL = 5 * 60; // 5 minutes in seconds
+  private readonly METADATA_CACHE_TTL = 24 * 60 * 60; // 24 hours in seconds
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly cacheService: CacheService,
+  ) {
     this.config = {
-      baseUrl: this.configService.get<string>('COINGECKO_BASE_URL', 'https://api.coingecko.com/api/v3'),
+      baseUrl: this.configService.get<string>(
+        'COINGECKO_BASE_URL',
+        'https://api.coingecko.com/api/v3',
+      ),
       apiKey: this.configService.get<string>('COINGECKO_API_KEY'),
-      rateLimitPerMinute: this.configService.get<number>('COINGECKO_RATE_LIMIT', 30),
+      rateLimitPerMinute: this.configService.get<number>(
+        'COINGECKO_RATE_LIMIT',
+        30,
+      ),
       timeoutMs: this.configService.get<number>('COINGECKO_TIMEOUT_MS', 10000),
-      retryAttempts: this.configService.get<number>('COINGECKO_RETRY_ATTEMPTS', 3),
+      retryAttempts: this.configService.get<number>(
+        'COINGECKO_RETRY_ATTEMPTS',
+        3,
+      ),
     };
 
     this.initializeHttpClient();
@@ -82,7 +93,7 @@ export class PriceFeedService implements IPriceFeedRepository {
   private initializeHttpClient(): void {
     const headers: Record<string, string> = {
       'User-Agent': 'Obelisk-Staking-API/1.0',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     };
 
     if (this.config.apiKey) {
@@ -98,13 +109,15 @@ export class PriceFeedService implements IPriceFeedRepository {
     // Add request interceptor for logging
     this.httpClient.interceptors.request.use(
       (config) => {
-        this.logger.debug(`CoinGecko request: ${config.method?.toUpperCase()} ${config.url}`);
+        this.logger.debug(
+          `CoinGecko request: ${config.method?.toUpperCase()} ${config.url}`,
+        );
         return config;
       },
       (error) => {
         this.logger.error('CoinGecko request error:', error);
         return Promise.reject(error);
-      }
+      },
     );
 
     // Add response interceptor for error handling
@@ -117,16 +130,19 @@ export class PriceFeedService implements IPriceFeedRepository {
           this.logger.error(`CoinGecko response error: ${error.message}`);
         }
         return Promise.reject(error);
-      }
+      },
     );
   }
 
-  async getTokenPrice(tokenAddress: string, chain: ChainType): Promise<TokenPrice> {
-    const cacheKey = `${chain}:${tokenAddress.toLowerCase()}`;
-    const cached = this.priceCache.get(cacheKey);
-    
-    if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
-      return cached.data;
+  async getTokenPrice(
+    tokenAddress: string,
+    chain: ChainType,
+  ): Promise<TokenPrice> {
+    const cacheKey = `${this.CACHE_NAMESPACE}:price:${chain}:${tokenAddress.toLowerCase()}`;
+
+    const cached = await this.cacheService.get<TokenPrice>(cacheKey);
+    if (cached) {
+      return cached;
     }
 
     try {
@@ -135,19 +151,24 @@ export class PriceFeedService implements IPriceFeedRepository {
         throw new Error(`Unsupported chain: ${chain}`);
       }
 
-      const response = await this.httpClient.get<CoinGeckoPrice>('/simple/token_price', {
-        params: {
-          id: platform,
-          contract_addresses: tokenAddress.toLowerCase(),
-          vs_currencies: 'usd',
-          include_24hr_change: true,
-          include_last_updated_at: true,
+      const response = await this.httpClient.get<CoinGeckoPrice>(
+        '/simple/token_price',
+        {
+          params: {
+            id: platform,
+            contract_addresses: tokenAddress.toLowerCase(),
+            vs_currencies: 'usd',
+            include_24hr_change: true,
+            include_last_updated_at: true,
+          },
         },
-      });
+      );
 
       const priceData = response.data[tokenAddress.toLowerCase()];
       if (!priceData) {
-        throw new Error(`Price not found for token ${tokenAddress} on ${chain}`);
+        throw new Error(
+          `Price not found for token ${tokenAddress} on ${chain}`,
+        );
       }
 
       const tokenPrice: TokenPrice = {
@@ -155,60 +176,78 @@ export class PriceFeedService implements IPriceFeedRepository {
         symbol: '', // Will be filled by metadata if needed
         priceUsd: priceData.usd,
         change24h: priceData.usd_24h_change,
-        lastUpdated: new Date(priceData.last_updated_at ? priceData.last_updated_at * 1000 : Date.now()),
+        lastUpdated: new Date(
+          priceData.last_updated_at
+            ? priceData.last_updated_at * 1000
+            : Date.now(),
+        ),
         source: 'coingecko',
         isStale: false,
       };
 
-      // Cache the result
-      this.priceCache.set(cacheKey, { data: tokenPrice, timestamp: Date.now() });
+      await this.cacheService.set(cacheKey, tokenPrice, this.PRICE_CACHE_TTL);
 
       return tokenPrice;
     } catch (error) {
-      this.logger.error(`Failed to get token price for ${tokenAddress} on ${chain}:`, error);
-      
-      // Return stale data if available
-      if (cached) {
+      this.logger.error(
+        `Failed to get token price for ${tokenAddress} on ${chain}:`,
+        error,
+      );
+
+      const staleCached = await this.cacheService.get<TokenPrice>(cacheKey);
+      if (staleCached) {
         this.logger.warn(`Returning stale price data for ${tokenAddress}`);
-        return { ...cached.data, isStale: true };
+        return { ...staleCached, isStale: true };
       }
 
       throw new Error(`Failed to fetch token price from CoinGecko`);
     }
   }
 
-  async getMultipleTokenPrices(tokenAddresses: string[], chain: ChainType): Promise<TokenPrice[]> {
+  async getMultipleTokenPrices(
+    tokenAddresses: string[],
+    chain: ChainType,
+  ): Promise<TokenPrice[]> {
     try {
       const platform = this.platformMappings.get(chain);
       if (!platform) {
         throw new Error(`Unsupported chain: ${chain}`);
       }
 
-      const addresses = tokenAddresses.map(addr => addr.toLowerCase()).join(',');
-      
-      const response = await this.httpClient.get<CoinGeckoPrice>('/simple/token_price', {
-        params: {
-          id: platform,
-          contract_addresses: addresses,
-          vs_currencies: 'usd',
-          include_24hr_change: true,
-          include_last_updated_at: true,
+      const addresses = tokenAddresses
+        .map((addr) => addr.toLowerCase())
+        .join(',');
+
+      const response = await this.httpClient.get<CoinGeckoPrice>(
+        '/simple/token_price',
+        {
+          params: {
+            id: platform,
+            contract_addresses: addresses,
+            vs_currencies: 'usd',
+            include_24hr_change: true,
+            include_last_updated_at: true,
+          },
         },
-      });
+      );
 
       const prices: TokenPrice[] = [];
-      
+
       for (const address of tokenAddresses) {
         const lowerAddress = address.toLowerCase();
         const priceData = response.data[lowerAddress];
-        
+
         if (priceData) {
           const tokenPrice: TokenPrice = {
             tokenAddress: lowerAddress,
             symbol: '',
             priceUsd: priceData.usd,
             change24h: priceData.usd_24h_change,
-            lastUpdated: new Date(priceData.last_updated_at ? priceData.last_updated_at * 1000 : Date.now()),
+            lastUpdated: new Date(
+              priceData.last_updated_at
+                ? priceData.last_updated_at * 1000
+                : Date.now(),
+            ),
             source: 'coingecko',
             isStale: false,
           };
@@ -216,8 +255,12 @@ export class PriceFeedService implements IPriceFeedRepository {
           prices.push(tokenPrice);
 
           // Cache individual results
-          const cacheKey = `${chain}:${lowerAddress}`;
-          this.priceCache.set(cacheKey, { data: tokenPrice, timestamp: Date.now() });
+          const cacheKey = `${this.CACHE_NAMESPACE}:price:${chain}:${lowerAddress}`;
+          await this.cacheService.set(
+            cacheKey,
+            tokenPrice,
+            this.PRICE_CACHE_TTL,
+          );
         }
       }
 
@@ -230,14 +273,17 @@ export class PriceFeedService implements IPriceFeedRepository {
 
   async getTokenPriceByCoinGeckoId(coinGeckoId: string): Promise<TokenPrice> {
     try {
-      const response = await this.httpClient.get<CoinGeckoPrice>('/simple/price', {
-        params: {
-          ids: coinGeckoId,
-          vs_currencies: 'usd',
-          include_24hr_change: true,
-          include_last_updated_at: true,
+      const response = await this.httpClient.get<CoinGeckoPrice>(
+        '/simple/price',
+        {
+          params: {
+            ids: coinGeckoId,
+            vs_currencies: 'usd',
+            include_24hr_change: true,
+            include_last_updated_at: true,
+          },
         },
-      });
+      );
 
       const priceData = response.data[coinGeckoId];
       if (!priceData) {
@@ -249,30 +295,42 @@ export class PriceFeedService implements IPriceFeedRepository {
         symbol: coinGeckoId,
         priceUsd: priceData.usd,
         change24h: priceData.usd_24h_change,
-        lastUpdated: new Date(priceData.last_updated_at ? priceData.last_updated_at * 1000 : Date.now()),
+        lastUpdated: new Date(
+          priceData.last_updated_at
+            ? priceData.last_updated_at * 1000
+            : Date.now(),
+        ),
         source: 'coingecko',
         isStale: false,
       };
     } catch (error) {
-      this.logger.error(`Failed to get token price by CoinGecko ID ${coinGeckoId}:`, error);
+      this.logger.error(
+        `Failed to get token price by CoinGecko ID ${coinGeckoId}:`,
+        error,
+      );
       throw new Error(`Failed to fetch token price by CoinGecko ID`);
     }
   }
 
-  async getMultipleTokenPricesByCoinGeckoIds(coinGeckoIds: string[]): Promise<TokenPrice[]> {
+  async getMultipleTokenPricesByCoinGeckoIds(
+    coinGeckoIds: string[],
+  ): Promise<TokenPrice[]> {
     try {
       const ids = coinGeckoIds.join(',');
-      
-      const response = await this.httpClient.get<CoinGeckoPrice>('/simple/price', {
-        params: {
-          ids,
-          vs_currencies: 'usd',
-          include_24hr_change: true,
-          include_last_updated_at: true,
-        },
-      });
 
-      return coinGeckoIds.map(id => {
+      const response = await this.httpClient.get<CoinGeckoPrice>(
+        '/simple/price',
+        {
+          params: {
+            ids,
+            vs_currencies: 'usd',
+            include_24hr_change: true,
+            include_last_updated_at: true,
+          },
+        },
+      );
+
+      return coinGeckoIds.map((id) => {
         const priceData = response.data[id];
         if (!priceData) {
           throw new Error(`Price not found for CoinGecko ID: ${id}`);
@@ -283,13 +341,20 @@ export class PriceFeedService implements IPriceFeedRepository {
           symbol: id,
           priceUsd: priceData.usd,
           change24h: priceData.usd_24h_change,
-          lastUpdated: new Date(priceData.last_updated_at ? priceData.last_updated_at * 1000 : Date.now()),
+          lastUpdated: new Date(
+            priceData.last_updated_at
+              ? priceData.last_updated_at * 1000
+              : Date.now(),
+          ),
           source: 'coingecko',
           isStale: false,
         };
       });
     } catch (error) {
-      this.logger.error(`Failed to get multiple token prices by CoinGecko IDs:`, error);
+      this.logger.error(
+        `Failed to get multiple token prices by CoinGecko IDs:`,
+        error,
+      );
       throw new Error(`Failed to fetch multiple token prices by CoinGecko IDs`);
     }
   }
@@ -302,14 +367,25 @@ export class PriceFeedService implements IPriceFeedRepository {
     granularity: 'hourly' | 'daily' = 'daily',
   ): Promise<{ timestamp: number; price: number }[]> {
     try {
-      const coinGeckoId = await this.getCoinGeckoIdByTokenAddress(tokenAddress, chain);
+      const coinGeckoId = await this.getCoinGeckoIdByTokenAddress(
+        tokenAddress,
+        chain,
+      );
       if (!coinGeckoId) {
         throw new Error(`CoinGecko ID not found for token ${tokenAddress}`);
       }
 
-      return this.getTokenPriceHistoryByCoinGeckoId(coinGeckoId, fromTimestamp, toTimestamp, granularity);
+      return this.getTokenPriceHistoryByCoinGeckoId(
+        coinGeckoId,
+        fromTimestamp,
+        toTimestamp,
+        granularity,
+      );
     } catch (error) {
-      this.logger.error(`Failed to get token price history for ${tokenAddress}:`, error);
+      this.logger.error(
+        `Failed to get token price history for ${tokenAddress}:`,
+        error,
+      );
       throw new Error(`Failed to fetch token price history`);
     }
   }
@@ -321,36 +397,50 @@ export class PriceFeedService implements IPriceFeedRepository {
     granularity: 'hourly' | 'daily' = 'daily',
   ): Promise<{ timestamp: number; price: number }[]> {
     try {
-      const endpoint = granularity === 'hourly' ? '/coins/{id}/market_chart/range' : '/coins/{id}/market_chart/range';
-      
-      const response = await this.httpClient.get(endpoint.replace('{id}', coinGeckoId), {
-        params: {
-          vs_currency: 'usd',
-          from: Math.floor(fromTimestamp / 1000),
-          to: Math.floor(toTimestamp / 1000),
+      const endpoint =
+        granularity === 'hourly'
+          ? '/coins/{id}/market_chart/range'
+          : '/coins/{id}/market_chart/range';
+
+      const response = await this.httpClient.get(
+        endpoint.replace('{id}', coinGeckoId),
+        {
+          params: {
+            vs_currency: 'usd',
+            from: Math.floor(fromTimestamp / 1000),
+            to: Math.floor(toTimestamp / 1000),
+          },
         },
-      });
+      );
 
       if (!response.data.prices) {
         throw new Error('No price history data returned');
       }
 
-      return response.data.prices.map(([timestamp, price]: [number, number]) => ({
-        timestamp: timestamp,
-        price,
-      }));
+      return response.data.prices.map(
+        ([timestamp, price]: [number, number]) => ({
+          timestamp: timestamp,
+          price,
+        }),
+      );
     } catch (error) {
-      this.logger.error(`Failed to get token price history for ${coinGeckoId}:`, error);
+      this.logger.error(
+        `Failed to get token price history for ${coinGeckoId}:`,
+        error,
+      );
       throw new Error(`Failed to fetch token price history`);
     }
   }
 
-  async getTokenMetadata(tokenAddress: string, chain: ChainType): Promise<TokenMetadata | null> {
-    const cacheKey = `${chain}:${tokenAddress.toLowerCase()}:metadata`;
-    const cached = this.metadataCache.get(cacheKey);
-    
-    if (cached && Date.now() - cached.timestamp < this.metadataCacheTTL) {
-      return cached.data;
+  async getTokenMetadata(
+    tokenAddress: string,
+    chain: ChainType,
+  ): Promise<TokenMetadata | null> {
+    const cacheKey = `${this.CACHE_NAMESPACE}:metadata:${chain}:${tokenAddress.toLowerCase()}`;
+
+    const cached = await this.cacheService.get<TokenMetadata>(cacheKey);
+    if (cached) {
+      return cached;
     }
 
     try {
@@ -359,8 +449,10 @@ export class PriceFeedService implements IPriceFeedRepository {
         throw new Error(`Unsupported chain: ${chain}`);
       }
 
-      const response = await this.httpClient.get<CoinGeckoTokenData>(`/coins/${platform}/contract/${tokenAddress.toLowerCase()}`);
-      
+      const response = await this.httpClient.get<CoinGeckoTokenData>(
+        `/coins/${platform}/contract/${tokenAddress.toLowerCase()}`,
+      );
+
       const tokenData = response.data;
       const metadata: TokenMetadata = {
         address: tokenAddress.toLowerCase(),
@@ -371,56 +463,78 @@ export class PriceFeedService implements IPriceFeedRepository {
         coingeckoId: tokenData.id,
       };
 
-      // Cache the result
-      this.metadataCache.set(cacheKey, { data: metadata, timestamp: Date.now() });
+      await this.cacheService.set(cacheKey, metadata, this.METADATA_CACHE_TTL);
 
       return metadata;
     } catch (error) {
-      this.logger.error(`Failed to get token metadata for ${tokenAddress}:`, error);
+      this.logger.error(
+        `Failed to get token metadata for ${tokenAddress}:`,
+        error,
+      );
       return null;
     }
   }
 
-  async getMultipleTokensMetadata(tokenAddresses: string[], chain: ChainType): Promise<TokenMetadata[]> {
-    const metadataPromises = tokenAddresses.map(address => 
-      this.getTokenMetadata(address, chain)
+  async getMultipleTokensMetadata(
+    tokenAddresses: string[],
+    chain: ChainType,
+  ): Promise<TokenMetadata[]> {
+    const metadataPromises = tokenAddresses.map((address) =>
+      this.getTokenMetadata(address, chain),
     );
 
     const results = await Promise.allSettled(metadataPromises);
-    
+
     return results
-      .filter((result): result is PromiseFulfilledResult<TokenMetadata> => 
-        result.status === 'fulfilled' && result.value !== null
+      .filter(
+        (result): result is PromiseFulfilledResult<TokenMetadata> =>
+          result.status === 'fulfilled' && result.value !== null,
       )
-      .map(result => result.value);
+      .map((result) => result.value);
   }
 
   // Placeholder implementations for other methods
-  async searchToken(query: string, chain?: ChainType): Promise<{
-    id: string;
-    symbol: string;
-    name: string;
-    address?: string;
-    iconUrl?: string;
-    chain?: string;
-  }[]> {
+  async searchToken(
+    query: string,
+    chain?: ChainType,
+  ): Promise<
+    {
+      id: string;
+      symbol: string;
+      name: string;
+      address?: string;
+      iconUrl?: string;
+      chain?: string;
+    }[]
+  > {
     throw new Error('Method not implemented yet');
   }
 
-  async getSupportedPlatforms(): Promise<{ id: string; name: string; chainId?: number }[]> {
+  async getSupportedPlatforms(): Promise<
+    { id: string; name: string; chainId?: number }[]
+  > {
     throw new Error('Method not implemented yet');
   }
 
-  async getTokenAddressByCoinGeckoId(coinGeckoId: string, platform: string): Promise<string | null> {
+  async getTokenAddressByCoinGeckoId(
+    coinGeckoId: string,
+    platform: string,
+  ): Promise<string | null> {
     throw new Error('Method not implemented yet');
   }
 
-  async getCoinGeckoIdByTokenAddress(tokenAddress: string, chain: ChainType): Promise<string | null> {
+  async getCoinGeckoIdByTokenAddress(
+    tokenAddress: string,
+    chain: ChainType,
+  ): Promise<string | null> {
     const metadata = await this.getTokenMetadata(tokenAddress, chain);
     return metadata?.coingeckoId || null;
   }
 
-  async getTokenMarketData(tokenAddress: string, chain: ChainType): Promise<{
+  async getTokenMarketData(
+    tokenAddress: string,
+    chain: ChainType,
+  ): Promise<{
     marketCap: number;
     volume24h: number;
     circulatingSupply: number;
@@ -435,14 +549,16 @@ export class PriceFeedService implements IPriceFeedRepository {
     throw new Error('Method not implemented yet');
   }
 
-  async getTrendingTokens(): Promise<{
-    id: string;
-    symbol: string;
-    name: string;
-    priceUsd: number;
-    priceChangePercentage24h: number;
-    marketCapRank: number;
-  }[]> {
+  async getTrendingTokens(): Promise<
+    {
+      id: string;
+      symbol: string;
+      name: string;
+      priceUsd: number;
+      priceChangePercentage24h: number;
+      marketCapRank: number;
+    }[]
+  > {
     throw new Error('Method not implemented yet');
   }
 
@@ -457,11 +573,13 @@ export class PriceFeedService implements IPriceFeedRepository {
     lastUpdated: Date;
   }> {
     const tokenPrice = await this.getTokenPrice(tokenAddress, chain);
-    
+
     return {
       price: tokenPrice.priceUsd,
       priceChange24h: includePriceChange ? tokenPrice.change24h : undefined,
-      priceChangePercentage24h: includePriceChange ? tokenPrice.change24h : undefined,
+      priceChangePercentage24h: includePriceChange
+        ? tokenPrice.change24h
+        : undefined,
       lastUpdated: tokenPrice.lastUpdated,
     };
   }
@@ -470,20 +588,27 @@ export class PriceFeedService implements IPriceFeedRepository {
     tokenAddresses: string[],
     chain: ChainType,
     includePriceChange?: boolean,
-  ): Promise<Map<string, {
-    price: number;
-    priceChange24h?: number;
-    priceChangePercentage24h?: number;
-    lastUpdated: Date;
-  }>> {
+  ): Promise<
+    Map<
+      string,
+      {
+        price: number;
+        priceChange24h?: number;
+        priceChangePercentage24h?: number;
+        lastUpdated: Date;
+      }
+    >
+  > {
     const prices = await this.getMultipleTokenPrices(tokenAddresses, chain);
     const priceMap = new Map();
 
-    prices.forEach(tokenPrice => {
+    prices.forEach((tokenPrice) => {
       priceMap.set(tokenPrice.tokenAddress, {
         price: tokenPrice.priceUsd,
         priceChange24h: includePriceChange ? tokenPrice.change24h : undefined,
-        priceChangePercentage24h: includePriceChange ? tokenPrice.change24h : undefined,
+        priceChangePercentage24h: includePriceChange
+          ? tokenPrice.change24h
+          : undefined,
         lastUpdated: tokenPrice.lastUpdated,
       });
     });
@@ -491,7 +616,10 @@ export class PriceFeedService implements IPriceFeedRepository {
     return priceMap;
   }
 
-  async validateToken(tokenAddress: string, chain: ChainType): Promise<boolean> {
+  async validateToken(
+    tokenAddress: string,
+    chain: ChainType,
+  ): Promise<boolean> {
     try {
       const metadata = await this.getTokenMetadata(tokenAddress, chain);
       return metadata !== null;
@@ -517,7 +645,7 @@ export class PriceFeedService implements IPriceFeedRepository {
     lastSuccessfulCall: Date;
   }> {
     const startTime = Date.now();
-    
+
     try {
       await this.httpClient.get('/ping');
       const latency = Date.now() - startTime;
@@ -531,7 +659,7 @@ export class PriceFeedService implements IPriceFeedRepository {
     } catch (error) {
       const latency = Date.now() - startTime;
       this.logger.error('CoinGecko health check failed:', error);
-      
+
       return {
         isHealthy: false,
         latency,
@@ -542,29 +670,48 @@ export class PriceFeedService implements IPriceFeedRepository {
   }
 
   // Additional placeholder methods
-  async getDeFiProtocolData(protocolId: string): Promise<{ name: string; tvl: number; tokenAddress?: string; chain?: string } | null> {
+  async getDeFiProtocolData(protocolId: string): Promise<{
+    name: string;
+    tvl: number;
+    tokenAddress?: string;
+    chain?: string;
+  } | null> {
     throw new Error('Method not implemented yet');
   }
 
-  async getTokenIcon(tokenAddress: string, chain: ChainType, size?: 'small' | 'large'): Promise<string | null> {
+  async getTokenIcon(
+    tokenAddress: string,
+    chain: ChainType,
+    size?: 'small' | 'large',
+  ): Promise<string | null> {
     const metadata = await this.getTokenMetadata(tokenAddress, chain);
     // Icon URL would be extracted from metadata if available
     return null;
   }
 
-  async getMultipleTokenIcons(tokenAddresses: string[], chain: ChainType, size?: 'small' | 'large'): Promise<Map<string, string>> {
+  async getMultipleTokenIcons(
+    tokenAddresses: string[],
+    chain: ChainType,
+    size?: 'small' | 'large',
+  ): Promise<Map<string, string>> {
     throw new Error('Method not implemented yet');
   }
 
-  async refreshTokenData(tokenAddress: string, chain: ChainType): Promise<void> {
-    const cacheKey = `${chain}:${tokenAddress.toLowerCase()}`;
-    this.priceCache.delete(cacheKey);
-    this.metadataCache.delete(`${cacheKey}:metadata`);
+  async refreshTokenData(
+    tokenAddress: string,
+    chain: ChainType,
+  ): Promise<void> {
+    const priceKey = `${this.CACHE_NAMESPACE}:price:${chain}:${tokenAddress.toLowerCase()}`;
+    const metadataKey = `${this.CACHE_NAMESPACE}:metadata:${chain}:${tokenAddress.toLowerCase()}`;
+
+    await Promise.all([
+      this.cacheService.delete(priceKey),
+      this.cacheService.delete(metadataKey),
+    ]);
   }
 
   async clearCache(): Promise<void> {
-    this.priceCache.clear();
-    this.metadataCache.clear();
+    await this.cacheService.clearNamespace(this.CACHE_NAMESPACE);
   }
 
   async getCacheStats(): Promise<{
@@ -574,6 +721,15 @@ export class PriceFeedService implements IPriceFeedRepository {
     oldestCacheEntry: Date;
     newestCacheEntry: Date;
   }> {
-    throw new Error('Method not implemented yet');
+    const keys = await this.cacheService.getKeys(`${this.CACHE_NAMESPACE}:*`);
+    const priceKeys = keys.filter((key) => key.includes(':price:'));
+
+    return {
+      totalCachedTokens: priceKeys.length,
+      cacheHitRate: 0,
+      averageCacheAge: 0,
+      oldestCacheEntry: new Date(),
+      newestCacheEntry: new Date(),
+    };
   }
-} 
+}

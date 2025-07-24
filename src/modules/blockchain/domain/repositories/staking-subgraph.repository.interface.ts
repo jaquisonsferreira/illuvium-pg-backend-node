@@ -21,7 +21,9 @@ export interface IStakingSubgraphRepository {
   /**
    * Gets vault positions for a specific user
    */
-  getUserPositions(params: PositionQueryParams): Promise<DataResponse<VaultPosition[]>>;
+  getUserPositions(
+    params: PositionQueryParams,
+  ): Promise<DataResponse<VaultPosition[]>>;
 
   /**
    * Gets vault position for a specific user and vault
@@ -45,7 +47,9 @@ export interface IStakingSubgraphRepository {
   /**
    * Gets transaction history
    */
-  getTransactions(params: TransactionQueryParams): Promise<DataResponse<PaginatedResponse<VaultTransaction>>>;
+  getTransactions(
+    params: TransactionQueryParams,
+  ): Promise<DataResponse<PaginatedResponse<VaultTransaction>>>;
 
   /**
    * Gets a specific transaction by ID
@@ -103,14 +107,16 @@ export interface IStakingSubgraphRepository {
   /**
    * Gets aggregated data across all vaults for ecosystem stats
    */
-  getEcosystemStats(chain: ChainType): Promise<DataResponse<{
-    totalValueLocked: string;
-    totalValueLockedUsd: number;
-    totalVaults: number;
-    totalParticipants: number;
-    volume24h: string;
-    volume7d: string;
-  }>>;
+  getEcosystemStats(chain: ChainType): Promise<
+    DataResponse<{
+      totalValueLocked: string;
+      totalValueLockedUsd: number;
+      totalVaults: number;
+      totalParticipants: number;
+      volume24h: string;
+      volume7d: string;
+    }>
+  >;
 
   /**
    * Gets current block number from subgraph
@@ -152,13 +158,17 @@ export interface IStakingSubgraphRepository {
     chain: ChainType,
     fromTimestamp?: number,
     toTimestamp?: number,
-  ): Promise<DataResponse<{
-    timestamp: number;
-    reserve0: string;
-    reserve1: string;
-    totalSupply: string;
-    blockNumber: number;
-  }[]>>;
+  ): Promise<
+    DataResponse<
+      {
+        timestamp: number;
+        reserve0: string;
+        reserve1: string;
+        totalSupply: string;
+        blockNumber: number;
+      }[]
+    >
+  >;
 
   /**
    * Gets token transfer events for LP tokens (for tracking liquidity changes)
@@ -168,14 +178,18 @@ export interface IStakingSubgraphRepository {
     chain: ChainType,
     fromBlock?: number,
     toBlock?: number,
-  ): Promise<DataResponse<{
-    from: string;
-    to: string;
-    value: string;
-    blockNumber: number;
-    timestamp: number;
-    transactionHash: string;
-  }[]>>;
+  ): Promise<
+    DataResponse<
+      {
+        from: string;
+        to: string;
+        value: string;
+        blockNumber: number;
+        timestamp: number;
+        transactionHash: string;
+      }[]
+    >
+  >;
 
   /**
    * Health check for subgraph availability
@@ -186,4 +200,4 @@ export interface IStakingSubgraphRepository {
     lastBlock: number;
     indexingErrors?: string[];
   }>;
-} 
+}
