@@ -120,21 +120,26 @@ describe('ThirdwebTokenClaims', () => {
     });
 
     it('should return true for expired token', () => {
-      // Create a token with a short expiration time (but safely in the future)
+      // Create a token that will expire soon
+      const futureTime = new Date(now.getTime() + 100); // expires in 100ms
+      
       const shortLivedData = {
         ...validClaimsData,
         iat: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),
-        exp: new Date(now.getTime() + 500).toISOString(), // expires in 500ms
+        exp: futureTime.toISOString(),
       };
 
       const claims = new ThirdwebTokenClaims(shortLivedData);
+
+      // Initially should not be expired
+      expect(claims.isExpired()).toBe(false);
 
       // Wait for the token to expire
       return new Promise<void>((resolve) => {
         setTimeout(() => {
           expect(claims.isExpired()).toBe(true);
           resolve();
-        }, 600); // Wait 600ms to ensure token is expired
+        }, 150); // Wait 150ms to ensure token is expired
       });
     });
   });
