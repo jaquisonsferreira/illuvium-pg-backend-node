@@ -1,6 +1,5 @@
 import {
   VaultPosition,
-  VaultTransaction,
   LPTokenData,
   TokenMetadata,
   ChainType,

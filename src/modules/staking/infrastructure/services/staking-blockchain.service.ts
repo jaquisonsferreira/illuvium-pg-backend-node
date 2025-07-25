@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ethers, Contract, Provider, JsonRpcProvider } from 'ethers';
+import { ethers, Contract, JsonRpcProvider } from 'ethers';
 import {
   IStakingBlockchainRepository,
   VaultPosition,
@@ -9,7 +9,6 @@ import {
   ChainType,
   BlockchainEvent,
   SeasonStatus,
-  VaultType,
 } from '../../domain/types/staking-types';
 import { VaultPositionEntity } from '../../domain/entities/vault-position.entity';
 import { LPToken } from '../../domain/entities/lp-token.entity';
@@ -467,19 +466,19 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
   // For brevity, implementing placeholder methods for the remaining interface methods
 
   async getVaultEvents(
-    vaultAddress: string,
-    fromBlock: number,
-    toBlock: number,
-    chain: ChainType,
-    eventNames?: string[],
+    _vaultAddress: string,
+    _fromBlock: number,
+    _toBlock: number,
+    _chain: ChainType,
+    _eventNames?: string[],
   ): Promise<BlockchainEvent[]> {
     // Implementation would fetch and parse vault events from the blockchain
     throw new Error('Method not implemented yet');
   }
 
   async getTransactionVaultEvents(
-    transactionHash: string,
-    chain: ChainType,
+    _transactionHash: string,
+    _chain: ChainType,
   ): Promise<BlockchainEvent[]> {
     throw new Error('Method not implemented yet');
   }
@@ -663,11 +662,11 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
   }
 
   async estimateVaultOperationGas(
-    operation: 'deposit' | 'withdraw' | 'redeem',
-    vaultAddress: string,
-    amount: string,
-    userAddress: string,
-    chain: ChainType,
+    _operation: 'deposit' | 'withdraw' | 'redeem',
+    _vaultAddress: string,
+    _amount: string,
+    _userAddress: string,
+    _chain: ChainType,
   ): Promise<string> {
     throw new Error('Method not implemented yet');
   }

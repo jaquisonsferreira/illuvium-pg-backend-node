@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import {
   ChainType,
   VaultType,
-  SeasonStatus,
   VaultConfig,
   ChainConfig,
 } from '../../domain/types/staking-types';
@@ -290,7 +289,7 @@ export class VaultConfigService {
 
   getTokenConfigByAddress(
     address: string,
-    chain: ChainType,
+    _chain: ChainType,
   ): TokenConfig | undefined {
     return Array.from(this.tokenConfigs.values()).find(
       (token) => token.address.toLowerCase() === address.toLowerCase(),

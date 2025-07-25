@@ -165,9 +165,10 @@ export class SyncVaultPositionsUseCase {
             positionData.balance,
             existingPosition.shares,
             positionData.usdValue,
+            existingPosition.lockWeeks,
             existingPosition.snapshotDate,
             existingPosition.blockNumber,
-            new Date(),
+            existingPosition.createdAt,
           );
 
           await this.vaultPositionRepository.update(updatedPosition);
@@ -189,6 +190,7 @@ export class SyncVaultPositionsUseCase {
           positionData.balance,
           positionData.shares,
           positionData.usdValue,
+          4, // Default lock weeks
           new Date(),
           positionData.blockNumber || 0,
           new Date(),
@@ -255,9 +257,10 @@ export class SyncVaultPositionsUseCase {
             currentData.balance,
             position.shares,
             currentData.usdValue,
+            position.lockWeeks,
             position.snapshotDate,
             position.blockNumber,
-            new Date(),
+            position.createdAt,
           );
           await this.vaultPositionRepository.update(updatedPosition);
         }
