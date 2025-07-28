@@ -1,5 +1,13 @@
-import { Controller, Get, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  HttpException,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { SystemHealthService } from '../../application/services/system-health.service';
 
 interface SystemHealthResponse {
   status: 'healthy' | 'unhealthy';
@@ -30,6 +38,8 @@ interface ReadinessResponse {
 export class SystemHealthController {
   private readonly logger = new Logger(SystemHealthController.name);
   private readonly startTime = Date.now();
+
+  constructor(private readonly healthService: SystemHealthService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -79,45 +89,35 @@ export class SystemHealthController {
   }
 
   @Get('ready')
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Readiness probe for Kubernetes' })
   @ApiResponse({
     status: 200,
     description: 'Service is ready',
   })
+  @ApiResponse({
+    status: 503,
+    description: 'Service is not ready',
+  })
   async readinessCheck(): Promise<ReadinessResponse> {
     const checks = {
-      database: this.checkDatabase(),
-      redis: this.checkRedis(),
+      database: await this.healthService.checkDatabaseConnection(),
+      redis: await this.healthService.checkRedisConnection(),
       environment: this.checkEnvironment(),
     };
 
     const ready = Object.values(checks).every((check) => check === true);
 
-    return {
+    const response: ReadinessResponse = {
       ready,
       timestamp: new Date().toISOString(),
       checks,
     };
-  }
 
-  private checkDatabase(): boolean {
-    try {
-      return !!(
-        process.env.DATABASE_URL ||
-        (process.env.DB_HOST && process.env.DB_PORT && process.env.DB_NAME)
-      );
-    } catch {
-      return false;
+    if (!ready) {
+      throw new HttpException(response, HttpStatus.SERVICE_UNAVAILABLE);
     }
-  }
 
-  private checkRedis(): boolean {
-    try {
-      return !!(process.env.REDIS_HOST && process.env.REDIS_PORT);
-    } catch {
-      return false;
-    }
+    return response;
   }
 
   private checkEnvironment(): boolean {

@@ -1,4 +1,4 @@
-FROM node:20-slim AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /app
 
@@ -8,22 +8,21 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:20-slim
+FROM node:22-slim AS deps
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci --production && npm cache clean --force
 
-COPY --from=builder /app/dist ./dist
+FROM gcr.io/distroless/nodejs22-debian12:nonroot
 
-RUN groupadd -g 1654 appuser && \
-    useradd -u 1654 -g appuser -m -s /bin/bash appuser
-USER appuser
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY package.json ./
 
 EXPOSE 5000
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/_system/health/live', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
-
-CMD ["node", "dist/main"]
+CMD ["dist/main"]

@@ -30,16 +30,25 @@ export class BlockchainEventBridgeService {
       return;
     }
 
+    const region = this.configService.get('AWS_REGION', 'us-east-1');
     const accessKeyId = this.configService.get('AWS_ACCESS_KEY_ID');
     const secretAccessKey = this.configService.get('AWS_SECRET_ACCESS_KEY');
 
-    this.eventBridgeClient = new EventBridgeClient({
-      region: this.configService.get('AWS_REGION', 'us-east-1'),
-      credentials: {
-        accessKeyId: accessKeyId!,
-        secretAccessKey: secretAccessKey!,
-      },
-    });
+    if (accessKeyId && secretAccessKey) {
+      // Development mode with explicit credentials
+      this.eventBridgeClient = new EventBridgeClient({
+        region,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+        },
+      });
+    } else {
+      // Production mode - uses IRSA (IAM Roles for Service Accounts)y
+      this.eventBridgeClient = new EventBridgeClient({
+        region,
+      });
+    }
 
     this.eventBusName = this.configService.get(
       'AWS_EVENTBRIDGE_BUS_NAME',
