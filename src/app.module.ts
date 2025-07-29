@@ -14,6 +14,7 @@ import { DeveloperModule } from './modules/developer/developer.module';
 import { ChatModule } from './modules/chat/chat.module';
 
 import { ObservabilityModule } from './modules/observability/observability.module';
+import { SystemModule } from './modules/system/system.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ObservabilityModule } from './modules/observability/observability.modul
     AuditModule,
     DeveloperModule,
     ChatModule,
+    SystemModule,
   ],
   controllers: [AppController],
   providers: [AppService, AssetsModule, WebhooksModule],
