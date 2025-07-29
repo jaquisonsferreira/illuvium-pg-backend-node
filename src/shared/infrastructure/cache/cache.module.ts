@@ -2,6 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import { ValkeyCacheRepository } from './repositories/valkey-cache.repository';
+import { IoRedisCacheRepository } from './repositories/ioredis-cache.repository';
 import { CacheConfigService } from './config/cache.config';
 
 import { SetCacheUseCase } from '../../application/cache/use-cases/set-cache.use-case';
@@ -17,7 +18,11 @@ import { CACHE_REPOSITORY_TOKEN } from './contants';
     CacheConfigService,
     {
       provide: CACHE_REPOSITORY_TOKEN,
-      useClass: ValkeyCacheRepository,
+      useClass:
+        // We use IoRedis in development because Valkey has conflicts on ARM64 processors
+        process.env.NODE_ENV === 'development'
+          ? IoRedisCacheRepository
+          : ValkeyCacheRepository,
     },
     SetCacheUseCase,
     GetCacheUseCase,
