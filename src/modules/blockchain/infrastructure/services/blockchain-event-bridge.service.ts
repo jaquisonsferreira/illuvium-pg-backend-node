@@ -33,18 +33,26 @@ export class BlockchainEventBridgeService {
     const region = this.configService.get('AWS_REGION', 'us-east-1');
     const accessKeyId = this.configService.get('AWS_ACCESS_KEY_ID');
     const secretAccessKey = this.configService.get('AWS_SECRET_ACCESS_KEY');
+    const endpoint = this.configService.get('AWS_ENDPOINT_URL');
 
     if (accessKeyId && secretAccessKey) {
       // Development mode with explicit credentials
-      this.eventBridgeClient = new EventBridgeClient({
+      const clientConfig: any = {
         region,
         credentials: {
           accessKeyId,
           secretAccessKey,
         },
-      });
+      };
+
+      // Add LocalStack endpoint if configured
+      if (endpoint) {
+        clientConfig.endpoint = endpoint;
+      }
+
+      this.eventBridgeClient = new EventBridgeClient(clientConfig);
     } else {
-      // Production mode - uses IRSA (IAM Roles for Service Accounts)y
+      // Production mode - uses IRSA (IAM Roles for Service Accounts)
       this.eventBridgeClient = new EventBridgeClient({
         region,
       });
