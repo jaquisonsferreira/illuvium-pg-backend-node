@@ -2,6 +2,24 @@ import { Kysely, PostgresDialect } from 'kysely';
 import { Pool } from 'pg';
 import { Database } from './database.types';
 import { EnvironmentConfigService } from '../../infrastructure/config';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+
+const getTlsConfig = () => {
+  const tlsPath = '/mnt/tls/cockroachdb-svc-backend-node';
+  const caPath = join(tlsPath, 'ca.crt');
+  const certPath = join(tlsPath, 'tls.crt');
+  const keyPath = join(tlsPath, 'tls.key');
+
+  if (existsSync(caPath) && existsSync(certPath) && existsSync(keyPath)) {
+    return {
+      ca: readFileSync(caPath, 'utf8'),
+      cert: readFileSync(certPath, 'utf8'),
+      key: readFileSync(keyPath, 'utf8'),
+    };
+  }
+  return {};
+};
 
 /**
  * Creates a database connection using Kysely
@@ -24,17 +42,13 @@ export const createDatabaseConnection = (
         ssl: dbConfig.ssl
           ? {
               rejectUnauthorized: true,
-              // Defined as true to verify the SSL certificate CA
+              ...getTlsConfig(),
             }
           : undefined,
-        // CockroachDB specific configurations
         application_name: 'illuvium-api',
-        // Transaction retry parameters
-        max: 20, // Maximum number of connections
+        max: 20,
         connectionTimeoutMillis: 3000,
-        // CockroachDB recommends these configurations for better performance
-        // https://www.cockroachlabs.com/docs/stable/connection-pooling.html
-        statement_timeout: 30000, // timeout for query execution (30s)
+        statement_timeout: 30000,
       }),
     }),
   });
