@@ -1,10 +1,36 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { createThirdwebClient } from 'thirdweb';
 import { createAuth } from 'thirdweb/auth';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 import {
   ThirdwebTokenClaimsData,
   ThirdwebTokenClaims,
 } from '../../domain/value-objects/thirdweb-token-claims.value-object';
+
+const getThirdwebConfig = () => {
+  const secretsPath = '/mnt/secrets';
+  const clientIdPath = join(secretsPath, 'thirdweb-client-id');
+  const secretKeyPath = join(secretsPath, 'thirdweb-secret-key');
+  const domainPath = join(secretsPath, 'thirdweb-auth-domain');
+
+  if (existsSync(clientIdPath) && existsSync(secretKeyPath)) {
+    return {
+      clientId: readFileSync(clientIdPath, 'utf8').trim(),
+      secretKey: readFileSync(secretKeyPath, 'utf8').trim(),
+      domain: existsSync(domainPath)
+        ? readFileSync(domainPath, 'utf8').trim()
+        : 'localhost:3000',
+    };
+  }
+
+  // Fallback use environment variables
+  return {
+    clientId: process.env.THIRDWEB_CLIENT_ID || '',
+    secretKey: process.env.THIRDWEB_SECRET_KEY || '',
+    domain: process.env.THIRDWEB_AUTH_DOMAIN || 'localhost:3000',
+  };
+};
 
 export interface ThirdwebTokenValidationResult {
   isValid: boolean;
@@ -14,6 +40,7 @@ export interface ThirdwebTokenValidationResult {
 
 @Injectable()
 export class ThirdwebTokenValidationService {
+  private readonly logger = new Logger(ThirdwebTokenValidationService.name);
   private thirdwebClient: any;
   private auth: any;
   private secretKey: string;
@@ -21,9 +48,16 @@ export class ThirdwebTokenValidationService {
   private domain: string;
 
   constructor() {
-    this.secretKey = process.env.THIRDWEB_SECRET_KEY || '';
-    this.clientId = process.env.THIRDWEB_CLIENT_ID || '';
-    this.domain = process.env.THIRDWEB_AUTH_DOMAIN || 'localhost:3000';
+    const config = getThirdwebConfig();
+    this.secretKey = config.secretKey;
+    this.clientId = config.clientId;
+    this.domain = config.domain;
+
+    this.logger.log('Initializing Thirdweb client', {
+      hasClientId: !!this.clientId,
+      hasSecretKey: !!this.secretKey,
+      domain: this.domain,
+    });
 
     if (this.secretKey && this.clientId) {
       this.thirdwebClient = createThirdwebClient({
