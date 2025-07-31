@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GetUserStakingPositionsUseCase } from './get-user-staking-positions.use-case';
 import { IStakingSubgraphRepository } from '../../domain/repositories/staking-subgraph.repository.interface';
+import { IStakingBlockchainRepository } from '../../domain/repositories/staking-blockchain.repository.interface';
 import { IPriceFeedRepository } from '../../domain/repositories/price-feed.repository.interface';
 import { VaultConfigService } from '../../infrastructure/config/vault-config.service';
 import { TokenDecimalsService } from '../../infrastructure/services/token-decimals.service';
@@ -15,6 +16,7 @@ import {
 describe('GetUserStakingPositionsUseCase', () => {
   let useCase: GetUserStakingPositionsUseCase;
   let stakingSubgraphRepository: jest.Mocked<IStakingSubgraphRepository>;
+  let blockchainRepository: jest.Mocked<IStakingBlockchainRepository>;
   let priceFeedRepository: jest.Mocked<IPriceFeedRepository>;
   let vaultConfigService: VaultConfigService;
   let tokenDecimalsService: jest.Mocked<TokenDecimalsService>;
@@ -31,6 +33,13 @@ describe('GetUserStakingPositionsUseCase', () => {
           useValue: {
             getUserPositions: jest.fn(),
             getLPTokenData: jest.fn(),
+          },
+        },
+        {
+          provide: 'IStakingBlockchainRepository',
+          useValue: {
+            getUserTokenBalance: jest.fn(),
+            getTokenMetadata: jest.fn(),
           },
         },
         {
@@ -69,6 +78,7 @@ describe('GetUserStakingPositionsUseCase', () => {
       GetUserStakingPositionsUseCase,
     );
     stakingSubgraphRepository = module.get('IStakingSubgraphRepository');
+    blockchainRepository = module.get('IStakingBlockchainRepository');
     priceFeedRepository = module.get('IPriceFeedRepository');
     vaultConfigService = module.get(VaultConfigService);
     tokenDecimalsService = module.get(TokenDecimalsService);
@@ -170,6 +180,11 @@ describe('GetUserStakingPositionsUseCase', () => {
         },
       );
 
+      // Mock user token balance
+      blockchainRepository.getUserTokenBalance.mockResolvedValue(
+        '50250000000000000000', // 50.25 tokens
+      );
+
       const result = await useCase.execute({
         walletAddress: mockWalletAddress,
         page: 1,
@@ -259,6 +274,9 @@ describe('GetUserStakingPositionsUseCase', () => {
           isStale: false,
         },
       });
+
+      // Mock user token balance for LP token
+      blockchainRepository.getUserTokenBalance.mockResolvedValue('0');
 
       // Mock LP price calculation
       calculateLPTokenPriceUseCase.execute.mockResolvedValue({
@@ -361,6 +379,22 @@ describe('GetUserStakingPositionsUseCase', () => {
         },
       });
 
+      // Mock wallet balance
+      blockchainRepository.getUserTokenBalance.mockResolvedValue('0');
+
+      // Mock token price
+      priceFeedRepository.getTokenPrice.mockResolvedValue({
+        tokenAddress: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
+        symbol: 'ILV',
+        priceUsd: 9.56,
+        change24h: 2.4,
+        lastUpdated: new Date(),
+        source: 'coingecko',
+        isStale: false,
+      });
+
+      tokenDecimalsService.getDecimals.mockResolvedValue(18);
+
       const result = await useCase.execute({
         walletAddress: mockWalletAddress,
         vaultId: 'ilv_vault',
@@ -453,6 +487,22 @@ describe('GetUserStakingPositionsUseCase', () => {
           isStale: false,
         },
       });
+
+      // Mock wallet balances
+      blockchainRepository.getUserTokenBalance.mockResolvedValue('0');
+
+      // Mock token prices
+      priceFeedRepository.getTokenPrice.mockResolvedValue({
+        tokenAddress: '',
+        symbol: '',
+        priceUsd: 1,
+        change24h: 0,
+        lastUpdated: new Date(),
+        source: 'mock',
+        isStale: false,
+      });
+
+      tokenDecimalsService.getDecimals.mockResolvedValue(18);
 
       const result = await useCase.execute({
         walletAddress: mockWalletAddress,
@@ -578,6 +628,25 @@ describe('GetUserStakingPositionsUseCase', () => {
         lastUpdated: new Date(),
         source: 'coingecko',
         isStale: false,
+      });
+
+      // Setup getLPTokenData mock for LP vault
+      stakingSubgraphRepository.getLPTokenData.mockResolvedValue({
+        data: {
+          address: '0x6A9865aDE2B6207dAAC49f8bCBa9705dEB0B0e6D',
+          token0: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
+          token1: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+          reserve0: '1000000000000000000000',
+          reserve1: '500000000000000000000',
+          totalSupply: '1000000000000000000000',
+          blockNumber: 1000000,
+          timestamp: Date.now() / 1000,
+        },
+        metadata: {
+          source: 'subgraph',
+          lastUpdated: new Date(),
+          isStale: false,
+        },
       });
 
       calculateLPTokenPriceUseCase.execute.mockResolvedValue({

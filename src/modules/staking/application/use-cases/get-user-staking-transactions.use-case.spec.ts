@@ -183,13 +183,20 @@ describe('GetUserStakingTransactionsUseCase', () => {
       });
 
       expect(result.wallet).toBe(mockWalletAddress);
-      expect(result.transactions).toHaveLength(2);
-      expect(result.transactions[0].type).toBe('deposit');
-      expect(result.transactions[0].amount).toBe('100.5');
-      expect(result.transactions[0].vault_id).toBe('ilv_vault');
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0].type).toBe('deposit');
+      expect(result.data[0].amount).toBe('100.5');
+      expect(result.data[0].vault_id).toBe('ilv_vault');
       expect(result.summary.total_transactions).toBe(2);
       expect(result.summary.total_deposits).toBe(1);
       expect(result.summary.total_withdrawals).toBe(1);
+
+      // Verify new fields match issue #20 spec
+      expect(result.data[0].transaction_hash).toBe('0xabc123');
+      expect(result.data[0].underlying_asset).toBe('Illuvium');
+      expect(result.data[0].underlying_asset_ticker).toBe('ILV');
+      expect(result.data[0].token_icons).toBeDefined();
+      expect(result.data[0].token_icons.primary).toBeTruthy();
     });
 
     it('should filter transactions by vault_id', async () => {
@@ -292,8 +299,8 @@ describe('GetUserStakingTransactionsUseCase', () => {
         limit: 10,
       });
 
-      expect(result.transactions).toHaveLength(1);
-      expect(result.transactions[0].vault_id).toBe('ilv_vault');
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].vault_id).toBe('ilv_vault');
     });
 
     it('should filter transactions by type', async () => {
@@ -391,8 +398,8 @@ describe('GetUserStakingTransactionsUseCase', () => {
         limit: 10,
       });
 
-      expect(result.transactions).toHaveLength(1);
-      expect(result.transactions[0].type).toBe('deposit');
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].type).toBe('deposit');
     });
 
     it('should filter transactions by date range', async () => {
@@ -498,8 +505,8 @@ describe('GetUserStakingTransactionsUseCase', () => {
         limit: 10,
       });
 
-      expect(result.transactions).toHaveLength(1);
-      expect(result.transactions[0].tx_hash).toBe('0xabc123');
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].transaction_hash).toBe('0xabc123');
     });
 
     it('should sort transactions correctly', async () => {
@@ -598,8 +605,8 @@ describe('GetUserStakingTransactionsUseCase', () => {
         limit: 10,
       });
 
-      expect(result.transactions[0].amount).toBe('100.0');
-      expect(result.transactions[1].amount).toBe('50.0');
+      expect(result.data[0].amount).toBe('100.0');
+      expect(result.data[1].amount).toBe('50.0');
     });
 
     it('should handle empty transactions gracefully', async () => {
@@ -626,7 +633,7 @@ describe('GetUserStakingTransactionsUseCase', () => {
         limit: 10,
       });
 
-      expect(result.transactions).toEqual([]);
+      expect(result.data).toEqual([]);
       expect(result.summary.total_transactions).toBe(0);
       expect(result.summary.total_deposited_usd).toBe('0.00');
     });

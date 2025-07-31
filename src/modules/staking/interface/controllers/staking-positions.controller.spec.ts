@@ -9,6 +9,7 @@ describe('StakingPositionsController', () => {
   let getUserStakingPositionsUseCase: jest.Mocked<GetUserStakingPositionsUseCase>;
 
   const mockWalletAddress = '0x1234567890abcdef1234567890abcdef12345678';
+  const checksumAddress = '0x1234567890AbcdEF1234567890aBcdef12345678';
   const mockVaultId = 'ilv_vault';
 
   beforeEach(async () => {
@@ -108,7 +109,7 @@ describe('StakingPositionsController', () => {
 
       expect(result).toEqual(mockResponse);
       expect(getUserStakingPositionsUseCase.execute).toHaveBeenCalledWith({
-        walletAddress: mockWalletAddress,
+        walletAddress: checksumAddress,
         vaultId: undefined,
         page: 1,
         limit: 10,
@@ -181,7 +182,7 @@ describe('StakingPositionsController', () => {
 
       expect(result).toEqual(mockResponse);
       expect(getUserStakingPositionsUseCase.execute).toHaveBeenCalledWith({
-        walletAddress: mockWalletAddress,
+        walletAddress: checksumAddress,
         vaultId: mockVaultId,
         page: 1,
         limit: 10,
@@ -226,7 +227,7 @@ describe('StakingPositionsController', () => {
 
       expect(result).toEqual(mockResponse);
       expect(getUserStakingPositionsUseCase.execute).toHaveBeenCalledWith({
-        walletAddress: mockWalletAddress,
+        walletAddress: checksumAddress,
         vaultId: undefined,
         page: 2,
         limit: 20,
@@ -268,7 +269,7 @@ describe('StakingPositionsController', () => {
       });
 
       expect(getUserStakingPositionsUseCase.execute).toHaveBeenCalledWith({
-        walletAddress: mockWalletAddress,
+        walletAddress: checksumAddress,
         vaultId: undefined,
         page: 1,
         limit: 10,

@@ -13,6 +13,7 @@ import {
   ApiBadRequestResponse,
   ApiInternalServerErrorResponse,
 } from '@nestjs/swagger';
+import { getAddress, isAddress } from 'ethers';
 import { GetPositionsQueryDto } from '../dto/get-positions-query.dto';
 import { StakingPositionsResponseDto } from '../dto/staking-positions-response.dto';
 import { GetUserStakingPositionsUseCase } from '../../application/use-cases/get-user-staking-positions.use-case';
@@ -50,12 +51,16 @@ export class StakingPositionsController {
     @Param('walletAddress') walletAddress: string,
     @Query() query: GetPositionsQueryDto,
   ): Promise<StakingPositionsResponseDto> {
-    // Validate wallet address format
-    if (!this.isValidEthereumAddress(walletAddress)) {
-      throw new BadRequestException('Invalid wallet address format');
+    let validatedAddress: string;
+    try {
+      if (!isAddress(walletAddress)) {
+        throw new BadRequestException('Invalid wallet address format');
+      }
+      validatedAddress = getAddress(walletAddress);
+    } catch (error) {
+      throw new BadRequestException('Invalid wallet address: ' + error.message);
     }
 
-    // Validate query parameters
     if (query.limit !== undefined && query.limit > 100) {
       throw new BadRequestException('Limit cannot exceed 100');
     }
@@ -65,15 +70,11 @@ export class StakingPositionsController {
     }
 
     return await this.getUserStakingPositionsUseCase.execute({
-      walletAddress,
+      walletAddress: validatedAddress,
       vaultId: query.vault_id,
       page: query.page || 1,
       limit: query.limit || 10,
       search: query.search,
     });
-  }
-
-  private isValidEthereumAddress(address: string): boolean {
-    return /^0x[a-fA-F0-9]{40}$/.test(address);
   }
 }

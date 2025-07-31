@@ -1,14 +1,12 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { IStakingSubgraphRepository } from '../../domain/repositories/staking-subgraph.repository.interface';
+import { IStakingBlockchainRepository } from '../../domain/repositories/staking-blockchain.repository.interface';
 import { IPriceFeedRepository } from '../../domain/repositories/price-feed.repository.interface';
 import { VaultConfigService } from '../../infrastructure/config/vault-config.service';
 import { TokenDecimalsService } from '../../infrastructure/services/token-decimals.service';
 import { CalculateLPTokenPriceUseCase } from './calculate-lp-token-price.use-case';
 import { StakingPositionsResponseDto } from '../../interface/dto/staking-positions-response.dto';
-import {
-  VaultType,
-  VaultPosition,
-} from '../../domain/types/staking-types';
+import { VaultType, VaultPosition } from '../../domain/types/staking-types';
 import { formatUnits } from 'ethers';
 
 interface ExecuteParams {
@@ -26,6 +24,8 @@ export class GetUserStakingPositionsUseCase {
   constructor(
     @Inject('IStakingSubgraphRepository')
     private readonly stakingSubgraphRepository: IStakingSubgraphRepository,
+    @Inject('IStakingBlockchainRepository')
+    private readonly blockchainRepository: IStakingBlockchainRepository,
     @Inject('IPriceFeedRepository')
     private readonly priceFeedRepository: IPriceFeedRepository,
     private readonly vaultConfigService: VaultConfigService,
@@ -38,7 +38,6 @@ export class GetUserStakingPositionsUseCase {
 
     this.logger.log(`Fetching positions for wallet: ${walletAddress}`);
 
-    // Get current season info
     const currentSeasonConfig = this.vaultConfigService.getCurrentSeason();
     if (!currentSeasonConfig) {
       throw new Error('No active season found');
@@ -50,13 +49,10 @@ export class GetUserStakingPositionsUseCase {
       chain: currentSeasonConfig.primaryChain,
     };
 
-    // Get vaults based on filters
     let vaults: any[] = [];
     if (vaultId) {
-      // Try to find vault by ID first (assuming vaultId could be vault_id like "ilv_vault")
       const allVaults = this.vaultConfigService.getActiveVaults();
       const vaultByCustomId = allVaults.find((v) => {
-        // Create a custom ID from vault symbol
         const customId = `${v.tokenConfig.symbol.toLowerCase()}_vault`;
         return customId === vaultId.toLowerCase();
       });
@@ -64,7 +60,6 @@ export class GetUserStakingPositionsUseCase {
       if (vaultByCustomId) {
         vaults = [vaultByCustomId];
       } else {
-        // Try by address
         const vaultByAddress = this.vaultConfigService.getVaultConfig(vaultId);
         if (vaultByAddress) {
           vaults = [vaultByAddress];
@@ -74,7 +69,6 @@ export class GetUserStakingPositionsUseCase {
       vaults = this.vaultConfigService.getActiveVaults();
     }
 
-    // Apply search filter if provided
     if (search) {
       const searchLower = search.toLowerCase();
       vaults = vaults.filter(
@@ -85,7 +79,6 @@ export class GetUserStakingPositionsUseCase {
       );
     }
 
-    // Get user positions from subgraph
     const positionsResponse =
       await this.stakingSubgraphRepository.getUserPositions({
         userAddress: walletAddress,
@@ -94,7 +87,6 @@ export class GetUserStakingPositionsUseCase {
 
     const userPositions = positionsResponse.data || [];
 
-    // Group positions by vault
     const positionsByVault = new Map<string, VaultPosition[]>();
     for (const position of userPositions) {
       const vaultAddress = position.vault.toLowerCase();
@@ -104,14 +96,12 @@ export class GetUserStakingPositionsUseCase {
       positionsByVault.get(vaultAddress)!.push(position);
     }
 
-    // Process each vault and enrich with data
     const enrichedVaults = await Promise.all(
       vaults.map(async (vault) => {
         const vaultAddress = vault.address.toLowerCase();
         const vaultPositions = positionsByVault.get(vaultAddress) || [];
         const hasPositions = vaultPositions.length > 0;
 
-        // Get token price
         let tokenPrice = 0;
         let price24hChange = 0;
         let tokenIcons: { primary: string; secondary: string | null } = {
@@ -121,7 +111,6 @@ export class GetUserStakingPositionsUseCase {
 
         try {
           if (vault.type === VaultType.LP_TOKEN) {
-            // Get LP token data and calculate price
             const lpData = await this.stakingSubgraphRepository.getLPTokenData(
               vault.asset,
               vault.chain,
@@ -135,17 +124,15 @@ export class GetUserStakingPositionsUseCase {
               tokenPrice = lpPrice.lpTokenPrice?.priceUsd || 0;
             }
 
-            // For LP tokens, we need to get icons for both tokens
             if (vault.tokenConfig.isLP) {
               tokenIcons = {
                 primary:
-                  'https://coin-images.coingecko.com/coins/images/2588/large/ilv.png', // ILV icon
+                  'https://coin-images.coingecko.com/coins/images/2588/large/ilv.png',
                 secondary:
-                  'https://coin-images.coingecko.com/coins/images/279/large/ethereum.png', // ETH icon
+                  'https://coin-images.coingecko.com/coins/images/279/large/ethereum.png',
               };
             }
           } else {
-            // Get single token price
             const priceData = await this.priceFeedRepository.getTokenPrice(
               vault.asset,
               vault.chain,
@@ -153,7 +140,6 @@ export class GetUserStakingPositionsUseCase {
             tokenPrice = priceData.priceUsd || 0;
             price24hChange = priceData.change24h || 0;
 
-            // For single tokens
             tokenIcons = {
               primary:
                 vault.tokenConfig.coingeckoId === 'illuvium'
@@ -163,13 +149,17 @@ export class GetUserStakingPositionsUseCase {
             };
           }
         } catch (error) {
-          this.logger.warn(
-            `Failed to get price for vault ${vault.address}:`,
-            error,
+          this.logger.error(
+            `Failed to get price for vault ${vault.address}: ${error.message}`,
           );
+          if (error.response?.statusCode === 503) {
+            tokenPrice = 0;
+            price24hChange = 0;
+          } else {
+            throw error;
+          }
         }
 
-        // Format vault data
         const totalStaked = vaultPositions.reduce(
           (sum, pos) => sum + BigInt(pos.assets || '0'),
           BigInt(0),
@@ -183,23 +173,45 @@ export class GetUserStakingPositionsUseCase {
         const formattedTotalStaked = formatUnits(totalStaked, decimals);
         const totalStakedUsd = parseFloat(formattedTotalStaked) * tokenPrice;
 
-        // Calculate earned shards (simplified - should use actual formula)
         const shardsRate = vault.type === VaultType.LP_TOKEN ? 20 : 80;
         const totalEarnedShards = (totalStakedUsd / 1000) * shardsRate;
 
-        // Get wallet balance
-        // TODO: This should be fetched from blockchain service
-        const walletBalance = '0';
+        let walletBalance = '0';
+        let walletBalanceRaw = '0';
+        try {
+          walletBalanceRaw =
+            await this.blockchainRepository.getUserTokenBalance(
+              walletAddress,
+              vault.asset,
+              vault.chain,
+            );
+          walletBalance = formatUnits(walletBalanceRaw, decimals);
+        } catch (error) {
+          this.logger.warn(
+            `Failed to get wallet balance for ${vault.asset}:`,
+            error,
+          );
+        }
 
-        // Format positions
         const formattedPositions = await Promise.all(
           vaultPositions.map(async (pos, index) => {
             const stakedAmount = formatUnits(pos.assets || '0', decimals);
-            const lockDuration = this.calculateLockDuration(pos.timestamp);
+            const remainingLockDays = this.calculateLockDuration(pos.timestamp);
+            const isLocked = remainingLockDays > 0;
+            const totalLockDays = 365;
+
+            const daysSinceDeposit = Math.floor(
+              (Date.now() / 1000 - pos.timestamp) / (24 * 60 * 60),
+            );
+            const effectiveLockDays = Math.min(daysSinceDeposit, totalLockDays);
             const shardsMultiplier =
-              this.calculateShardsMultiplier(lockDuration);
+              this.calculateShardsMultiplier(effectiveLockDays);
 
             const vaultId = `${vault.tokenConfig.symbol.toLowerCase().replace('/', '_').replace('-lp', '')}_vault`;
+
+            const unlockDate = new Date(
+              (pos.timestamp + totalLockDays * 24 * 60 * 60) * 1000,
+            );
 
             return {
               position_id: `${vault.tokenConfig.symbol} #${index + 1}`,
@@ -212,18 +224,17 @@ export class GetUserStakingPositionsUseCase {
               ).toString(),
               staked_amount: stakedAmount,
               staked_amount_raw: pos.assets,
-              lock_duration: `${lockDuration} days`,
+              lock_duration: isLocked
+                ? `${remainingLockDays} days`
+                : 'Unlocked',
               shards_multiplier: shardsMultiplier.toFixed(2),
-              isLocked: true,
+              isLocked,
               deposit_date: new Date(pos.timestamp * 1000).toISOString(),
-              unlock_date: new Date(
-                (pos.timestamp + lockDuration * 24 * 60 * 60) * 1000,
-              ).toISOString(),
+              unlock_date: unlockDate.toISOString(),
             };
           }),
         );
 
-        // Format TVL
         const tvl = parseFloat(formatUnits(vault.totalAssets || '0', decimals));
         const tvlUsd = tvl * tokenPrice;
 
@@ -252,17 +263,15 @@ export class GetUserStakingPositionsUseCase {
           user_active_positions_count: vaultPositions.length,
           user_total_earned_shards: Math.floor(totalEarnedShards).toString(),
           underlying_asset_balance_in_wallet: walletBalance,
-          underlying_asset_balance_in_wallet_raw: '0',
+          underlying_asset_balance_in_wallet_raw: walletBalanceRaw,
           positions: formattedPositions,
         };
       }),
     );
 
-    // Apply pagination
     const offset = (page - 1) * limit;
     const paginatedVaults = enrichedVaults.slice(offset, offset + limit);
 
-    // Calculate user summary
     const userSummary = this.calculateUserSummary(enrichedVaults);
 
     return {
@@ -282,14 +291,20 @@ export class GetUserStakingPositionsUseCase {
     };
   }
 
-  private calculateLockDuration(_depositTimestamp: number): number {
-    // For now, return default 365 days
-    // TODO: Get actual lock duration from contract
-    return 365;
+  private calculateLockDuration(depositTimestamp: number): number {
+    const now = Math.floor(Date.now() / 1000);
+    const daysSinceDeposit = Math.floor(
+      (now - depositTimestamp) / (24 * 60 * 60),
+    );
+
+    if (daysSinceDeposit < 365) {
+      return 365 - daysSinceDeposit;
+    }
+
+    return 0;
   }
 
   private calculateShardsMultiplier(lockDays: number): number {
-    // Linear multiplier: 1x at 30 days, 2x at 365 days
     if (lockDays <= 30) return 1;
     if (lockDays >= 365) return 2;
     return 1 + (lockDays - 30) / 335;

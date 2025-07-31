@@ -13,6 +13,7 @@ import {
   ApiBadRequestResponse,
   ApiInternalServerErrorResponse,
 } from '@nestjs/swagger';
+import { getAddress, isAddress } from 'ethers';
 import { GetTransactionsQueryDto } from '../dto/get-transactions-query.dto';
 import { StakingTransactionsResponseDto } from '../dto/staking-transactions-response.dto';
 import { GetUserStakingTransactionsUseCase } from '../../application/use-cases/get-user-staking-transactions.use-case';
@@ -50,12 +51,16 @@ export class StakingTransactionsController {
     @Param('walletAddress') walletAddress: string,
     @Query() query: GetTransactionsQueryDto,
   ): Promise<StakingTransactionsResponseDto> {
-    // Validate wallet address format
-    if (!this.isValidEthereumAddress(walletAddress)) {
-      throw new BadRequestException('Invalid wallet address format');
+    let validatedAddress: string;
+    try {
+      if (!isAddress(walletAddress)) {
+        throw new BadRequestException('Invalid wallet address format');
+      }
+      validatedAddress = getAddress(walletAddress);
+    } catch (error) {
+      throw new BadRequestException('Invalid wallet address: ' + error.message);
     }
 
-    // Validate date formats if provided
     if (query.start_date && !this.isValidISO8601Date(query.start_date)) {
       throw new BadRequestException(
         'Invalid start_date format. Use ISO 8601 format',
@@ -68,7 +73,6 @@ export class StakingTransactionsController {
       );
     }
 
-    // Validate date range
     if (query.start_date && query.end_date) {
       const start = new Date(query.start_date);
       const end = new Date(query.end_date);
@@ -78,7 +82,7 @@ export class StakingTransactionsController {
     }
 
     return await this.getUserStakingTransactionsUseCase.execute({
-      walletAddress,
+      walletAddress: validatedAddress,
       vaultId: query.vault_id,
       type: query.type,
       page: query.page || 1,
@@ -88,10 +92,6 @@ export class StakingTransactionsController {
       sortBy: query.sort_by,
       sortOrder: query.sort_order,
     });
-  }
-
-  private isValidEthereumAddress(address: string): boolean {
-    return /^0x[a-fA-F0-9]{40}$/.test(address);
   }
 
   private isValidISO8601Date(dateString: string): boolean {

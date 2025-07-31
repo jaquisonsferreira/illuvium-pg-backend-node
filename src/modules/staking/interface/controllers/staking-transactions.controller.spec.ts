@@ -13,6 +13,7 @@ describe('StakingTransactionsController', () => {
   let getUserStakingTransactionsUseCase: jest.Mocked<GetUserStakingTransactionsUseCase>;
 
   const mockWalletAddress = '0x1234567890abcdef1234567890abcdef12345678';
+  const checksumAddress = '0x1234567890AbcdEF1234567890aBcdef12345678';
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -39,19 +40,26 @@ describe('StakingTransactionsController', () => {
     it('should return user transactions with default pagination', async () => {
       const mockResponse = {
         wallet: mockWalletAddress,
-        transactions: [
+        data: [
           {
-            tx_hash: '0xabc123',
+            transaction_hash: '0xabc123',
             type: 'deposit' as const,
             vault_id: 'ilv_vault',
             vault_name: 'ILV',
-            asset_ticker: 'ILV',
+            underlying_asset: 'Illuvium',
+            underlying_asset_ticker: 'ILV',
+            token_icons: {
+              primary:
+                'https://coin-images.coingecko.com/coins/images/2588/large/ilv.png',
+              secondary: null,
+            },
             amount: '100.50',
             amount_raw: '100500000000000000000',
             usd_value: '1523.58',
             token_price: '15.16',
             gas_fee_eth: '0.0025',
             gas_fee_usd: '7.50',
+            gas_price_gwei: '25.5',
             status: 'confirmed' as const,
             block_number: 12345678,
             timestamp: '2025-03-15T10:30:00Z',
@@ -60,6 +68,7 @@ describe('StakingTransactionsController', () => {
             confirmations: 150,
             lock_duration: 365,
             earned_shards: '1219',
+            chain: 'mainnet',
           },
         ],
         summary: {
@@ -93,7 +102,7 @@ describe('StakingTransactionsController', () => {
 
       expect(result).toEqual(mockResponse);
       expect(getUserStakingTransactionsUseCase.execute).toHaveBeenCalledWith({
-        walletAddress: mockWalletAddress,
+        walletAddress: checksumAddress,
         vaultId: undefined,
         type: undefined,
         page: 1,
@@ -108,7 +117,7 @@ describe('StakingTransactionsController', () => {
     it('should filter transactions by vault_id', async () => {
       const mockResponse = {
         wallet: mockWalletAddress,
-        transactions: [],
+        data: [],
         summary: {
           total_transactions: 0,
           total_deposits: 0,
@@ -138,7 +147,7 @@ describe('StakingTransactionsController', () => {
       });
 
       expect(getUserStakingTransactionsUseCase.execute).toHaveBeenCalledWith({
-        walletAddress: mockWalletAddress,
+        walletAddress: checksumAddress,
         vaultId: 'ilv_vault',
         type: undefined,
         page: 1,
@@ -153,7 +162,7 @@ describe('StakingTransactionsController', () => {
     it('should filter transactions by type', async () => {
       const mockResponse = {
         wallet: mockWalletAddress,
-        transactions: [],
+        data: [],
         summary: {
           total_transactions: 0,
           total_deposits: 0,
@@ -183,7 +192,7 @@ describe('StakingTransactionsController', () => {
       });
 
       expect(getUserStakingTransactionsUseCase.execute).toHaveBeenCalledWith({
-        walletAddress: mockWalletAddress,
+        walletAddress: checksumAddress,
         vaultId: undefined,
         type: TransactionType.DEPOSIT,
         page: 1,
@@ -198,7 +207,7 @@ describe('StakingTransactionsController', () => {
     it('should handle date range filtering', async () => {
       const mockResponse = {
         wallet: mockWalletAddress,
-        transactions: [],
+        data: [],
         summary: {
           total_transactions: 0,
           total_deposits: 0,
@@ -232,7 +241,7 @@ describe('StakingTransactionsController', () => {
       });
 
       expect(getUserStakingTransactionsUseCase.execute).toHaveBeenCalledWith({
-        walletAddress: mockWalletAddress,
+        walletAddress: checksumAddress,
         vaultId: undefined,
         type: undefined,
         page: 1,
@@ -247,7 +256,7 @@ describe('StakingTransactionsController', () => {
     it('should handle sorting parameters', async () => {
       const mockResponse = {
         wallet: mockWalletAddress,
-        transactions: [],
+        data: [],
         summary: {
           total_transactions: 0,
           total_deposits: 0,
@@ -278,7 +287,7 @@ describe('StakingTransactionsController', () => {
       });
 
       expect(getUserStakingTransactionsUseCase.execute).toHaveBeenCalledWith({
-        walletAddress: mockWalletAddress,
+        walletAddress: checksumAddress,
         vaultId: undefined,
         type: undefined,
         page: 1,
@@ -326,7 +335,7 @@ describe('StakingTransactionsController', () => {
     it('should handle pagination parameters', async () => {
       const mockResponse = {
         wallet: mockWalletAddress,
-        transactions: [],
+        data: [],
         summary: {
           total_transactions: 100,
           total_deposits: 60,
@@ -359,7 +368,7 @@ describe('StakingTransactionsController', () => {
       expect(result.pagination.page).toBe(3);
       expect(result.pagination.limit).toBe(25);
       expect(getUserStakingTransactionsUseCase.execute).toHaveBeenCalledWith({
-        walletAddress: mockWalletAddress,
+        walletAddress: checksumAddress,
         vaultId: undefined,
         type: undefined,
         page: 3,

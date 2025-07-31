@@ -115,7 +115,7 @@ export class GetUserStakingTransactionsUseCase {
 
     return {
       wallet: walletAddress,
-      transactions: paginatedTransactions,
+      data: paginatedTransactions,
       summary,
       pagination: {
         page,
@@ -186,10 +186,8 @@ export class GetUserStakingTransactionsUseCase {
             vaultConfig.chain,
           );
 
-          // Format amount
           const formattedAmount = formatUnits(tx.amount || '0', decimals);
 
-          // Get historical price (simplified - using current price)
           const priceData = await this.priceFeedRepository.getTokenPrice(
             vaultConfig.asset,
             vaultConfig.chain,
@@ -197,12 +195,26 @@ export class GetUserStakingTransactionsUseCase {
           const tokenPrice = priceData.priceUsd || 0;
           const usdValue = parseFloat(formattedAmount) * tokenPrice;
 
-          // Calculate gas fees (simplified estimation)
           const gasPrice = BigInt(tx.gasPrice || '0');
           const gasUsed = BigInt(tx.gasUsed || '21000'); // Default gas for simple transfer
           const gasFeeWei = gasPrice * gasUsed;
           const gasFeeEth = formatUnits(gasFeeWei, 18);
-          const ethPrice = 3000; // Simplified - should fetch actual ETH price
+          const gasPriceGwei = formatUnits(gasPrice, 9);
+
+          let ethPrice = 0;
+          try {
+            const ethPriceData = await this.priceFeedRepository.getTokenPrice(
+              '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH address
+              vaultConfig.chain,
+            );
+            ethPrice = ethPriceData.priceUsd;
+          } catch (error) {
+            this.logger.warn(
+              `Failed to fetch ETH price, using 0 for gas fee calculation: ${error.message}`,
+            );
+            // Continue with 0 ETH price for gas fee calculation
+          }
+
           const gasFeeUsd = parseFloat(gasFeeEth) * ethPrice;
 
           const vaultId = `${vaultConfig.tokenConfig.symbol.toLowerCase().replace('/', '_').replace('-lp', '')}_vault`;
@@ -217,22 +229,58 @@ export class GetUserStakingTransactionsUseCase {
             ).toString();
           }
 
-          // Get current block number (simplified)
           const currentBlock = 20000000; // Should fetch from blockchain
           const confirmations = currentBlock - tx.blockNumber;
 
+          let sharesAmount: string | undefined = undefined;
+          let sharesAmountRaw: string | undefined = undefined;
+          if (tx.shares) {
+            sharesAmountRaw = tx.shares;
+            sharesAmount = formatUnits(tx.shares, decimals);
+          }
+
+          const vaultApr = (vaultConfig.aprBase * 100).toFixed(1);
+
+          const positionId = `${vaultConfig.tokenConfig.symbol} #${tx.blockNumber % 1000}`;
+
+          let tokenIcons: { primary: string; secondary: string | null } = {
+            primary: '',
+            secondary: null,
+          };
+
+          if (vaultConfig.type === VaultType.LP_TOKEN) {
+            tokenIcons = {
+              primary:
+                'https://coin-images.coingecko.com/coins/images/2588/large/ilv.png',
+              secondary:
+                'https://coin-images.coingecko.com/coins/images/279/large/ethereum.png',
+            };
+          } else {
+            tokenIcons = {
+              primary:
+                vaultConfig.tokenConfig.coingeckoId === 'illuvium'
+                  ? 'https://coin-images.coingecko.com/coins/images/2588/large/ilv.png'
+                  : '',
+              secondary: null,
+            };
+          }
+
           return {
-            tx_hash: tx.hash,
+            transaction_hash: tx.hash,
             type: tx.type,
             vault_id: vaultId,
             vault_name: vaultConfig.tokenConfig.symbol,
-            asset_ticker: vaultConfig.tokenConfig.symbol,
+            underlying_asset:
+              vaultConfig.tokenConfig.name || vaultConfig.tokenConfig.symbol,
+            underlying_asset_ticker: vaultConfig.tokenConfig.symbol,
+            token_icons: tokenIcons,
             amount: formattedAmount,
             amount_raw: tx.amount,
             usd_value: usdValue.toFixed(2),
             token_price: tokenPrice.toFixed(2),
             gas_fee_eth: gasFeeEth,
             gas_fee_usd: gasFeeUsd.toFixed(2),
+            gas_price_gwei: gasPriceGwei,
             status: 'confirmed',
             block_number: tx.blockNumber,
             timestamp: new Date(tx.timestamp * 1000).toISOString(),
@@ -241,6 +289,13 @@ export class GetUserStakingTransactionsUseCase {
             confirmations,
             lock_duration: tx.type === 'deposit' ? 365 : undefined,
             earned_shards: tx.type === 'deposit' ? earnedShards : undefined,
+            shares_amount: sharesAmount,
+            shares_amount_raw: sharesAmountRaw,
+            chain: vaultConfig.chain,
+            vault_apr: vaultApr,
+            position_id: tx.type === 'deposit' ? positionId : undefined,
+            balance_after: undefined,
+            method_name: tx.type,
           };
         } catch (error) {
           this.logger.error(`Failed to enrich transaction ${tx.hash}:`, error);

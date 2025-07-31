@@ -6,7 +6,7 @@ export class TransactionDto {
     example:
       '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
   })
-  tx_hash: string;
+  transaction_hash: string;
 
   @ApiProperty({
     description: 'Type of transaction',
@@ -28,10 +28,29 @@ export class TransactionDto {
   vault_name: string;
 
   @ApiProperty({
-    description: 'Asset ticker symbol',
+    description: 'Underlying asset name',
+    example: 'Illuvium',
+  })
+  underlying_asset: string;
+
+  @ApiProperty({
+    description: 'Underlying asset ticker symbol',
     example: 'ILV',
   })
-  asset_ticker: string;
+  underlying_asset_ticker: string;
+
+  @ApiProperty({
+    description: 'Token icons for the asset',
+    example: {
+      primary:
+        'https://coin-images.coingecko.com/coins/images/2588/large/ilv.png',
+      secondary: null,
+    },
+  })
+  token_icons: {
+    primary: string;
+    secondary: string | null;
+  };
 
   @ApiProperty({
     description: 'Transaction amount formatted',
@@ -119,6 +138,60 @@ export class TransactionDto {
     required: false,
   })
   earned_shards?: string;
+
+  @ApiProperty({
+    description: 'Share amount (vault shares)',
+    example: '100.50',
+    required: false,
+  })
+  shares_amount?: string;
+
+  @ApiProperty({
+    description: 'Raw share amount',
+    example: '100500000000000000000',
+    required: false,
+  })
+  shares_amount_raw?: string;
+
+  @ApiProperty({
+    description: 'Blockchain network',
+    example: 'base',
+  })
+  chain: string;
+
+  @ApiProperty({
+    description: 'Vault APR at time of transaction',
+    example: '12.5',
+    required: false,
+  })
+  vault_apr?: string;
+
+  @ApiProperty({
+    description: 'Position ID this transaction relates to',
+    example: 'ILV #1',
+    required: false,
+  })
+  position_id?: string;
+
+  @ApiProperty({
+    description: 'Running balance after this transaction',
+    example: '500.75',
+    required: false,
+  })
+  balance_after?: string;
+
+  @ApiProperty({
+    description: 'Gas price in Gwei',
+    example: '25.5',
+  })
+  gas_price_gwei: string;
+
+  @ApiProperty({
+    description: 'Transaction method name',
+    example: 'deposit',
+    required: false,
+  })
+  method_name?: string;
 }
 
 export class TransactionSummaryDto {
@@ -226,7 +299,7 @@ export class StakingTransactionsResponseDto {
     description: 'List of transactions',
     type: [TransactionDto],
   })
-  transactions: TransactionDto[];
+  data: TransactionDto[];
 
   @ApiProperty({
     description: 'Transaction summary statistics',
