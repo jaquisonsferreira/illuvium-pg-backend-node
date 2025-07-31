@@ -77,21 +77,27 @@ describe('PriceHistoryScheduler', () => {
           {
             provide: ConfigService,
             useValue: {
-              get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
-                const config: Record<string, any> = {
-                  PRICE_UPDATE_ENABLED: true,
-                  PRICE_UPDATE_FREQUENCY: 'minute',
-                  PRICE_UPDATE_TOKENS: ['ILV', 'ETH', 'USDC', 'USDT', 'DAI'],
-                };
-                return config[key] ?? defaultValue;
-              }),
+              get: jest
+                .fn()
+                .mockImplementation((key: string, defaultValue?: any) => {
+                  const config: Record<string, any> = {
+                    PRICE_UPDATE_ENABLED: true,
+                    PRICE_UPDATE_FREQUENCY: 'minute',
+                    PRICE_UPDATE_TOKENS: ['ILV', 'ETH', 'USDC', 'USDT', 'DAI'],
+                  };
+                  return config[key] ?? defaultValue;
+                }),
             },
           },
         ],
       }).compile();
 
-      const schedulerMinute = moduleMinute.get<PriceHistoryScheduler>(PriceHistoryScheduler);
-      const priceUpdateQueueMinute = moduleMinute.get(`BullQueue_${SHARD_QUEUES.PRICE_UPDATE}`);
+      const schedulerMinute = moduleMinute.get<PriceHistoryScheduler>(
+        PriceHistoryScheduler,
+      );
+      const priceUpdateQueueMinute = moduleMinute.get(
+        `BullQueue_${SHARD_QUEUES.PRICE_UPDATE}`,
+      );
 
       await schedulerMinute.scheduleMinutePriceUpdate();
 
@@ -274,11 +280,13 @@ describe('PriceHistoryScheduler', () => {
     it('should return current price update status', () => {
       const status = scheduler.getPriceUpdateStatus();
 
-      expect(status.config).toEqual(expect.objectContaining({
-        enabled: true,
-        frequency: 'five_minutes',
-        tokens: expect.arrayContaining(['ILV', 'ETH', 'USDC', 'USDT', 'DAI']),
-      }));
+      expect(status.config).toEqual(
+        expect.objectContaining({
+          enabled: true,
+          frequency: 'five_minutes',
+          tokens: expect.arrayContaining(['ILV', 'ETH', 'USDC', 'USDT', 'DAI']),
+        }),
+      );
       expect(status.nextUpdate).toBeInstanceOf(Date);
       expect(status.isActive).toBe(true);
     });

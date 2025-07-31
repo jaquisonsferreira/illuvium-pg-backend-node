@@ -255,21 +255,29 @@ describe('PriceHistoryRepository', () => {
       ];
 
       // Mock the repository method directly
-      jest.spyOn(repository, 'findMultipleTokensLatest').mockResolvedValueOnce([
-        new PriceHistoryEntity(
-          mockDbPriceHistory.id,
-          mockDbPriceHistory.token_address,
-          mockDbPriceHistory.chain,
-          parseFloat(mockDbPriceHistory.price_usd),
-          mockDbPriceHistory.price_change_24h ? parseFloat(mockDbPriceHistory.price_change_24h) : null,
-          mockDbPriceHistory.market_cap ? parseFloat(mockDbPriceHistory.market_cap) : null,
-          mockDbPriceHistory.volume_24h ? parseFloat(mockDbPriceHistory.volume_24h) : null,
-          mockDbPriceHistory.timestamp,
-          mockDbPriceHistory.source,
-          mockDbPriceHistory.granularity,
-          mockDbPriceHistory.created_at,
-        ),
-      ]);
+      jest
+        .spyOn(repository, 'findMultipleTokensLatest')
+        .mockResolvedValueOnce([
+          new PriceHistoryEntity(
+            mockDbPriceHistory.id,
+            mockDbPriceHistory.token_address,
+            mockDbPriceHistory.chain,
+            parseFloat(mockDbPriceHistory.price_usd),
+            mockDbPriceHistory.price_change_24h
+              ? parseFloat(mockDbPriceHistory.price_change_24h)
+              : null,
+            mockDbPriceHistory.market_cap
+              ? parseFloat(mockDbPriceHistory.market_cap)
+              : null,
+            mockDbPriceHistory.volume_24h
+              ? parseFloat(mockDbPriceHistory.volume_24h)
+              : null,
+            mockDbPriceHistory.timestamp,
+            mockDbPriceHistory.source,
+            mockDbPriceHistory.granularity,
+            mockDbPriceHistory.created_at,
+          ),
+        ]);
 
       const result = await repository.findMultipleTokensLatest(tokens);
 
@@ -353,7 +361,7 @@ describe('PriceHistoryRepository', () => {
         onConflict: jest.fn(),
         execute: jest.fn().mockResolvedValue(undefined),
       };
-      
+
       // onConflict should return the insert query to allow chaining
       mockInsertInto.onConflict.mockImplementation((callback) => {
         const conflictBuilder = {
@@ -363,7 +371,7 @@ describe('PriceHistoryRepository', () => {
         callback(conflictBuilder);
         return mockInsertInto;
       });
-      
+
       mockDb.insertInto.mockReturnValue(mockInsertInto);
 
       await repository.createBatch(priceHistories);
@@ -410,7 +418,7 @@ describe('PriceHistoryRepository', () => {
           price_usd: '1500',
         }),
       };
-      
+
       // onConflict should return the insert query to allow chaining
       mockInsertInto.onConflict.mockImplementation((callback) => {
         const conflictBuilder = {
@@ -420,7 +428,7 @@ describe('PriceHistoryRepository', () => {
         callback(conflictBuilder);
         return mockInsertInto;
       });
-      
+
       mockDb.insertInto.mockReturnValue(mockInsertInto);
 
       const result = await repository.upsert(priceHistory);

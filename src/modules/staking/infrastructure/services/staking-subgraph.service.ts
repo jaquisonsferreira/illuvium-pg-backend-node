@@ -5,6 +5,7 @@ import {
   IStakingSubgraphRepository,
   VaultPosition,
   VaultTransaction,
+  StakingTransaction,
   LPTokenData,
   SubgraphSyncStatus,
   VaultAnalytics,
@@ -638,6 +639,132 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
       page,
       limit,
     });
+  }
+
+  async getUserTransactions(params: {
+    userAddress: string;
+    chain: ChainType;
+    limit?: number;
+    offset?: number;
+  }): Promise<DataResponse<StakingTransaction[]>> {
+    const { userAddress, chain, limit = 100, offset = 0 } = params;
+
+    const query = `
+      query GetUserTransactions {
+        deposits: vaultTransactions(
+          where: { user: "${userAddress.toLowerCase()}", type: "deposit" }
+          orderBy: timestamp
+          orderDirection: desc
+          first: ${limit}
+          skip: ${offset}
+        ) {
+          id
+          vault
+          user
+          type
+          assets
+          shares
+          timestamp
+          blockNumber
+          transactionHash
+        }
+        withdrawals: vaultTransactions(
+          where: { user: "${userAddress.toLowerCase()}", type: "withdrawal" }
+          orderBy: timestamp
+          orderDirection: desc
+          first: ${limit}
+          skip: ${offset}
+        ) {
+          id
+          vault
+          user
+          type
+          assets
+          shares
+          timestamp
+          blockNumber
+          transactionHash
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        deposits: Array<{
+          id: string;
+          vault: string;
+          user: string;
+          type: string;
+          assets: string;
+          shares: string;
+          timestamp: number;
+          blockNumber: number;
+          transactionHash: string;
+        }>;
+        withdrawals: Array<{
+          id: string;
+          vault: string;
+          user: string;
+          type: string;
+          assets: string;
+          shares: string;
+          timestamp: number;
+          blockNumber: number;
+          transactionHash: string;
+        }>;
+      }>(chain, query);
+
+      const allTransactions = [
+        ...response.deposits.map((tx) => ({
+          hash: tx.transactionHash,
+          type: 'deposit' as const,
+          vault: tx.vault,
+          user: tx.user,
+          amount: tx.assets,
+          shares: tx.shares,
+          timestamp: tx.timestamp,
+          blockNumber: tx.blockNumber,
+          from: tx.user,
+          to: tx.vault,
+        })),
+        ...response.withdrawals.map((tx) => ({
+          hash: tx.transactionHash,
+          type: 'withdrawal' as const,
+          vault: tx.vault,
+          user: tx.user,
+          amount: tx.assets,
+          shares: tx.shares,
+          timestamp: tx.timestamp,
+          blockNumber: tx.blockNumber,
+          from: tx.vault,
+          to: tx.user,
+        })),
+      ];
+
+      // Sort by timestamp descending
+      allTransactions.sort((a, b) => b.timestamp - a.timestamp);
+
+      // Apply limit
+      const limitedTransactions = allTransactions.slice(0, limit);
+
+      const syncStatus = await this.getSyncStatus(chain);
+
+      return {
+        data: limitedTransactions,
+        metadata: {
+          source: 'subgraph',
+          lastUpdated: new Date(),
+          isStale: syncStatus.blocksBehind > 50,
+          syncStatus,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to get user transactions for ${userAddress}:`,
+        error,
+      );
+      throw new Error(`Failed to fetch user transactions from subgraph`);
+    }
   }
 
   async getLPTokenData(

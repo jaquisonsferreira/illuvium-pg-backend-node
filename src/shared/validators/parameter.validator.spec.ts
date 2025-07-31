@@ -106,20 +106,20 @@ describe('ParameterValidator', () => {
     });
 
     it('should enforce minimum page number', () => {
-      expect(() => 
-        ParameterValidator.validatePagination({ page: 0 })
-      ).toThrow(ValidationError);
+      expect(() => ParameterValidator.validatePagination({ page: 0 })).toThrow(
+        ValidationError,
+      );
     });
 
     it('should enforce minimum limit', () => {
-      expect(() => 
-        ParameterValidator.validatePagination({ limit: 0 })
-      ).toThrow(ValidationError);
+      expect(() => ParameterValidator.validatePagination({ limit: 0 })).toThrow(
+        ValidationError,
+      );
     });
 
     it('should enforce maximum limit', () => {
-      expect(() => 
-        ParameterValidator.validatePagination({ limit: 200 })
+      expect(() =>
+        ParameterValidator.validatePagination({ limit: 200 }),
       ).toThrow(ValidationError);
     });
 
@@ -149,7 +149,10 @@ describe('ParameterValidator', () => {
     it('should validate correct date range', () => {
       const startDate = new Date('2024-01-01');
       const endDate = new Date('2024-12-31');
-      const result = ParameterValidator.validateTimeframe({ startDate, endDate });
+      const result = ParameterValidator.validateTimeframe({
+        startDate,
+        endDate,
+      });
 
       expect(result.startDate).toBeInstanceOf(Date);
       expect(result.endDate).toBeInstanceOf(Date);

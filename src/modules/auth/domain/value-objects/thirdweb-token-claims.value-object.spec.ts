@@ -122,7 +122,7 @@ describe('ThirdwebTokenClaims', () => {
     it('should return true for expired token', () => {
       // Create a token that will expire soon
       const futureTime = new Date(now.getTime() + 100); // expires in 100ms
-      
+
       const shortLivedData = {
         ...validClaimsData,
         iat: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),

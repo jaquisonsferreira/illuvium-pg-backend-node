@@ -1,6 +1,7 @@
 import {
   VaultPosition,
   VaultTransaction,
+  StakingTransaction,
   LPTokenData,
   SubgraphSyncStatus,
   VaultAnalytics,
@@ -68,6 +69,16 @@ export interface IStakingSubgraphRepository {
     limit?: number,
     offset?: number,
   ): Promise<DataResponse<PaginatedResponse<VaultTransaction>>>;
+
+  /**
+   * Gets all transactions for a specific user
+   */
+  getUserTransactions(params: {
+    userAddress: string;
+    chain: ChainType;
+    limit?: number;
+    offset?: number;
+  }): Promise<DataResponse<StakingTransaction[]>>;
 
   /**
    * Gets LP token data including reserves

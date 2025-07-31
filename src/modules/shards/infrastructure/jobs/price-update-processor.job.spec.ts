@@ -96,9 +96,7 @@ describe('PriceUpdateProcessorJob', () => {
       await job.process(mockJob);
 
       // Verify that the error was handled
-      expect(cacheService.get).toHaveBeenCalledWith(
-        'shards:prices:fallback'
-      );
+      expect(cacheService.get).toHaveBeenCalledWith('shards:prices:fallback');
     });
   });
 

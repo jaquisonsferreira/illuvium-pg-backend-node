@@ -158,7 +158,9 @@ describe('TokensController', () => {
         chain: 'base',
       };
 
-      await expect(controller.getTokenMetadata(query)).rejects.toThrow(HttpException);
+      await expect(controller.getTokenMetadata(query)).rejects.toThrow(
+        HttpException,
+      );
 
       try {
         await controller.getTokenMetadata(query);
@@ -167,7 +169,8 @@ describe('TokensController', () => {
         expect(error.getResponse()).toMatchObject({
           statusCode: 400,
           error: 'MISSING_PARAMETERS',
-          message: 'At least one search parameter is required (tokenAddress, symbol, or coingeckoId)',
+          message:
+            'At least one search parameter is required (tokenAddress, symbol, or coingeckoId)',
         });
       }
     });
@@ -178,7 +181,9 @@ describe('TokensController', () => {
         chain: 'base',
       };
 
-      await expect(controller.getTokenMetadata(query)).rejects.toThrow(HttpException);
+      await expect(controller.getTokenMetadata(query)).rejects.toThrow(
+        HttpException,
+      );
     });
 
     it('should handle token not found', async () => {
@@ -193,7 +198,9 @@ describe('TokensController', () => {
         chain: 'base',
       };
 
-      await expect(controller.getTokenMetadata(query)).rejects.toThrow(HttpException);
+      await expect(controller.getTokenMetadata(query)).rejects.toThrow(
+        HttpException,
+      );
 
       try {
         await controller.getTokenMetadata(query);
@@ -216,7 +223,9 @@ describe('TokensController', () => {
         chain: 'base',
       };
 
-      await expect(controller.getTokenMetadata(query)).rejects.toThrow(HttpException);
+      await expect(controller.getTokenMetadata(query)).rejects.toThrow(
+        HttpException,
+      );
     });
   });
 
@@ -236,7 +245,10 @@ describe('TokensController', () => {
 
       const result = await controller.searchTokens(query);
 
-      expect(getTokenMetadataUseCase.searchTokens).toHaveBeenCalledWith('ETH', 10);
+      expect(getTokenMetadataUseCase.searchTokens).toHaveBeenCalledWith(
+        'ETH',
+        10,
+      );
       expect(result.tokens).toHaveLength(2);
       expect(result.total).toBe(2);
     });
@@ -288,7 +300,9 @@ describe('TokensController', () => {
         query: 'E',
       };
 
-      await expect(controller.searchTokens(query)).rejects.toThrow(HttpException);
+      await expect(controller.searchTokens(query)).rejects.toThrow(
+        HttpException,
+      );
 
       try {
         await controller.searchTokens(query);
@@ -307,36 +321,41 @@ describe('TokensController', () => {
         query: '  ',
       };
 
-      await expect(controller.searchTokens(query)).rejects.toThrow(HttpException);
+      await expect(controller.searchTokens(query)).rejects.toThrow(
+        HttpException,
+      );
     });
   });
 
   describe('getLpTokens', () => {
     it('should return paginated LP tokens', async () => {
-      const mockLpTokens = Array(25).fill(null).map((_, index) => 
-        new TokenMetadataEntity(
-          `mock-id-lp-${index}`,
-          `0x${index.toString().padStart(40, '0')}`,
-          mockLpToken.chain,
-          mockLpToken.symbol,
-          mockLpToken.name,
-          mockLpToken.decimals,
-          mockLpToken.totalSupply,
-          mockLpToken.circulatingSupply,
-          mockLpToken.coingeckoId,
-          mockLpToken.isLpToken,
-          mockLpToken.token0Address,
-          mockLpToken.token1Address,
-          mockLpToken.poolAddress,
-          mockLpToken.dexName,
-          mockLpToken.logoUrl,
-          mockLpToken.contractType,
-          mockLpToken.isVerified,
-          mockLpToken.lastUpdated,
-          mockLpToken.createdAt,
-          mockLpToken.updatedAt,
-        ),
-      );
+      const mockLpTokens = Array(25)
+        .fill(null)
+        .map(
+          (_, index) =>
+            new TokenMetadataEntity(
+              `mock-id-lp-${index}`,
+              `0x${index.toString().padStart(40, '0')}`,
+              mockLpToken.chain,
+              mockLpToken.symbol,
+              mockLpToken.name,
+              mockLpToken.decimals,
+              mockLpToken.totalSupply,
+              mockLpToken.circulatingSupply,
+              mockLpToken.coingeckoId,
+              mockLpToken.isLpToken,
+              mockLpToken.token0Address,
+              mockLpToken.token1Address,
+              mockLpToken.poolAddress,
+              mockLpToken.dexName,
+              mockLpToken.logoUrl,
+              mockLpToken.contractType,
+              mockLpToken.isVerified,
+              mockLpToken.lastUpdated,
+              mockLpToken.createdAt,
+              mockLpToken.updatedAt,
+            ),
+        );
 
       getTokenMetadataUseCase.getLpTokens.mockResolvedValue({
         tokens: mockLpTokens,
@@ -362,30 +381,33 @@ describe('TokensController', () => {
     });
 
     it('should handle page 2 of results', async () => {
-      const mockLpTokens = Array(25).fill(null).map((_, index) => 
-        new TokenMetadataEntity(
-          `mock-id-lp-${index}`,
-          `0x${index.toString().padStart(40, '0')}`,
-          mockLpToken.chain,
-          mockLpToken.symbol,
-          mockLpToken.name,
-          mockLpToken.decimals,
-          mockLpToken.totalSupply,
-          mockLpToken.circulatingSupply,
-          mockLpToken.coingeckoId,
-          mockLpToken.isLpToken,
-          mockLpToken.token0Address,
-          mockLpToken.token1Address,
-          mockLpToken.poolAddress,
-          mockLpToken.dexName,
-          mockLpToken.logoUrl,
-          mockLpToken.contractType,
-          mockLpToken.isVerified,
-          mockLpToken.lastUpdated,
-          mockLpToken.createdAt,
-          mockLpToken.updatedAt,
-        ),
-      );
+      const mockLpTokens = Array(25)
+        .fill(null)
+        .map(
+          (_, index) =>
+            new TokenMetadataEntity(
+              `mock-id-lp-${index}`,
+              `0x${index.toString().padStart(40, '0')}`,
+              mockLpToken.chain,
+              mockLpToken.symbol,
+              mockLpToken.name,
+              mockLpToken.decimals,
+              mockLpToken.totalSupply,
+              mockLpToken.circulatingSupply,
+              mockLpToken.coingeckoId,
+              mockLpToken.isLpToken,
+              mockLpToken.token0Address,
+              mockLpToken.token1Address,
+              mockLpToken.poolAddress,
+              mockLpToken.dexName,
+              mockLpToken.logoUrl,
+              mockLpToken.contractType,
+              mockLpToken.isVerified,
+              mockLpToken.lastUpdated,
+              mockLpToken.createdAt,
+              mockLpToken.updatedAt,
+            ),
+        );
 
       getTokenMetadataUseCase.getLpTokens.mockResolvedValue({
         tokens: mockLpTokens,
@@ -433,7 +455,9 @@ describe('TokensController', () => {
         chain: 'base',
       };
 
-      await expect(controller.getLpTokens(query)).rejects.toThrow(HttpException);
+      await expect(controller.getLpTokens(query)).rejects.toThrow(
+        HttpException,
+      );
 
       try {
         await controller.getLpTokens(query);
@@ -546,7 +570,9 @@ describe('TokensController', () => {
         chain: 'base',
       };
 
-      await expect(controller.getTokenPairInfo(query)).rejects.toThrow(HttpException);
+      await expect(controller.getTokenPairInfo(query)).rejects.toThrow(
+        HttpException,
+      );
 
       try {
         await controller.getTokenPairInfo(query);
@@ -573,7 +599,9 @@ describe('TokensController', () => {
         chain: 'base',
       };
 
-      await expect(controller.getTokenPairInfo(query)).rejects.toThrow(HttpException);
+      await expect(controller.getTokenPairInfo(query)).rejects.toThrow(
+        HttpException,
+      );
 
       try {
         await controller.getTokenPairInfo(query);
@@ -601,7 +629,9 @@ describe('TokensController', () => {
         issues: [],
       };
 
-      getTokenMetadataUseCase.validateTokenMetadata.mockResolvedValue(validationResult);
+      getTokenMetadataUseCase.validateTokenMetadata.mockResolvedValue(
+        validationResult,
+      );
 
       const query = {
         tokenAddress: validTokenAddress,
@@ -610,10 +640,9 @@ describe('TokensController', () => {
 
       const result = await controller.validateToken(query);
 
-      expect(getTokenMetadataUseCase.validateTokenMetadata).toHaveBeenCalledWith(
-        validTokenAddress,
-        'base',
-      );
+      expect(
+        getTokenMetadataUseCase.validateTokenMetadata,
+      ).toHaveBeenCalledWith(validTokenAddress, 'base');
 
       expect(result).toEqual({
         isValid: true,
@@ -626,13 +655,12 @@ describe('TokensController', () => {
     it('should return validation issues', async () => {
       const validationResult = {
         isValid: false,
-        issues: [
-          'Missing CoinGecko ID',
-          'Token not verified',
-        ],
+        issues: ['Missing CoinGecko ID', 'Token not verified'],
       };
 
-      getTokenMetadataUseCase.validateTokenMetadata.mockResolvedValue(validationResult);
+      getTokenMetadataUseCase.validateTokenMetadata.mockResolvedValue(
+        validationResult,
+      );
 
       const query = {
         tokenAddress: validTokenAddress,
@@ -651,7 +679,9 @@ describe('TokensController', () => {
         chain: 'base',
       };
 
-      await expect(controller.validateToken(query)).rejects.toThrow(HttpException);
+      await expect(controller.validateToken(query)).rejects.toThrow(
+        HttpException,
+      );
     });
 
     it('should transform ApiError to HttpException', async () => {
@@ -663,7 +693,9 @@ describe('TokensController', () => {
         chain: 'base',
       };
 
-      await expect(controller.validateToken(query)).rejects.toThrow(HttpException);
+      await expect(controller.validateToken(query)).rejects.toThrow(
+        HttpException,
+      );
     });
   });
 
@@ -679,10 +711,9 @@ describe('TokensController', () => {
 
       const result = await controller.getTokenByPoolAddress(poolAddress, chain);
 
-      expect(getTokenMetadataUseCase.getTokensByPoolAddress).toHaveBeenCalledWith(
-        poolAddress,
-        chain,
-      );
+      expect(
+        getTokenMetadataUseCase.getTokensByPoolAddress,
+      ).toHaveBeenCalledWith(poolAddress, chain);
 
       expect(result.token).toMatchObject({
         isLpToken: true,

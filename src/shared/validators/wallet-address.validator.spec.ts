@@ -205,9 +205,15 @@ describe('WalletAddressValidator', () => {
 
       expect(result).toHaveLength(2);
       // Both addresses should be returned with proper checksums
-      const checksummedAddresses = result.map(addr => getAddress(addr.toLowerCase()));
-      expect(checksummedAddresses).toContain(getAddress('0x742d35cc6634c0532925a3b844bc9e7595f89234'));
-      expect(checksummedAddresses).toContain(getAddress('0x5fbdb2315678afecb367f032d93f642f64180aa3'));
+      const checksummedAddresses = result.map((addr) =>
+        getAddress(addr.toLowerCase()),
+      );
+      expect(checksummedAddresses).toContain(
+        getAddress('0x742d35cc6634c0532925a3b844bc9e7595f89234'),
+      );
+      expect(checksummedAddresses).toContain(
+        getAddress('0x5fbdb2315678afecb367f032d93f642f64180aa3'),
+      );
     });
 
     it('should validate with custom max length', () => {

@@ -50,6 +50,22 @@ export interface VaultTransaction {
   readonly status: TransactionStatus;
 }
 
+// Staking Transaction (simplified version for user transactions)
+export interface StakingTransaction {
+  readonly hash: string;
+  readonly type: 'deposit' | 'withdrawal';
+  readonly vault: string;
+  readonly user: string;
+  readonly amount: string; // Raw BigInt as string
+  readonly shares?: string; // Raw BigInt as string
+  readonly timestamp: number;
+  readonly blockNumber: number;
+  readonly from: string;
+  readonly to: string;
+  readonly gasPrice?: string;
+  readonly gasUsed?: string;
+}
+
 // LP Token Data from Subgraph
 export interface LPTokenData {
   readonly address: string;

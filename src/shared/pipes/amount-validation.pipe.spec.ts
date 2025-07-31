@@ -19,8 +19,10 @@ describe('AmountValidationPipe', () => {
   it('should validate body type', () => {
     const mockAmount = '1000000000000000000';
     const metadata: ArgumentMetadata = { type: 'body' };
-    
-    (AmountValidator.validateRawAmount as jest.Mock).mockReturnValue(BigInt(mockAmount));
+
+    (AmountValidator.validateRawAmount as jest.Mock).mockReturnValue(
+      BigInt(mockAmount),
+    );
 
     const result = pipe.transform(mockAmount, metadata);
 
@@ -34,8 +36,10 @@ describe('AmountValidationPipe', () => {
   it('should validate query type', () => {
     const mockAmount = '1000000000000000000';
     const metadata: ArgumentMetadata = { type: 'query' };
-    
-    (AmountValidator.validateRawAmount as jest.Mock).mockReturnValue(BigInt(mockAmount));
+
+    (AmountValidator.validateRawAmount as jest.Mock).mockReturnValue(
+      BigInt(mockAmount),
+    );
 
     const result = pipe.transform(mockAmount, metadata);
 
@@ -69,8 +73,10 @@ describe('AmountValidationPipe', () => {
   it('should return string representation of validated amount', () => {
     const mockAmount = '999999999999999999';
     const metadata: ArgumentMetadata = { type: 'body' };
-    
-    (AmountValidator.validateRawAmount as jest.Mock).mockReturnValue(BigInt(mockAmount));
+
+    (AmountValidator.validateRawAmount as jest.Mock).mockReturnValue(
+      BigInt(mockAmount),
+    );
 
     const result = pipe.transform(mockAmount, metadata);
 
@@ -81,7 +87,7 @@ describe('AmountValidationPipe', () => {
   it('should propagate validation errors', () => {
     const metadata: ArgumentMetadata = { type: 'body' };
     const mockError = new Error('Invalid amount');
-    
+
     (AmountValidator.validateRawAmount as jest.Mock).mockImplementation(() => {
       throw mockError;
     });
@@ -93,8 +99,10 @@ describe('AmountValidationPipe', () => {
     const customPipe = new AmountValidationPipe(6);
     const mockAmount = '1000000';
     const metadata: ArgumentMetadata = { type: 'body' };
-    
-    (AmountValidator.validateRawAmount as jest.Mock).mockReturnValue(BigInt(mockAmount));
+
+    (AmountValidator.validateRawAmount as jest.Mock).mockReturnValue(
+      BigInt(mockAmount),
+    );
 
     customPipe.transform(mockAmount, metadata);
 
@@ -117,24 +125,34 @@ describe('DisplayAmountValidationPipe', () => {
   it('should validate body type', () => {
     const mockAmount = '1.5';
     const metadata: ArgumentMetadata = { type: 'body' };
-    
-    (AmountValidator.validateDisplayAmount as jest.Mock).mockReturnValue(mockAmount);
+
+    (AmountValidator.validateDisplayAmount as jest.Mock).mockReturnValue(
+      mockAmount,
+    );
 
     const result = pipe.transform(mockAmount, metadata);
 
-    expect(AmountValidator.validateDisplayAmount).toHaveBeenCalledWith(mockAmount, 18);
+    expect(AmountValidator.validateDisplayAmount).toHaveBeenCalledWith(
+      mockAmount,
+      18,
+    );
     expect(result).toBe(mockAmount);
   });
 
   it('should validate query type', () => {
     const mockAmount = '100.123';
     const metadata: ArgumentMetadata = { type: 'query' };
-    
-    (AmountValidator.validateDisplayAmount as jest.Mock).mockReturnValue(mockAmount);
+
+    (AmountValidator.validateDisplayAmount as jest.Mock).mockReturnValue(
+      mockAmount,
+    );
 
     const result = pipe.transform(mockAmount, metadata);
 
-    expect(AmountValidator.validateDisplayAmount).toHaveBeenCalledWith(mockAmount, 18);
+    expect(AmountValidator.validateDisplayAmount).toHaveBeenCalledWith(
+      mockAmount,
+      18,
+    );
     expect(result).toBe(mockAmount);
   });
 
@@ -161,10 +179,12 @@ describe('DisplayAmountValidationPipe', () => {
   it('should propagate validation errors', () => {
     const metadata: ArgumentMetadata = { type: 'body' };
     const mockError = new Error('Invalid display amount');
-    
-    (AmountValidator.validateDisplayAmount as jest.Mock).mockImplementation(() => {
-      throw mockError;
-    });
+
+    (AmountValidator.validateDisplayAmount as jest.Mock).mockImplementation(
+      () => {
+        throw mockError;
+      },
+    );
 
     expect(() => pipe.transform('invalid', metadata)).toThrow(mockError);
   });
@@ -173,23 +193,33 @@ describe('DisplayAmountValidationPipe', () => {
     const customPipe = new DisplayAmountValidationPipe(6);
     const mockAmount = '1.123456';
     const metadata: ArgumentMetadata = { type: 'body' };
-    
-    (AmountValidator.validateDisplayAmount as jest.Mock).mockReturnValue(mockAmount);
+
+    (AmountValidator.validateDisplayAmount as jest.Mock).mockReturnValue(
+      mockAmount,
+    );
 
     customPipe.transform(mockAmount, metadata);
 
-    expect(AmountValidator.validateDisplayAmount).toHaveBeenCalledWith(mockAmount, 6);
+    expect(AmountValidator.validateDisplayAmount).toHaveBeenCalledWith(
+      mockAmount,
+      6,
+    );
   });
 
   it('should handle zero decimal tokens', () => {
     const customPipe = new DisplayAmountValidationPipe(0);
     const mockAmount = '100';
     const metadata: ArgumentMetadata = { type: 'body' };
-    
-    (AmountValidator.validateDisplayAmount as jest.Mock).mockReturnValue(mockAmount);
+
+    (AmountValidator.validateDisplayAmount as jest.Mock).mockReturnValue(
+      mockAmount,
+    );
 
     customPipe.transform(mockAmount, metadata);
 
-    expect(AmountValidator.validateDisplayAmount).toHaveBeenCalledWith(mockAmount, 0);
+    expect(AmountValidator.validateDisplayAmount).toHaveBeenCalledWith(
+      mockAmount,
+      0,
+    );
   });
 });

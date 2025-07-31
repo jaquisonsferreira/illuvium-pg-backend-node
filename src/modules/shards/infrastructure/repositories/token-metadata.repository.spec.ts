@@ -489,7 +489,7 @@ describe('TokenMetadataRepository', () => {
           symbol: 'TOK',
         }),
       };
-      
+
       // onConflict should return the insert query to allow chaining
       mockInsertInto.onConflict.mockImplementation((callback) => {
         const conflictBuilder = {
@@ -499,7 +499,7 @@ describe('TokenMetadataRepository', () => {
         callback(conflictBuilder);
         return mockInsertInto;
       });
-      
+
       mockDb.insertInto.mockReturnValue(mockInsertInto);
 
       const result = await repository.upsert(token);
