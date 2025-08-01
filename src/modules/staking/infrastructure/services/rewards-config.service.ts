@@ -3,13 +3,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { VaultType } from '../../domain/types/staking-types';
 
-interface RewardRate {
+export interface RewardRate {
   rate: number;
   unit: string;
   vaultType: string;
 }
 
-interface RewardsConfig {
+export interface RewardsConfig {
   rewardRates: {
     description: string;
     rates: Record<string, RewardRate>;
