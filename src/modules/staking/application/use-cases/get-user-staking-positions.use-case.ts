@@ -1,12 +1,18 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { IStakingSubgraphRepository } from '../../domain/repositories/staking-subgraph.repository.interface';
 import { IStakingBlockchainRepository } from '../../domain/repositories/staking-blockchain.repository.interface';
 import { IPriceFeedRepository } from '../../domain/repositories/price-feed.repository.interface';
 import { VaultConfigService } from '../../infrastructure/config/vault-config.service';
+import { RewardsConfigService } from '../../infrastructure/services/rewards-config.service';
 import { TokenDecimalsService } from '../../infrastructure/services/token-decimals.service';
 import { CalculateLPTokenPriceUseCase } from './calculate-lp-token-price.use-case';
 import { StakingPositionsResponseDto } from '../../interface/dto/staking-positions-response.dto';
-import { VaultType, VaultPosition } from '../../domain/types/staking-types';
+import {
+  VaultType,
+  VaultPosition,
+  ChainType,
+} from '../../domain/types/staking-types';
 import { formatUnits } from 'ethers';
 
 interface ExecuteParams {
@@ -29,8 +35,10 @@ export class GetUserStakingPositionsUseCase {
     @Inject('IPriceFeedRepository')
     private readonly priceFeedRepository: IPriceFeedRepository,
     private readonly vaultConfigService: VaultConfigService,
+    private readonly rewardsConfigService: RewardsConfigService,
     private readonly tokenDecimalsService: TokenDecimalsService,
     private readonly calculateLPTokenPriceUseCase: CalculateLPTokenPriceUseCase,
+    private readonly configService: ConfigService,
   ) {}
 
   async execute(params: ExecuteParams): Promise<StakingPositionsResponseDto> {
@@ -101,11 +109,23 @@ export class GetUserStakingPositionsUseCase {
       positionsByVault.get(vaultAddress)!.push(position);
     }
 
+    // Get vault TVL data
+    const vaultTvlData = await this.stakingSubgraphRepository.getVaultsTVL(
+      currentSeason.chain,
+      vaults.map((v) => v.address),
+    );
+
     const enrichedVaults = await Promise.all(
       vaults.map(async (vault) => {
         const vaultAddress = vault.address.toLowerCase();
         const vaultPositions = positionsByVault.get(vaultAddress) || [];
         const hasPositions = vaultPositions.length > 0;
+
+        // Get TVL data for this vault
+        const tvlData = vaultTvlData[vaultAddress] || {
+          totalAssets: '0',
+          sharePrice: 0,
+        };
 
         let tokenPrice = 0;
         let price24hChange = 0;
@@ -191,7 +211,7 @@ export class GetUserStakingPositionsUseCase {
         const formattedTotalStaked = formatUnits(totalStaked, decimals);
         const totalStakedUsd = parseFloat(formattedTotalStaked) * tokenPrice;
 
-        const shardsRate = vault.type === VaultType.LP_TOKEN ? 20 : 80;
+        const shardsRate = this.rewardsConfigService.getRewardRate(vault.type);
         const totalEarnedShards = (totalStakedUsd / 1000) * shardsRate;
 
         let walletBalance = '0';
@@ -223,9 +243,11 @@ export class GetUserStakingPositionsUseCase {
             );
             const effectiveLockDays = Math.min(daysSinceDeposit, totalLockDays);
             const shardsMultiplier =
-              this.calculateShardsMultiplier(effectiveLockDays);
+              this.rewardsConfigService.calculateShardsMultiplier(
+                effectiveLockDays,
+              );
 
-            const vaultId = `${vault.tokenConfig.symbol.toLowerCase().replace('/', '_').replace('-lp', '')}_vault`;
+            const vaultId = `${vault.tokenConfig.symbol.toLowerCase().replace('/', '_').replace('-lp', '').replace('-', '_')}_vault`;
 
             const unlockDate = new Date(
               (pos.timestamp + totalLockDays * 24 * 60 * 60) * 1000,
@@ -253,7 +275,7 @@ export class GetUserStakingPositionsUseCase {
           }),
         );
 
-        const tvl = parseFloat(formatUnits(vault.totalAssets || '0', decimals));
+        const tvl = parseFloat(formatUnits(tvlData.totalAssets, decimals));
         const tvlUsd = tvl * tokenPrice;
 
         const vaultId = `${vault.tokenConfig.symbol.toLowerCase().replace('/', '_').replace('-lp', '')}_vault`;
@@ -264,11 +286,11 @@ export class GetUserStakingPositionsUseCase {
           underlying_asset_ticker: vault.tokenConfig.symbol,
           vault_address: vault.address,
           underlying_asset_address: vault.asset,
-          chain: vault.chain,
+          chain: this.getChainDisplayName(vault.chain),
           token_icons: tokenIcons,
           tvl: `$${this.formatNumber(tvlUsd)}`,
           tvl_raw: tvlUsd.toFixed(2),
-          vault_size: formatUnits(vault.totalSupply || '0', decimals),
+          vault_size: formatUnits(tvlData.totalAssets, decimals),
           token_price: tokenPrice.toFixed(2),
           '24h_change':
             price24hChange > 0
@@ -322,10 +344,15 @@ export class GetUserStakingPositionsUseCase {
     return 0;
   }
 
-  private calculateShardsMultiplier(lockDays: number): number {
-    if (lockDays <= 30) return 1;
-    if (lockDays >= 365) return 2;
-    return 1 + (lockDays - 30) / 335;
+  private getChainDisplayName(chain: ChainType): string {
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
+
+    if (chain === ChainType.BASE) {
+      return isProduction ? 'Base' : 'Base Sepolia';
+    }
+
+    return chain === ChainType.OBELISK ? 'Obelisk' : chain;
   }
 
   private calculateUserSummary(vaults: any[]): any {

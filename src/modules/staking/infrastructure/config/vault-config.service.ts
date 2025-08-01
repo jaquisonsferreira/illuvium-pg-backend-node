@@ -250,7 +250,7 @@ export class VaultConfigService {
 
     this.tokenConfigs.set('ilv-eth-lp-base', {
       address: ilvEthLpAddress,
-      symbol: 'ILV-ETH-LP',
+      symbol: 'ILV/ETH',
       name: 'ILV/ETH Liquidity Pool',
       decimals: 18,
       coingeckoId: '',
@@ -303,7 +303,7 @@ export class VaultConfigService {
         '0xF91971689C33C1a1545C9286530C300e59014F0F',
       ),
       name: 'ILV/ETH LP Staking Vault',
-      symbol: 'sILV-ETH-LP',
+      symbol: 'sILV/ETH',
       asset: this.tokenConfigs.get('ilv-eth-lp-base')!.address,
       type: VaultType.LP_TOKEN,
       chain: ChainType.BASE,

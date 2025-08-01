@@ -7,6 +7,7 @@ import { StakingPositionsController } from './interface/controllers/staking-posi
 import { StakingTransactionsController } from './interface/controllers/staking-transactions.controller';
 import { VaultsController } from './interface/controllers/vaults.controller';
 import { SeasonsController } from './interface/controllers/seasons.controller';
+import { RewardsController } from './interface/controllers/rewards.controller';
 import { StakingSubgraphService } from './infrastructure/services/staking-subgraph.service';
 import { AlchemyStakingService } from './infrastructure/services/alchemy-staking.service';
 import { StakingDataProviderFactory } from './infrastructure/services/staking-data-provider.factory';
@@ -18,6 +19,7 @@ import { TokenDecimalsService } from './infrastructure/services/token-decimals.s
 import { SeasonContextService } from './infrastructure/services/season-context.service';
 import { SeasonValidationService } from './infrastructure/services/season-validation.service';
 import { CrossSeasonDataService } from './infrastructure/services/cross-season-data.service';
+import { RewardsConfigService } from './infrastructure/services/rewards-config.service';
 
 import { GetVaultPositionUseCase } from './application/use-cases/get-vault-position.use-case';
 import { GetUserPositionsUseCase } from './application/use-cases/get-user-positions.use-case';
@@ -35,6 +37,7 @@ import { GetStakingStatsUseCase } from './application/use-cases/get-staking-stat
     StakingTransactionsController,
     VaultsController,
     SeasonsController,
+    RewardsController,
   ],
   providers: [
     VaultConfigService,
@@ -42,6 +45,7 @@ import { GetStakingStatsUseCase } from './application/use-cases/get-staking-stat
     SeasonContextService,
     SeasonValidationService,
     CrossSeasonDataService,
+    RewardsConfigService,
     StakingSubgraphService,
     AlchemyStakingService,
     StakingDataProviderFactory,

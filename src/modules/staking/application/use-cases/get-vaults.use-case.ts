@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { VaultConfigService } from '../../infrastructure/config/vault-config.service';
+import { RewardsConfigService } from '../../infrastructure/services/rewards-config.service';
 import { IStakingSubgraphRepository } from '../../domain/repositories/staking-subgraph.repository.interface';
 import { IPriceFeedRepository } from '../../domain/repositories/price-feed.repository.interface';
 import {
@@ -23,6 +24,7 @@ export class GetVaultsUseCase {
 
   constructor(
     private readonly vaultConfigService: VaultConfigService,
+    private readonly rewardsConfigService: RewardsConfigService,
     @Inject('IStakingSubgraphRepository')
     private readonly subgraphRepository: IStakingSubgraphRepository,
     @Inject('IPriceFeedRepository')
@@ -125,7 +127,7 @@ export class GetVaultsUseCase {
               vault.tokenConfig.symbol;
           }
 
-          const rewardRate = this.calculateRewardRate(vault.seasonNumber);
+          const rewardRate = this.calculateRewardRate(vault);
 
           return {
             vault_id: this.generateVaultId(vault),
@@ -276,16 +278,11 @@ export class GetVaultsUseCase {
   }
 
   private generateVaultId(vault: any): string {
-    return `${vault.tokenConfig.symbol.toLowerCase().replace('/', '_').replace('-lp', '')}_vault`;
+    return `${vault.tokenConfig.symbol.toLowerCase().replace('/', '_').replace('-lp', '').replace('-', '_')}_vault`;
   }
 
-  private calculateRewardRate(seasonNumber: number): string {
-    const rates = {
-      1: { single: 250, lp: 300 },
-      2: { single: 300, lp: 350 },
-    };
-    const rate = rates[seasonNumber] || rates[1];
-    return `${rate.single} Shards / $1,000`;
+  private calculateRewardRate(vault: any): string {
+    return this.rewardsConfigService.getFormattedRewardRate(vault.type);
   }
 
   private getTokenIcon(coingeckoIdOrSymbol: string): string {

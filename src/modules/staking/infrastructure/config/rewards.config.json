@@ -1,0 +1,31 @@
+{
+  "rewardRates": {
+    "description": "Shards reward rates per $1,000 per day",
+    "rates": {
+      "ILV": {
+        "rate": 80,
+        "unit": "Shards / $1,000 / day",
+        "vaultType": "single_token"
+      },
+      "ILV/ETH": {
+        "rate": 20,
+        "unit": "Shards / $1,000 / day",
+        "vaultType": "lp_token"
+      }
+    },
+    "defaults": {
+      "single_token": 80,
+      "lp_token": 20
+    }
+  },
+  "multipliers": {
+    "lockDuration": {
+      "description": "Multiplier based on lock duration",
+      "30_days_or_less": 1.0,
+      "365_days_or_more": 2.0,
+      "calculation": "1 + (lockDays - 30) / 335"
+    }
+  },
+  "lastUpdated": "2025-08-01",
+  "notes": "Update this file when reward rates change"
+}

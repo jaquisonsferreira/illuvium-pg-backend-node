@@ -81,13 +81,14 @@ export class CoinGeckoPriceFeedService implements IPriceFeedRepository {
         include_24hr_change: true,
       };
 
-      if (this.apiKey) {
-        params['x_cg_pro_api_key'] = this.apiKey;
+      const headers: any = {};
+      if (this.apiKey && !this.apiKey.startsWith('CG-')) {
+        headers['x-cg-pro-api-key'] = this.apiKey;
       }
 
       const response = await lastValueFrom(
         this.httpService
-          .get<CoinGeckoPrice>(url, { params })
+          .get<CoinGeckoPrice>(url, { params, headers })
           .pipe(map((res) => res.data)),
       );
 
@@ -150,13 +151,14 @@ export class CoinGeckoPriceFeedService implements IPriceFeedRepository {
         include_24hr_change: true,
       };
 
-      if (this.apiKey) {
-        params['x_cg_pro_api_key'] = this.apiKey;
+      const headers: any = {};
+      if (this.apiKey && !this.apiKey.startsWith('CG-')) {
+        headers['x-cg-pro-api-key'] = this.apiKey;
       }
 
       const response = await lastValueFrom(
         this.httpService
-          .get<CoinGeckoPrice>(url, { params })
+          .get<CoinGeckoPrice>(url, { params, headers })
           .pipe(map((res) => res.data)),
       );
 
@@ -232,12 +234,15 @@ export class CoinGeckoPriceFeedService implements IPriceFeedRepository {
         localization: false,
       };
 
-      if (this.apiKey) {
-        params['x_cg_pro_api_key'] = this.apiKey;
+      const headers: any = {};
+      if (this.apiKey && !this.apiKey.startsWith('CG-')) {
+        headers['x-cg-pro-api-key'] = this.apiKey;
       }
 
       const response = await lastValueFrom(
-        this.httpService.get<any>(url, { params }).pipe(map((res) => res.data)),
+        this.httpService
+          .get<any>(url, { params, headers })
+          .pipe(map((res) => res.data)),
       );
 
       const priceUsd = response.market_data?.current_price?.usd || 0;

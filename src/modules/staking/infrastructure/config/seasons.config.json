@@ -97,7 +97,7 @@
       "chain": "base",
       "seasonId": 1,
       "status": "active",
-      "underlyingAsset": "ILV-ETH-LP",
+      "underlyingAsset": "ILV/ETH",
       "underlyingAssetAddress": "0x128a55aed29f113DBF95a369974523F2A9E7A8Ea",
       "mechanics": {
         "withdrawalEnabled": true,
@@ -114,7 +114,7 @@
       "chain": "obelisk",
       "seasonId": 2,
       "status": "planned",
-      "underlyingAsset": "ILV-ETH-LP",
+      "underlyingAsset": "ILV/ETH",
       "underlyingAssetAddress": "0x128a55aed29f113DBF95a369974523F2A9E7A8Ea",
       "mechanics": {
         "withdrawalEnabled": true,
