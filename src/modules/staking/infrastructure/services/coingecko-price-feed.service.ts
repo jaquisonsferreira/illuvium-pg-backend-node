@@ -31,12 +31,18 @@ export class CoinGeckoPriceFeedService implements IPriceFeedRepository {
   private readonly apiKey: string;
   private readonly baseUrl = 'https://api.coingecko.com/api/v3';
   private readonly tokenIdMap: Map<string, string> = new Map([
+    // Mainnet addresses
     ['0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E', 'illuvium'],
     ['0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 'ethereum'],
     ['0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', 'usd-coin'],
     ['0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', 'wrapped-bitcoin'],
     ['0xdAC17F958D2ee523a2206206994597C13D831ec7', 'tether'],
     ['0x6B175474E89094C44Da98b954EedeAC495271d0F', 'dai'],
+    // Base Sepolia testnet addresses (mapped to mainnet equivalents for pricing)
+    ['0xC3fcc8530F6d6997adD7EA9439F0C7F6855bF8e8', 'illuvium'], // ILV on Base Sepolia
+    ['0x4200000000000000000000000000000000000006', 'ethereum'], // WETH on Base
+    ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', 'usd-coin'], // USDC on Base
+    ['0x9470ed99A5797D3F4696B74732830B87BAc51d24', 'illuvium'], // ILV/ETH LP (mapped to ILV)
   ]);
 
   constructor(
@@ -256,8 +262,17 @@ export class CoinGeckoPriceFeedService implements IPriceFeedRepository {
   }
 
   private getCoinGeckoId(tokenAddress: string): string | null {
-    const idByAddress = this.tokenIdMap.get(tokenAddress);
-    return idByAddress || null;
+    // Convert to lowercase for consistency
+    const normalizedAddress = tokenAddress.toLowerCase();
+
+    // Check all entries in the map with lowercase comparison
+    for (const [key, value] of this.tokenIdMap.entries()) {
+      if (key.toLowerCase() === normalizedAddress) {
+        return value;
+      }
+    }
+
+    return null;
   }
 
   private isPriceStale(lastUpdated: Date): boolean {

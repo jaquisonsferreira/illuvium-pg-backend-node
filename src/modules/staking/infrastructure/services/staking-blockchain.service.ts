@@ -40,9 +40,11 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
       [ChainType.BASE]: {
         rpcUrl: this.configService.get<string>(
           'BASE_RPC_URL',
-          'https://mainnet.base.org',
+          this.configService.get<string>('NODE_ENV') === 'production' 
+            ? 'https://mainnet.base.org'
+            : 'https://sepolia.base.org',
         ),
-        chainId: 8453,
+        chainId: this.configService.get<string>('NODE_ENV') === 'production' ? 8453 : 84532,
       },
       [ChainType.OBELISK]: {
         rpcUrl: this.configService.get<string>(

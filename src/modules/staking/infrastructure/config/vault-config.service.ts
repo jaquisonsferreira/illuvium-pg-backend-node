@@ -43,6 +43,13 @@ export class VaultConfigService {
 
   constructor(private readonly configService: ConfigService) {
     this.initializeConfigurations();
+
+    this.logger.log(`Initialized ${this.vaultConfigs.size} vaults`);
+    this.vaultConfigs.forEach((vault, key) => {
+      this.logger.log(
+        `Vault ${key}: ${vault.name} - Active: ${vault.isActive}`,
+      );
+    });
   }
 
   private initializeConfigurations(): void {
@@ -53,25 +60,30 @@ export class VaultConfigService {
   }
 
   private initializeChainConfigs(): void {
+    const isProduction =
+      this.configService.get<string>('NODE_ENV') === 'production';
+
     const baseConfig: ChainConfig = {
-      chainId: 8453,
-      name: 'Base',
+      chainId: isProduction ? 8453 : 84532, // Base mainnet : Base Sepolia
+      name: isProduction ? 'Base' : 'Base Sepolia',
       rpcUrl: this.configService.get<string>(
         'BASE_RPC_URL',
-        'https://mainnet.base.org',
+        isProduction ? 'https://mainnet.base.org' : 'https://sepolia.base.org',
       ),
       subgraphUrl: this.configService.get<string>(
         'SUBGRAPH_BASE_URL',
         'https://api.thegraph.com/subgraphs/name/obelisk/base-staking',
       ),
-      blockExplorerUrl: 'https://basescan.org',
+      blockExplorerUrl: isProduction
+        ? 'https://basescan.org'
+        : 'https://sepolia.basescan.org',
       nativeCurrency: {
         name: 'Ethereum',
         symbol: 'ETH',
         decimals: 18,
       },
       multicallAddress: '0xcA11bde05977b3631167028862bE2a173976CA11',
-      isTestnet: false,
+      isTestnet: !isProduction,
       confirmationsRequired: 1,
       avgBlockTimeMs: 2000,
     };
@@ -111,8 +123,8 @@ export class VaultConfigService {
       primaryChain: ChainType.BASE,
       vaults: [],
       isActive: true,
-      startTimestamp: 1704067200,
-      endTimestamp: 1735689600,
+      startTimestamp: 1704067200, // January 1, 2024
+      endTimestamp: 1767225600, // January 1, 2026
     };
 
     const season2: SeasonConfig = {
@@ -134,8 +146,24 @@ export class VaultConfigService {
   }
 
   private initializeTokenConfigs(): void {
+    // Use environment variables for token addresses to support both mainnet and testnet
+    const ilvTokenAddress = this.configService.get<string>(
+      'TOKEN_ILV_ADDRESS',
+      '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E', // Default mainnet address
+    );
+
+    const ilvEthLpAddress = this.configService.get<string>(
+      'TOKEN_ILV_ETH_ADDRESS',
+      '0x6A9865aDE2B6207dAAC49f8bCBa9705dEB0B0e6D', // Default mainnet address
+    );
+
+    const wethAddress = this.configService.get<string>(
+      'TOKEN_WETH_ADDRESS',
+      '0x4200000000000000000000000000000000000006', // Default Base WETH
+    );
+
     this.tokenConfigs.set('ilv', {
-      address: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
+      address: ilvTokenAddress,
       symbol: 'ILV',
       name: 'Illuvium',
       decimals: 18,
@@ -144,14 +172,14 @@ export class VaultConfigService {
     });
 
     this.tokenConfigs.set('ilv-eth-lp-base', {
-      address: '0x6A9865aDE2B6207dAAC49f8bCBa9705dEB0B0e6D',
+      address: ilvEthLpAddress,
       symbol: 'ILV-ETH-LP',
       name: 'ILV/ETH Liquidity Pool',
       decimals: 18,
       coingeckoId: '',
       isLP: true,
-      token0: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
-      token1: '0x4200000000000000000000000000000000000006',
+      token0: ilvTokenAddress,
+      token1: wethAddress,
     });
 
     this.tokenConfigs.set('eth-usdc-lp-base', {
@@ -174,7 +202,7 @@ export class VaultConfigService {
       ),
       name: 'ILV Staking Vault',
       symbol: 'sILV',
-      asset: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
+      asset: this.tokenConfigs.get('ilv')!.address,
       type: VaultType.SINGLE_TOKEN,
       chain: ChainType.BASE,
       seasonNumber: 1,
@@ -199,7 +227,7 @@ export class VaultConfigService {
       ),
       name: 'ILV/ETH LP Staking Vault',
       symbol: 'sILV-ETH-LP',
-      asset: '0x6A9865aDE2B6207dAAC49f8bCBa9705dEB0B0e6D',
+      asset: this.tokenConfigs.get('ilv-eth-lp-base')!.address,
       type: VaultType.LP_TOKEN,
       chain: ChainType.BASE,
       seasonNumber: 1,

@@ -249,84 +249,6 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     }
   }
 
-  async getUserPosition(
-    userAddress: string,
-    vaultAddress: string,
-    chain: ChainType,
-  ): Promise<DataResponse<VaultPosition | null>> {
-    const query = `
-      query GetUserPosition {
-        vaultPositions(
-          where: { 
-            user: "${userAddress.toLowerCase()}"
-            vault: "${vaultAddress.toLowerCase()}"
-          }
-          orderBy: blockNumber
-          orderDirection: desc
-          first: 1
-        ) {
-          id
-          vault
-          user
-          shares
-          assets
-          blockNumber
-          timestamp
-        }
-      }
-    `;
-
-    try {
-      const response = await this.query<{
-        vaultPositions: Array<{
-          id: string;
-          vault: string;
-          user: string;
-          shares: string;
-          assets: string;
-          blockNumber: number;
-          timestamp: number;
-        }>;
-      }>(chain, query);
-
-      const positionData = response.vaultPositions[0];
-      let position: VaultPosition | null = null;
-
-      if (positionData) {
-        const pos = VaultPositionEntity.fromSubgraphData({
-          vault: positionData.vault,
-          user: positionData.user,
-          shares: positionData.shares,
-          assets: positionData.assets,
-          blockNumber: positionData.blockNumber,
-          timestamp: positionData.timestamp,
-        });
-
-        if (pos.hasBalance()) {
-          position = pos;
-        }
-      }
-
-      const syncStatus = await this.getSyncStatus(chain);
-
-      return {
-        data: position,
-        metadata: {
-          source: 'subgraph',
-          lastUpdated: new Date(),
-          isStale: syncStatus.blocksBehind > 50,
-          syncStatus,
-        },
-      };
-    } catch (error) {
-      this.logger.error(
-        `Failed to get user position for ${userAddress} in vault ${vaultAddress}:`,
-        error,
-      );
-      throw new Error(`Failed to fetch user position from subgraph`);
-    }
-  }
-
   async getVaultPositions(
     vaultAddress: string,
     chain: ChainType,
@@ -1280,8 +1202,11 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
         }>;
       }>(chain, query);
 
-      const result: Record<string, { totalAssets: string; sharePrice: number }> = {};
-      
+      const result: Record<
+        string,
+        { totalAssets: string; sharePrice: number }
+      > = {};
+
       response.vaults.forEach((vault) => {
         result[vault.id] = {
           totalAssets: vault.totalAssets,
@@ -1327,8 +1252,8 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
   }
 
   async getVolume7d(chain: ChainType): Promise<number> {
-    const sevenDaysAgo = Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60);
-    
+    const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
+
     const query = `
       query GetVolume7d {
         protocolDayDatas(
@@ -1350,7 +1275,7 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
 
       const totalVolume = response.protocolDayDatas.reduce(
         (sum, day) => sum + parseFloat(day.dailyVolumeUSD),
-        0
+        0,
       );
 
       return totalVolume;
@@ -1494,7 +1419,7 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     const query = `
       query GetUserVaultPosition {
         vaultPositions(
-          where: { 
+          where: {
             user: "${walletAddress.toLowerCase()}"
             vault: "${vaultAddress.toLowerCase()}"
           }
