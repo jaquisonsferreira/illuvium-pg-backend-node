@@ -6,6 +6,7 @@ import { SharedModule } from '@shared/shared.module';
 import { StakingPositionsController } from './interface/controllers/staking-positions.controller';
 import { StakingTransactionsController } from './interface/controllers/staking-transactions.controller';
 import { VaultsController } from './interface/controllers/vaults.controller';
+import { SeasonsController } from './interface/controllers/seasons.controller';
 import { StakingSubgraphService } from './infrastructure/services/staking-subgraph.service';
 import { AlchemyStakingService } from './infrastructure/services/alchemy-staking.service';
 import { StakingDataProviderFactory } from './infrastructure/services/staking-data-provider.factory';
@@ -14,6 +15,9 @@ import { PriceFeedService } from './infrastructure/services/price-feed.service';
 import { CoinGeckoPriceFeedService } from './infrastructure/services/coingecko-price-feed.service';
 import { VaultConfigService } from './infrastructure/config/vault-config.service';
 import { TokenDecimalsService } from './infrastructure/services/token-decimals.service';
+import { SeasonContextService } from './infrastructure/services/season-context.service';
+import { SeasonValidationService } from './infrastructure/services/season-validation.service';
+import { CrossSeasonDataService } from './infrastructure/services/cross-season-data.service';
 
 import { GetVaultPositionUseCase } from './application/use-cases/get-vault-position.use-case';
 import { GetUserPositionsUseCase } from './application/use-cases/get-user-positions.use-case';
@@ -30,10 +34,14 @@ import { GetStakingStatsUseCase } from './application/use-cases/get-staking-stat
     StakingPositionsController,
     StakingTransactionsController,
     VaultsController,
+    SeasonsController,
   ],
   providers: [
     VaultConfigService,
     TokenDecimalsService,
+    SeasonContextService,
+    SeasonValidationService,
+    CrossSeasonDataService,
     StakingSubgraphService,
     AlchemyStakingService,
     StakingDataProviderFactory,
@@ -67,6 +75,9 @@ import { GetStakingStatsUseCase } from './application/use-cases/get-staking-stat
   exports: [
     VaultConfigService,
     TokenDecimalsService,
+    SeasonContextService,
+    SeasonValidationService,
+    CrossSeasonDataService,
     'IStakingSubgraphRepository',
     'IStakingBlockchainRepository',
     'IPriceFeedRepository',

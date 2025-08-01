@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ethers, Contract, JsonRpcProvider } from 'ethers';
+import { ethers, Contract, JsonRpcProvider, getAddress } from 'ethers';
 import {
   IStakingBlockchainRepository,
   VaultPosition,
@@ -40,11 +40,14 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
       [ChainType.BASE]: {
         rpcUrl: this.configService.get<string>(
           'BASE_RPC_URL',
-          this.configService.get<string>('NODE_ENV') === 'production' 
+          this.configService.get<string>('NODE_ENV') === 'production'
             ? 'https://mainnet.base.org'
             : 'https://sepolia.base.org',
         ),
-        chainId: this.configService.get<string>('NODE_ENV') === 'production' ? 8453 : 84532,
+        chainId:
+          this.configService.get<string>('NODE_ENV') === 'production'
+            ? 8453
+            : 84532,
       },
       [ChainType.OBELISK]: {
         rpcUrl: this.configService.get<string>(
@@ -132,8 +135,9 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
       const vaultContract = this.getVaultContract(vaultAddress, chain);
       const blockTag = blockNumber || 'latest';
 
+      const checksummedUserAddress = getAddress(userAddress);
       const [shareBalance, totalShares, totalAssets] = await Promise.all([
-        vaultContract.balanceOf(userAddress, { blockTag }),
+        vaultContract.balanceOf(checksummedUserAddress, { blockTag }),
         vaultContract.totalSupply({ blockTag }),
         vaultContract.totalAssets({ blockTag }),
       ]);
@@ -153,7 +157,7 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
 
       return new VaultPositionEntity(
         vaultAddress.toLowerCase(),
-        userAddress.toLowerCase(),
+        checksummedUserAddress.toLowerCase(),
         shareBalance.toString(),
         assetBalance,
         currentBlock,
@@ -436,8 +440,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
   > {
     try {
       const vaultContract = this.getVaultContract(vaultAddress, chain);
-      const withdrawalIds =
-        await vaultContract.getPendingWithdrawalIds(userAddress);
+      const checksummedUserAddress = getAddress(userAddress);
+      const withdrawalIds = await vaultContract.getPendingWithdrawalIds(
+        checksummedUserAddress,
+      );
 
       const withdrawalPromises = withdrawalIds.map(async (id: bigint) => {
         const withdrawal = await vaultContract.getPendingWithdrawal(
@@ -467,21 +473,12 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
   // Additional method implementations would go here...
   // For brevity, implementing placeholder methods for the remaining interface methods
 
-  async getVaultEvents(
-    _vaultAddress: string,
-    _fromBlock: number,
-    _toBlock: number,
-    _chain: ChainType,
-    _eventNames?: string[],
-  ): Promise<BlockchainEvent[]> {
+  async getVaultEvents(): Promise<BlockchainEvent[]> {
     // Implementation would fetch and parse vault events from the blockchain
     throw new Error('Method not implemented yet');
   }
 
-  async getTransactionVaultEvents(
-    _transactionHash: string,
-    _chain: ChainType,
-  ): Promise<BlockchainEvent[]> {
+  async getTransactionVaultEvents(): Promise<BlockchainEvent[]> {
     throw new Error('Method not implemented yet');
   }
 
@@ -526,7 +523,8 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
   ): Promise<string> {
     try {
       const vaultContract = this.getVaultContract(vaultAddress, chain);
-      const maxShares = await vaultContract.maxRedeem(userAddress);
+      const checksummedUserAddress = getAddress(userAddress);
+      const maxShares = await vaultContract.maxRedeem(checksummedUserAddress);
       return maxShares.toString();
     } catch (error) {
       this.logger.error(`Failed to get max redeem for ${userAddress}:`, error);
@@ -541,7 +539,8 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
   ): Promise<string> {
     try {
       const vaultContract = this.getVaultContract(vaultAddress, chain);
-      const maxAssets = await vaultContract.maxWithdraw(userAddress);
+      const checksummedUserAddress = getAddress(userAddress);
+      const maxAssets = await vaultContract.maxWithdraw(checksummedUserAddress);
       return maxAssets.toString();
     } catch (error) {
       this.logger.error(
@@ -561,7 +560,10 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     try {
       const tokenContract = this.getERC20Contract(tokenAddress, chain);
       const blockTag = blockNumber || 'latest';
-      const balance = await tokenContract.balanceOf(userAddress, { blockTag });
+      const checksummedUserAddress = getAddress(userAddress);
+      const balance = await tokenContract.balanceOf(checksummedUserAddress, {
+        blockTag,
+      });
       return balance.toString();
     } catch (error) {
       this.logger.error(
@@ -663,13 +665,7 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     }
   }
 
-  async estimateVaultOperationGas(
-    _operation: 'deposit' | 'withdraw' | 'redeem',
-    _vaultAddress: string,
-    _amount: string,
-    _userAddress: string,
-    _chain: ChainType,
-  ): Promise<string> {
+  async estimateVaultOperationGas(): Promise<string> {
     throw new Error('Method not implemented yet');
   }
 
@@ -700,7 +696,8 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
   } | null> {
     try {
       const vaultContract = this.getVaultContract(vaultAddress, chain);
-      const lockInfo = await vaultContract.getLockInfo(userAddress);
+      const checksummedUserAddress = getAddress(userAddress);
+      const lockInfo = await vaultContract.getLockInfo(checksummedUserAddress);
 
       if (lockInfo.depositTime === 0n) {
         return null;
@@ -720,15 +717,7 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
     }
   }
 
-  async batchCall(
-    calls: {
-      target: string;
-      callData: string;
-      allowFailure?: boolean;
-    }[],
-    chain: ChainType,
-    blockNumber?: number,
-  ): Promise<
+  async batchCall(): Promise<
     {
       success: boolean;
       returnData: string;

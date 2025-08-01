@@ -1,11 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   ChainType,
   VaultType,
   VaultConfig,
   ChainConfig,
 } from '../../domain/types/staking-types';
+import {
+  SeasonConfig as SeasonConfigFromFile,
+  SeasonConfigFile,
+  VaultSeasonConfig,
+  SeasonStatusType,
+} from '../../domain/types/season.types';
 
 interface SeasonConfig {
   seasonNumber: number;
@@ -40,6 +48,10 @@ export class VaultConfigService {
   private readonly vaultConfigs: Map<string, VaultConfig> = new Map();
   private readonly seasonConfigs: Map<number, SeasonConfig> = new Map();
   private readonly tokenConfigs: Map<string, TokenConfig> = new Map();
+  private readonly seasonConfigsFromFile: Map<number, SeasonConfigFromFile> =
+    new Map();
+  private readonly vaultSeasonConfigs: Map<string, VaultSeasonConfig> =
+    new Map();
 
   constructor(private readonly configService: ConfigService) {
     this.initializeConfigurations();
@@ -118,13 +130,78 @@ export class VaultConfigService {
   }
 
   private initializeSeasonConfigs(): void {
+    try {
+      this.loadSeasonConfigFromFile();
+    } catch {
+      this.logger.warn(
+        'Failed to load season config from file, using fallback configuration',
+      );
+      this.initializeFallbackSeasonConfigs();
+    }
+  }
+
+  private loadSeasonConfigFromFile(): void {
+    const configPath = path.join(__dirname, 'seasons.config.json');
+
+    if (!fs.existsSync(configPath)) {
+      throw new Error(`Season config file not found at ${configPath}`);
+    }
+
+    const configFile = fs.readFileSync(configPath, 'utf8');
+    const seasonConfigData: SeasonConfigFile = JSON.parse(configFile);
+
+    Object.values(seasonConfigData.seasons).forEach((seasonConfig) => {
+      this.seasonConfigsFromFile.set(seasonConfig.seasonId, seasonConfig);
+
+      const legacySeasonConfig: SeasonConfig = {
+        seasonNumber: seasonConfig.seasonId,
+        primaryChain: seasonConfig.chain,
+        vaults: [],
+        isActive: seasonConfig.status === SeasonStatusType.ACTIVE,
+        startTimestamp: Math.floor(
+          new Date(seasonConfig.startDate).getTime() / 1000,
+        ),
+        endTimestamp: seasonConfig.endDate
+          ? Math.floor(new Date(seasonConfig.endDate).getTime() / 1000)
+          : undefined,
+        migrationConfig: seasonConfig.migrationConfig
+          ? {
+              fromChain: seasonConfig.migrationConfig.fromChain,
+              toChain: seasonConfig.migrationConfig.toChain,
+              migrationStartTime: Math.floor(
+                new Date(
+                  seasonConfig.migrationConfig.migrationStartTime,
+                ).getTime() / 1000,
+              ),
+              migrationEndTime: Math.floor(
+                new Date(
+                  seasonConfig.migrationConfig.migrationEndTime,
+                ).getTime() / 1000,
+              ),
+            }
+          : undefined,
+      };
+
+      this.seasonConfigs.set(seasonConfig.seasonId, legacySeasonConfig);
+    });
+
+    Object.values(seasonConfigData.vaultConfigs).forEach((vaultConfig) => {
+      this.vaultSeasonConfigs.set(vaultConfig.vaultId, vaultConfig);
+    });
+
+    this.logger.log(
+      `Loaded ${Object.keys(seasonConfigData.seasons).length} season configurations from file`,
+    );
+  }
+
+  private initializeFallbackSeasonConfigs(): void {
     const season1: SeasonConfig = {
       seasonNumber: 1,
       primaryChain: ChainType.BASE,
       vaults: [],
       isActive: true,
-      startTimestamp: 1704067200, // January 1, 2024
-      endTimestamp: 1767225600, // January 1, 2026
+      startTimestamp: 1704067200,
+      endTimestamp: 1767225600,
     };
 
     const season2: SeasonConfig = {
@@ -149,12 +226,12 @@ export class VaultConfigService {
     // Use environment variables for token addresses to support both mainnet and testnet
     const ilvTokenAddress = this.configService.get<string>(
       'TOKEN_ILV_ADDRESS',
-      '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E', // Default mainnet address
+      '0xC3fcc8530F6d6997adD7EA9439F0C7F6855bF8e8',
     );
 
     const ilvEthLpAddress = this.configService.get<string>(
       'TOKEN_ILV_ETH_ADDRESS',
-      '0x6A9865aDE2B6207dAAC49f8bCBa9705dEB0B0e6D', // Default mainnet address
+      '0x9470ed99A5797D3F4696B74732830B87BAc51d24',
     );
 
     const wethAddress = this.configService.get<string>(
@@ -198,7 +275,7 @@ export class VaultConfigService {
     const ilvVaultBase: VaultConfig = {
       address: this.configService.get<string>(
         'ILV_VAULT_BASE_ADDRESS',
-        '0x742d35Cc4Bf3b4A5b5b8e10a4E1F0e8C6F8D9E0A',
+        '0xbBfadF4149D7fc67b6a1C33dd7424003F09Ed484',
       ),
       name: 'ILV Staking Vault',
       symbol: 'sILV',
@@ -223,7 +300,7 @@ export class VaultConfigService {
     const ilvEthLpVaultBase: VaultConfig = {
       address: this.configService.get<string>(
         'ILV_ETH_LP_VAULT_BASE_ADDRESS',
-        '0x893E8a50Bc3c4b5b8d8F23A4b5c8D8F9E1a2b3c4',
+        '0xF91971689C33C1a1545C9286530C300e59014F0F',
       ),
       name: 'ILV/ETH LP Staking Vault',
       symbol: 'sILV-ETH-LP',
@@ -294,6 +371,22 @@ export class VaultConfigService {
     return this.seasonConfigs.get(seasonNumber);
   }
 
+  getSeasonConfigFromFile(seasonId: number): SeasonConfigFromFile | undefined {
+    return this.seasonConfigsFromFile.get(seasonId);
+  }
+
+  getAllSeasonConfigsFromFile(): SeasonConfigFromFile[] {
+    return Array.from(this.seasonConfigsFromFile.values());
+  }
+
+  getVaultSeasonConfig(vaultId: string): VaultSeasonConfig | undefined {
+    return this.vaultSeasonConfigs.get(vaultId);
+  }
+
+  getAllVaultSeasonConfigs(): VaultSeasonConfig[] {
+    return Array.from(this.vaultSeasonConfigs.values());
+  }
+
   getCurrentSeason(): SeasonConfig | undefined {
     const now = Date.now() / 1000;
     return Array.from(this.seasonConfigs.values()).find(
@@ -304,6 +397,16 @@ export class VaultConfigService {
     );
   }
 
+  getCurrentSeasonFromFile(): SeasonConfigFromFile | undefined {
+    const now = new Date();
+    return Array.from(this.seasonConfigsFromFile.values()).find(
+      (season) =>
+        season.status === SeasonStatusType.ACTIVE &&
+        new Date(season.startDate) <= now &&
+        (!season.endDate || new Date(season.endDate) > now),
+    );
+  }
+
   getNextSeason(): SeasonConfig | undefined {
     const currentSeason = this.getCurrentSeason();
     if (!currentSeason) return undefined;
@@ -311,14 +414,18 @@ export class VaultConfigService {
     return this.seasonConfigs.get(currentSeason.seasonNumber + 1);
   }
 
+  getNextSeasonFromFile(): SeasonConfigFromFile | undefined {
+    const currentSeason = this.getCurrentSeasonFromFile();
+    if (!currentSeason) return undefined;
+
+    return this.seasonConfigsFromFile.get(currentSeason.seasonId + 1);
+  }
+
   getTokenConfig(tokenKey: string): TokenConfig | undefined {
     return this.tokenConfigs.get(tokenKey);
   }
 
-  getTokenConfigByAddress(
-    address: string,
-    _chain: ChainType,
-  ): TokenConfig | undefined {
+  getTokenConfigByAddress(address: string): TokenConfig | undefined {
     return Array.from(this.tokenConfigs.values()).find(
       (token) => token.address.toLowerCase() === address.toLowerCase(),
     );
@@ -339,6 +446,73 @@ export class VaultConfigService {
   isMainnetLaunched(): boolean {
     const currentSeason = this.getCurrentSeason();
     return currentSeason?.seasonNumber === 1;
+  }
+
+  isEmergencyMode(): boolean {
+    return false;
+  }
+
+  isMaintenanceMode(): boolean {
+    return false;
+  }
+
+  validateSeasonOperation(
+    seasonNumber: number,
+    operationType: 'deposit' | 'withdrawal' | 'migration' | 'transfer',
+  ): { isValid: boolean; errors: string[]; warnings: string[] } {
+    const season = this.getSeasonConfigFromFile(seasonNumber);
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (!season) {
+      errors.push(`Season ${seasonNumber} configuration not found`);
+      return { isValid: false, errors, warnings };
+    }
+
+    if (this.isEmergencyMode()) {
+      if (operationType !== 'withdrawal') {
+        errors.push('Only withdrawals allowed in emergency mode');
+      }
+    }
+
+    if (this.isMaintenanceMode()) {
+      errors.push('System is in maintenance mode');
+    }
+
+    const now = new Date();
+
+    switch (operationType) {
+      case 'deposit':
+        if (!season.features.depositsEnabled) {
+          errors.push('Deposits are disabled for this season');
+        }
+        break;
+      case 'withdrawal':
+        if (!season.features.withdrawalsEnabled) {
+          errors.push('Withdrawals are disabled for this season');
+        }
+        break;
+      case 'migration':
+        if (!season.migrationConfig) {
+          errors.push('Migration not configured for this season');
+        } else {
+          const { migrationStartTime, migrationDeadline } =
+            season.migrationConfig;
+          if (now < new Date(migrationStartTime)) {
+            errors.push('Migration period has not started');
+          }
+          if (now > new Date(migrationDeadline)) {
+            errors.push('Migration deadline has passed');
+          }
+        }
+        break;
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+    };
   }
 
   isMigrationPeriod(): boolean {
@@ -438,7 +612,7 @@ export class VaultConfigService {
     return this.chainConfigs.has(chain);
   }
 
-  validateTokenAddress(tokenAddress: string, chain: ChainType): boolean {
+  validateTokenAddress(tokenAddress: string): boolean {
     return Array.from(this.tokenConfigs.values()).some(
       (token) => token.address.toLowerCase() === tokenAddress.toLowerCase(),
     );

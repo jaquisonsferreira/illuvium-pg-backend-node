@@ -1,8 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { StakingPositionsController } from './staking-positions.controller';
 import { GetUserStakingPositionsUseCase } from '../../application/use-cases/get-user-staking-positions.use-case';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { ChainType } from '../../domain/types/staking-types';
+import { BadRequestException } from '@nestjs/common';
 
 describe('StakingPositionsController', () => {
   let controller: StakingPositionsController;

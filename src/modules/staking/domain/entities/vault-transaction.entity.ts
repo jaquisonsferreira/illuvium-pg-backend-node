@@ -235,7 +235,7 @@ export class VaultTransaction implements IVaultTransaction {
       if (bigintValue < 0n) {
         throw new Error(`${fieldName} must be non-negative`);
       }
-    } catch (error) {
+    } catch {
       throw new Error(`${fieldName} must be a valid BigInt string`);
     }
   }

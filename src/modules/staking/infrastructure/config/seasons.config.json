@@ -1,0 +1,117 @@
+{
+  "seasons": {
+    "1": {
+      "seasonId": 1,
+      "seasonName": "Season 1",
+      "chain": "base",
+      "startDate": "2025-06-01T00:00:00Z",
+      "endDate": "2025-09-01T00:00:00Z",
+      "status": "active",
+      "withdrawalEnabled": false,
+      "migrationStatus": "stable",
+      "features": {
+        "depositsEnabled": true,
+        "withdrawalsEnabled": false,
+        "lockedUntilMainnet": true,
+        "rewardsMultiplier": 1.0
+      },
+      "vaultMechanics": {
+        "type": "locked",
+        "lockDuration": 0,
+        "earlyWithdrawalPenalty": 0,
+        "compoundingEnabled": true
+      },
+      "migrationConfig": null
+    },
+    "2": {
+      "seasonId": 2,
+      "seasonName": "Season 2",
+      "chain": "obelisk",
+      "startDate": "2025-09-01T00:00:00Z",
+      "endDate": null,
+      "status": "planned",
+      "withdrawalEnabled": true,
+      "migrationStatus": "upcoming",
+      "features": {
+        "depositsEnabled": true,
+        "withdrawalsEnabled": true,
+        "lockedUntilMainnet": false,
+        "rewardsMultiplier": 1.2
+      },
+      "vaultMechanics": {
+        "type": "erc4626",
+        "lockDuration": 14,
+        "earlyWithdrawalPenalty": 0.1,
+        "compoundingEnabled": true,
+        "redeemDelayDays": 14
+      },
+      "migrationConfig": {
+        "fromChain": "base",
+        "toChain": "obelisk",
+        "migrationStartTime": "2025-08-25T00:00:00Z",
+        "migrationEndTime": "2025-09-08T00:00:00Z",
+        "migrationDeadline": "2025-10-01T00:00:00Z",
+        "userActionRequired": true,
+        "migrationGuideUrl": "https://docs.obelisk.gg/migration"
+      }
+    }
+  },
+  "vaultConfigs": {
+    "ILV_vault_base": {
+      "vaultId": "ILV_vault_base",
+      "vaultAddress": "0xbBfadF4149D7fc67b6a1C33dd7424003F09Ed484",
+      "name": "Illuvium Staking",
+      "chain": "base",
+      "seasonId": 1,
+      "status": "active",
+      "underlyingAsset": "ILV",
+      "underlyingAssetAddress": "0xC3fcc8530F6d6997adD7EA9439F0C7F6855bF8e8",
+      "mechanics": {
+        "withdrawalEnabled": false,
+        "lockedUntilMainnet": true
+      }
+    },
+    "ILV_vault_obelisk": {
+      "vaultId": "ILV_vault_obelisk",
+      "vaultAddress": "0xbBfadF4149D7fc67b6a1C33dd7424003F09Ed484",
+      "name": "Illuvium Staking",
+      "chain": "obelisk",
+      "seasonId": 2,
+      "status": "planned",
+      "underlyingAsset": "ILV",
+      "underlyingAssetAddress": "0xC3fcc8530F6d6997adD7EA9439F0C7F6855bF8e8",
+      "mechanics": {
+        "withdrawalEnabled": true,
+        "redeemDelayDays": 14
+      }
+    },
+    "ILV_ETH_LP_vault_base": {
+      "vaultId": "ILV_ETH_LP_vault_base",
+      "vaultAddress": "0xF91971689C33C1a1545C9286530C300e59014F0F",
+      "name": "ILV/ETH LP Staking",
+      "chain": "base",
+      "seasonId": 1,
+      "status": "active",
+      "underlyingAsset": "ILV-ETH-LP",
+      "underlyingAssetAddress": "0x9470ed99A5797D3F4696B74732830B87BAc51d24",
+      "mechanics": {
+        "withdrawalEnabled": false,
+        "lockedUntilMainnet": true
+      }
+    },
+    "ILV_ETH_LP_vault_obelisk": {
+      "vaultId": "ILV_ETH_LP_vault_obelisk",
+      "vaultAddress": "0xF91971689C33C1a1545C9286530C300e59014F0F",
+      "name": "ILV/ETH LP Staking",
+      "chain": "obelisk",
+      "seasonId": 2,
+      "status": "planned",
+      "underlyingAsset": "ILV-ETH-LP",
+      "underlyingAssetAddress": "0x9470ed99A5797D3F4696B74732830B87BAc51d24",
+      "mechanics": {
+        "withdrawalEnabled": true,
+        "redeemDelayDays": 14
+      }
+    }
+  }
+}

@@ -3,6 +3,7 @@ export * from './staking.module';
 
 // Types
 export * from './domain/types/staking-types';
+export * from './domain/types/season.types';
 
 // Entities
 export { VaultPositionEntity } from './domain/entities/vault-position.entity';
@@ -14,9 +15,20 @@ export * from './infrastructure/services/staking-subgraph.service';
 export * from './infrastructure/services/staking-blockchain.service';
 export * from './infrastructure/services/price-feed.service';
 export * from './infrastructure/services/token-decimals.service';
+export * from './infrastructure/services/season-context.service';
+export * from './infrastructure/services/season-validation.service';
 export * from './infrastructure/config/vault-config.service';
 
 // Use Cases
 export * from './application/use-cases/get-vault-position.use-case';
 export * from './application/use-cases/get-user-positions.use-case';
 export * from './application/use-cases/calculate-lp-token-price.use-case';
+
+// Controllers
+export * from './interface/controllers/seasons.controller';
+
+// Season DTOs
+export * from './interface/dto/current-season-response.dto';
+export * from './interface/dto/season-details-response.dto';
+export * from './interface/dto/migration-status-response.dto';
+export * from './interface/dto/cross-season-positions-response.dto';

@@ -15,7 +15,6 @@ import {
   PaginatedResponse,
   DataResponse,
   ChainType,
-  TransactionType,
   TransactionStatus,
 } from '../../domain/types/staking-types';
 import { VaultPositionEntity } from '../../domain/entities/vault-position.entity';
@@ -93,7 +92,7 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
         },
         (error) => {
           this.logger.error(`Subgraph request error for ${chain}:`, error);
-          return Promise.reject(error);
+          return Promise.reject(new Error(error.message));
         },
       );
 
@@ -1088,29 +1087,15 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     };
   }
 
-  async searchUserPositions(
-    addressPattern: string,
-    chain: ChainType,
-    limit: number = 50,
-  ): Promise<DataResponse<VaultPosition[]>> {
+  async searchUserPositions(): Promise<DataResponse<VaultPosition[]>> {
     throw new Error('Method not implemented yet');
   }
 
-  async getPositionChanges(
-    vaultAddress: string,
-    fromBlock: number,
-    toBlock: number,
-    chain: ChainType,
-  ): Promise<DataResponse<VaultPosition[]>> {
+  async getPositionChanges(): Promise<DataResponse<VaultPosition[]>> {
     throw new Error('Method not implemented yet');
   }
 
-  async getLPTokenReservesHistory(
-    tokenAddress: string,
-    chain: ChainType,
-    fromTimestamp?: number,
-    toTimestamp?: number,
-  ): Promise<
+  async getLPTokenReservesHistory(): Promise<
     DataResponse<
       {
         timestamp: number;
@@ -1124,12 +1109,7 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     throw new Error('Method not implemented yet');
   }
 
-  async getLPTokenTransfers(
-    tokenAddress: string,
-    chain: ChainType,
-    fromBlock?: number,
-    toBlock?: number,
-  ): Promise<
+  async getLPTokenTransfers(): Promise<
     DataResponse<
       {
         from: string;
@@ -1411,6 +1391,213 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     }
   }
 
+  async getUserPositionsAcrossSeasons(
+    wallet: string,
+  ): Promise<DataResponse<Record<ChainType, VaultPosition[]>>> {
+    const chains = [ChainType.BASE, ChainType.OBELISK];
+    const results: Record<ChainType, VaultPosition[]> = {
+      [ChainType.BASE]: [],
+      [ChainType.OBELISK]: [],
+    };
+
+    await Promise.allSettled(
+      chains.map(async (chain) => {
+        try {
+          const response = await this.getUserPositions({
+            userAddress: wallet,
+            chain,
+          });
+          results[chain] = response.data;
+        } catch (error) {
+          this.logger.warn(
+            `Failed to get positions for ${wallet} on ${chain}:`,
+            error,
+          );
+          results[chain] = [];
+        }
+      }),
+    );
+
+    const syncStatuses = await Promise.allSettled(
+      chains.map((chain) => this.getSyncStatus(chain)),
+    );
+
+    const oldestSyncStatus = syncStatuses
+      .filter((result) => result.status === 'fulfilled')
+      .map((result) => result.value)
+      .reduce((oldest, current) =>
+        current.lastSyncTime < oldest.lastSyncTime ? current : oldest,
+      );
+
+    return {
+      data: results,
+      metadata: {
+        source: 'subgraph',
+        lastUpdated: new Date(),
+        isStale: oldestSyncStatus?.blocksBehind > 50 || false,
+        syncStatus: oldestSyncStatus,
+      },
+    };
+  }
+
+  async getHistoricalPositionsBySeason(
+    wallet: string,
+    seasonId: number,
+  ): Promise<DataResponse<VaultPosition[]>> {
+    const chain = seasonId === 1 ? ChainType.BASE : ChainType.OBELISK;
+
+    const response = await this.getUserPositions({
+      userAddress: wallet,
+      chain,
+    });
+
+    return response;
+  }
+
+  async getVaultMigrationData(
+    fromVaultId: string,
+    toVaultId: string,
+  ): Promise<
+    DataResponse<{
+      fromVaultData: any;
+      toVaultData: any;
+      migrationEvents: any[];
+    }>
+  > {
+    const fromChain = ChainType.BASE;
+    const toChain = ChainType.OBELISK;
+
+    const [fromVaultData, toVaultData] = await Promise.allSettled([
+      this.getVaultData(fromChain, fromVaultId),
+      this.getVaultData(toChain, toVaultId),
+    ]);
+
+    const migrationEventsQuery = `
+      query GetMigrationEvents {
+        migrationEvents(
+          where: {
+            fromVault: "${fromVaultId.toLowerCase()}"
+            toVault: "${toVaultId.toLowerCase()}"
+          }
+          orderBy: timestamp
+          orderDirection: desc
+          first: 100
+        ) {
+          id
+          user
+          fromVault
+          toVault
+          assets
+          shares
+          timestamp
+          blockNumber
+          transactionHash
+        }
+      }
+    `;
+
+    let migrationEvents: any[] = [];
+    try {
+      const response = await this.query<{
+        migrationEvents: Array<{
+          id: string;
+          user: string;
+          fromVault: string;
+          toVault: string;
+          assets: string;
+          shares: string;
+          timestamp: number;
+          blockNumber: number;
+          transactionHash: string;
+        }>;
+      }>(fromChain, migrationEventsQuery);
+      migrationEvents = response.migrationEvents;
+    } catch (error) {
+      this.logger.warn(
+        'Migration events not found, this may be expected:',
+        error,
+      );
+    }
+
+    const syncStatus = await this.getSyncStatus(fromChain);
+
+    return {
+      data: {
+        fromVaultData:
+          fromVaultData.status === 'fulfilled' ? fromVaultData.value : null,
+        toVaultData:
+          toVaultData.status === 'fulfilled' ? toVaultData.value : null,
+        migrationEvents,
+      },
+      metadata: {
+        source: 'subgraph',
+        lastUpdated: new Date(),
+        isStale: syncStatus.blocksBehind > 50,
+        syncStatus,
+      },
+    };
+  }
+
+  async getCrossSeasonTVL(): Promise<
+    DataResponse<{
+      totalTVL: string;
+      totalTVLUsd: number;
+      tvlByChain: Record<
+        ChainType,
+        { totalAssets: string; totalAssetsUsd: number }
+      >;
+    }>
+  > {
+    const chains = [ChainType.BASE, ChainType.OBELISK];
+    const chainTVLs: Record<
+      ChainType,
+      { totalAssets: string; totalAssetsUsd: number }
+    > = {
+      [ChainType.BASE]: { totalAssets: '0', totalAssetsUsd: 0 },
+      [ChainType.OBELISK]: { totalAssets: '0', totalAssetsUsd: 0 },
+    };
+
+    await Promise.allSettled(
+      chains.map(async (chain) => {
+        try {
+          const stats = await this.getEcosystemStats(chain);
+          chainTVLs[chain] = {
+            totalAssets: stats.data.totalValueLocked,
+            totalAssetsUsd: stats.data.totalValueLockedUsd,
+          };
+        } catch (error) {
+          this.logger.warn(`Failed to get TVL for ${chain}:`, error);
+        }
+      }),
+    );
+
+    const totalTVLBigInt = Object.values(chainTVLs).reduce(
+      (total, chainTVL) => total + BigInt(chainTVL.totalAssets),
+      BigInt(0),
+    );
+
+    const totalTVLUsd = Object.values(chainTVLs).reduce(
+      (total, chainTVL) => total + chainTVL.totalAssetsUsd,
+      0,
+    );
+
+    const syncStatus = await this.getSyncStatus(ChainType.BASE);
+
+    return {
+      data: {
+        totalTVL: totalTVLBigInt.toString(),
+        totalTVLUsd,
+        tvlByChain: chainTVLs,
+      },
+      metadata: {
+        source: 'subgraph',
+        lastUpdated: new Date(),
+        isStale: syncStatus.blocksBehind > 50,
+        syncStatus,
+      },
+    };
+  }
+
   async getUserPosition(
     chain: ChainType,
     vaultAddress: string,
@@ -1499,6 +1686,280 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
     }
 
     return response.data.data;
+  }
+
+  async getHistoricalVaultPositions(
+    vaultAddress: string,
+    chain: ChainType,
+    fromTimestamp?: number,
+    toTimestamp?: number,
+  ): Promise<DataResponse<VaultPosition[]>> {
+    const whereConditions = [`vault: "${vaultAddress.toLowerCase()}"`];
+    if (fromTimestamp) {
+      whereConditions.push(`timestamp_gte: ${fromTimestamp}`);
+    }
+    if (toTimestamp) {
+      whereConditions.push(`timestamp_lte: ${toTimestamp}`);
+    }
+
+    const query = `
+      query GetHistoricalVaultPositions {
+        vaultPositions(
+          where: { ${whereConditions.join(', ')} }
+          orderBy: timestamp
+          orderDirection: asc
+          first: 1000
+        ) {
+          id
+          vault
+          user
+          shares
+          assets
+          blockNumber
+          timestamp
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        vaultPositions: Array<{
+          id: string;
+          vault: string;
+          user: string;
+          shares: string;
+          assets: string;
+          blockNumber: number;
+          timestamp: number;
+        }>;
+      }>(chain, query);
+
+      const positions = response.vaultPositions.map((pos) =>
+        VaultPositionEntity.fromSubgraphData({
+          vault: pos.vault,
+          user: pos.user,
+          shares: pos.shares,
+          assets: pos.assets,
+          blockNumber: pos.blockNumber,
+          timestamp: pos.timestamp,
+        }),
+      );
+
+      const syncStatus = await this.getSyncStatus(chain);
+
+      return {
+        data: positions,
+        metadata: {
+          source: 'subgraph',
+          lastUpdated: new Date(),
+          isStale: syncStatus.blocksBehind > 50,
+          syncStatus,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to get historical positions for vault ${vaultAddress}:`,
+        error,
+      );
+      throw new Error(
+        `Failed to fetch historical vault positions from subgraph`,
+      );
+    }
+  }
+
+  async getTransactionHistoryAcrossChains(
+    userAddress: string,
+    fromTimestamp?: number,
+    toTimestamp?: number,
+  ): Promise<
+    DataResponse<{
+      baseTransactions: VaultTransaction[];
+      obeliskTransactions: VaultTransaction[];
+      totalCount: number;
+    }>
+  > {
+    const chains = [ChainType.BASE, ChainType.OBELISK];
+    const results = await Promise.allSettled(
+      chains.map((chain) =>
+        this.getTransactions({
+          userAddress,
+          chain,
+          fromTimestamp,
+          toTimestamp,
+          limit: 1000,
+        }),
+      ),
+    );
+
+    const baseTransactions =
+      results[0].status === 'fulfilled' ? results[0].value.data.data : [];
+    const obeliskTransactions =
+      results[1].status === 'fulfilled' ? results[1].value.data.data : [];
+
+    const totalCount = baseTransactions.length + obeliskTransactions.length;
+
+    return {
+      data: {
+        baseTransactions,
+        obeliskTransactions,
+        totalCount,
+      },
+      metadata: {
+        source: 'subgraph',
+        lastUpdated: new Date(),
+        isStale: false,
+      },
+    };
+  }
+
+  async getMigrationEvents(
+    fromVaultAddress: string,
+    toVaultAddress: string,
+    userAddress?: string,
+  ): Promise<DataResponse<any[]>> {
+    const whereConditions = [
+      `fromVault: "${fromVaultAddress.toLowerCase()}"`,
+      `toVault: "${toVaultAddress.toLowerCase()}"`,
+    ];
+
+    if (userAddress) {
+      whereConditions.push(`user: "${userAddress.toLowerCase()}"`);
+    }
+
+    const query = `
+      query GetMigrationEvents {
+        migrationEvents(
+          where: { ${whereConditions.join(', ')} }
+          orderBy: timestamp
+          orderDirection: desc
+          first: 1000
+        ) {
+          id
+          user
+          fromVault
+          toVault
+          assets
+          shares
+          timestamp
+          blockNumber
+          transactionHash
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        migrationEvents: Array<{
+          id: string;
+          user: string;
+          fromVault: string;
+          toVault: string;
+          assets: string;
+          shares: string;
+          timestamp: number;
+          blockNumber: number;
+          transactionHash: string;
+        }>;
+      }>(ChainType.BASE, query);
+
+      const syncStatus = await this.getSyncStatus(ChainType.BASE);
+
+      return {
+        data: response.migrationEvents,
+        metadata: {
+          source: 'subgraph',
+          lastUpdated: new Date(),
+          isStale: syncStatus.blocksBehind > 50,
+          syncStatus,
+        },
+      };
+    } catch (error) {
+      this.logger.warn(
+        'Migration events query failed, this may be expected:',
+        error,
+      );
+      return {
+        data: [],
+        metadata: {
+          source: 'subgraph',
+          lastUpdated: new Date(),
+          isStale: false,
+        },
+      };
+    }
+  }
+
+  async getSeasonTVLHistory(
+    seasonId: number,
+    fromTimestamp?: number,
+    toTimestamp?: number,
+  ): Promise<DataResponse<TVLDataPoint[]>> {
+    const chain = seasonId === 1 ? ChainType.BASE : ChainType.OBELISK;
+
+    const whereConditions: string[] = [];
+    if (fromTimestamp) {
+      whereConditions.push(`date_gte: ${Math.floor(fromTimestamp / 1000)}`);
+    }
+    if (toTimestamp) {
+      whereConditions.push(`date_lte: ${Math.floor(toTimestamp / 1000)}`);
+    }
+
+    const whereClause =
+      whereConditions.length > 0
+        ? `where: { ${whereConditions.join(', ')} }`
+        : '';
+
+    const query = `
+      query GetSeasonTVLHistory {
+        protocolDayDatas(
+          ${whereClause}
+          orderBy: date
+          orderDirection: asc
+          first: 1000
+        ) {
+          date
+          totalValueLocked
+          totalValueLockedUSD
+          dailyVolumeUSD
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        protocolDayDatas: Array<{
+          date: number;
+          totalValueLocked: string;
+          totalValueLockedUSD: string;
+          dailyVolumeUSD: string;
+        }>;
+      }>(chain, query);
+
+      const dataPoints: TVLDataPoint[] = response.protocolDayDatas.map(
+        (point) => ({
+          timestamp: point.date * 1000,
+          totalAssets: point.totalValueLocked,
+          totalAssetsUsd: parseFloat(point.totalValueLockedUSD),
+          sharePrice: 1,
+          blockNumber: 0,
+        }),
+      );
+
+      const syncStatus = await this.getSyncStatus(chain);
+
+      return {
+        data: dataPoints,
+        metadata: {
+          source: 'subgraph',
+          lastUpdated: new Date(),
+          isStale: syncStatus.blocksBehind > 50,
+          syncStatus,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get season ${seasonId} TVL history:`, error);
+      throw new Error(`Failed to fetch season TVL history from subgraph`);
+    }
   }
 
   private async getChainHeadBlock(chain: ChainType): Promise<number> {

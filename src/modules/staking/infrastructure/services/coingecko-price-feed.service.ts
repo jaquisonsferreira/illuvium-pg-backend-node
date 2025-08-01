@@ -215,7 +215,6 @@ export class CoinGeckoPriceFeedService implements IPriceFeedRepository {
   async getHistoricalPrice(
     tokenAddress: string,
     timestamp: Date,
-    chain: ChainType,
   ): Promise<TokenPrice> {
     try {
       const coinGeckoId = this.getCoinGeckoId(tokenAddress);
@@ -280,47 +279,50 @@ export class CoinGeckoPriceFeedService implements IPriceFeedRepository {
     return lastUpdated < fiveMinutesAgo;
   }
 
-  async getTokenPriceByCoinGeckoId(coinGeckoId: string): Promise<TokenPrice> {
+  async getTokenPriceByCoinGeckoId(_coinGeckoId: string): Promise<TokenPrice> {
     throw new PriceFeedException('Method not implemented');
   }
 
   async getMultipleTokenPricesByCoinGeckoIds(
-    coinGeckoIds: string[],
+    _coinGeckoIds: string[],
   ): Promise<TokenPrice[]> {
     throw new PriceFeedException('Method not implemented');
   }
 
   async getTokenPriceHistory(
-    tokenAddress: string,
-    chain: ChainType,
-    fromTimestamp: number,
-    toTimestamp: number,
-    granularity?: 'hourly' | 'daily',
+    _tokenAddress: string,
+    _chain: ChainType,
+    _fromTimestamp: number,
+    _toTimestamp: number,
+    _granularity?: 'hourly' | 'daily',
   ): Promise<{ timestamp: number; price: number }[]> {
     return [];
   }
 
   async getTokenPriceHistoryByCoinGeckoId(
-    coinGeckoId: string,
-    fromTimestamp: number,
-    toTimestamp: number,
-    granularity?: 'hourly' | 'daily',
+    _coinGeckoId: string,
+    _fromTimestamp: number,
+    _toTimestamp: number,
+    _granularity?: 'hourly' | 'daily',
   ): Promise<{ timestamp: number; price: number }[]> {
     return [];
   }
 
-  async getTokenMetadata(tokenAddress: string, chain: ChainType): Promise<any> {
+  async getTokenMetadata(
+    _tokenAddress: string,
+    _chain: ChainType,
+  ): Promise<any> {
     return null;
   }
 
   async getMultipleTokensMetadata(
-    tokenAddresses: string[],
-    chain: ChainType,
+    _tokenAddresses: string[],
+    _chain: ChainType,
   ): Promise<any[]> {
     return [];
   }
 
-  async searchToken(query: string, chain?: ChainType): Promise<any[]> {
+  async searchToken(_query: string, _chain?: ChainType): Promise<any[]> {
     return [];
   }
 
@@ -329,22 +331,22 @@ export class CoinGeckoPriceFeedService implements IPriceFeedRepository {
   }
 
   async getTokenAddressByCoinGeckoId(
-    coinGeckoId: string,
-    platform: string,
+    _coinGeckoId: string,
+    _platform: string,
   ): Promise<string | null> {
     return null;
   }
 
   async getCoinGeckoIdByTokenAddress(
     tokenAddress: string,
-    chain: ChainType,
+    _chain: ChainType,
   ): Promise<string | null> {
     return this.getCoinGeckoId(tokenAddress);
   }
 
   async getTokenMarketData(
-    tokenAddress: string,
-    chain: ChainType,
+    _tokenAddress: string,
+    _chain: ChainType,
   ): Promise<any> {
     return null;
   }
@@ -356,7 +358,7 @@ export class CoinGeckoPriceFeedService implements IPriceFeedRepository {
   async getSimplePrice(
     tokenAddress: string,
     chain: ChainType,
-    includePriceChange?: boolean,
+    _includePriceChange?: boolean,
   ): Promise<any> {
     const price = await this.getTokenPrice(tokenAddress, chain);
     return {
@@ -370,7 +372,7 @@ export class CoinGeckoPriceFeedService implements IPriceFeedRepository {
   async getMultipleSimplePrices(
     tokenAddresses: string[],
     chain: ChainType,
-    includePriceChange?: boolean,
+    _includePriceChange?: boolean,
   ): Promise<Map<string, any>> {
     const prices = await this.getMultipleTokenPrices(tokenAddresses, chain);
     const priceMap = new Map();
@@ -389,7 +391,7 @@ export class CoinGeckoPriceFeedService implements IPriceFeedRepository {
 
   async validateToken(
     tokenAddress: string,
-    chain: ChainType,
+    _chain: ChainType,
   ): Promise<boolean> {
     return this.getCoinGeckoId(tokenAddress) !== null;
   }
@@ -411,22 +413,22 @@ export class CoinGeckoPriceFeedService implements IPriceFeedRepository {
     };
   }
 
-  async getDeFiProtocolData(protocolId: string): Promise<any> {
+  async getDeFiProtocolData(_protocolId: string): Promise<any> {
     return null;
   }
 
   async getTokenIcon(
-    tokenAddress: string,
-    chain: ChainType,
-    size?: 'small' | 'large',
+    _tokenAddress: string,
+    _chain: ChainType,
+    _size?: 'small' | 'large',
   ): Promise<string | null> {
     return null;
   }
 
   async getMultipleTokenIcons(
-    tokenAddresses: string[],
-    chain: ChainType,
-    size?: 'small' | 'large',
+    _tokenAddresses: string[],
+    _chain: ChainType,
+    _size?: 'small' | 'large',
   ): Promise<Map<string, string>> {
     return new Map();
   }

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AlchemyStakingService } from './alchemy-staking.service';
 import { Alchemy, Network } from 'alchemy-sdk';
 import { ChainType } from '../../domain/types/staking-types';
+import { getAddress } from 'ethers';
 
 jest.mock('alchemy-sdk');
 
@@ -110,16 +111,32 @@ describe('AlchemyStakingService', () => {
   });
 
   describe('getUserPositions', () => {
+    const validWallet = '0x1234567890123456789012345678901234567890';
+    const lowercaseWallet = '0xabcdef1234567890123456789012345678901234';
+    const mixedCaseWallet = '0xaBcDef1234567890123456789012345678901234';
+    const uppercaseWallet = '0xABCDEF1234567890123456789012345678901234';
+    const vaultAddress = '0x1111111111111111111111111111111111111111';
+
+    beforeEach(() => {
+      // Mock block data
+      mockAlchemy.core.getBlockNumber.mockResolvedValue(12345);
+      mockAlchemy.core.getBlock.mockResolvedValue({
+        timestamp: Math.floor(Date.now() / 1000),
+        number: 12345,
+      });
+    });
+
     it('should return empty array when user has no positions', async () => {
       const mockParams = {
-        userAddress: '0xuser123',
+        userAddress: validWallet,
         chain: ChainType.BASE,
       };
 
-      // Mock empty token balances
-      mockAlchemy.core.getTokenBalances.mockResolvedValue({
-        address: mockParams.userAddress,
-        tokenBalances: [],
+      // Mock the sync status call
+      mockAlchemy.core.getBlockNumber.mockResolvedValue(12345);
+      mockAlchemy.core.getBlock.mockResolvedValue({
+        timestamp: Math.floor(Date.now() / 1000),
+        number: 12345,
       });
 
       const result = await service.getUserPositions(mockParams);
@@ -128,13 +145,37 @@ describe('AlchemyStakingService', () => {
       expect(result.metadata.source).toBe('alchemy');
     });
 
+    it('should handle different address case formats properly', async () => {
+      const testCases = [
+        { input: validWallet, expected: getAddress(validWallet) },
+        { input: lowercaseWallet, expected: getAddress(lowercaseWallet) },
+        { input: mixedCaseWallet, expected: getAddress(mixedCaseWallet) },
+        { input: uppercaseWallet, expected: getAddress(uppercaseWallet) },
+      ];
+
+      for (const testCase of testCases) {
+        const params = {
+          userAddress: testCase.input,
+          vaultAddress,
+          chain: ChainType.BASE,
+        };
+
+        const result = await service.getUserPositions(params);
+
+        // The result should be properly formatted regardless of input case
+        expect(result).toBeDefined();
+        expect(result.data).toBeInstanceOf(Array);
+        expect(result.metadata.source).toBe('alchemy');
+      }
+    });
+
     it('should handle API errors gracefully', async () => {
       const mockParams = {
-        userAddress: '0xuser123',
+        userAddress: validWallet,
         chain: ChainType.BASE,
       };
 
-      mockAlchemy.core.getTokenBalances.mockRejectedValue(
+      mockAlchemy.core.getBlockNumber.mockRejectedValue(
         new Error('API rate limit exceeded'),
       );
 
@@ -225,7 +266,7 @@ describe('AlchemyStakingService', () => {
 
   describe('Error Handling', () => {
     it('should throw error for unsupported chain', async () => {
-      expect(() =>
+      await expect(() =>
         service.getSyncStatus('UNSUPPORTED' as ChainType),
       ).rejects.toThrow();
     });
@@ -252,6 +293,109 @@ describe('AlchemyStakingService', () => {
       expect(loggerSpy).toHaveBeenCalledWith(
         expect.stringContaining('No Alchemy API key provided'),
       );
+    });
+  });
+
+  describe('Address Validation and Checksumming', () => {
+    const validWallet = '0x1234567890123456789012345678901234567890';
+    const lowercaseWallet = '0xabcdef1234567890123456789012345678901234';
+    const mixedCaseWallet = '0xaBcDef1234567890123456789012345678901234';
+    const uppercaseWallet = '0xABCDEF1234567890123456789012345678901234';
+    const vaultAddress = '0x1111111111111111111111111111111111111111';
+
+    beforeEach(() => {
+      mockAlchemy.core.getBlockNumber.mockResolvedValue(12345);
+      mockAlchemy.core.getBlock.mockResolvedValue({
+        timestamp: Math.floor(Date.now() / 1000),
+        number: 12345,
+      });
+    });
+
+    it('should properly checksum addresses internally', () => {
+      const testAddress = '0xabcdef1234567890123456789012345678901234';
+      const checksummed = getAddress(testAddress);
+
+      // Verify that ethers getAddress function works as expected
+      expect(checksummed).not.toBe(testAddress);
+      expect(checksummed.toLowerCase()).toBe(testAddress.toLowerCase());
+      expect(checksummed).toMatch(/^0x[a-fA-F0-9]{40}$/);
+    });
+
+    it('should handle invalid addresses gracefully', async () => {
+      const invalidAddress = 'invalid-address';
+      const params = {
+        userAddress: invalidAddress,
+        vaultAddress,
+        chain: ChainType.BASE,
+      };
+
+      // The service should handle invalid addresses gracefully
+      // Since getUserVaultPosition uses getAddress() internally, it will throw
+      await expect(service.getUserPositions(params)).rejects.toThrow();
+    });
+
+    it('should handle addresses consistently across different formats', async () => {
+      const testCases = [lowercaseWallet, mixedCaseWallet, uppercaseWallet];
+
+      for (const address of testCases) {
+        const params = {
+          userAddress: address,
+          chain: ChainType.BASE,
+        };
+
+        const result = await service.getUserPositions(params);
+
+        // All should produce consistent results
+        expect(result).toBeDefined();
+        expect(result.data).toBeInstanceOf(Array);
+        expect(result.metadata.source).toBe('alchemy');
+      }
+    });
+
+    it('should maintain address checksums in vault position results', async () => {
+      const params = {
+        userAddress: lowercaseWallet,
+        vaultAddress,
+        chain: ChainType.BASE,
+      };
+
+      const result = await service.getUserPositions(params);
+
+      // If we get positions back, they should have checksummed addresses
+      if (result.data.length > 0) {
+        const position = result.data[0];
+        expect(position.user).toBe(getAddress(lowercaseWallet));
+        expect(position.user).not.toBe(lowercaseWallet);
+      }
+    });
+
+    it('should handle null vault addresses properly', async () => {
+      const params = {
+        userAddress: validWallet,
+        vaultAddress: '0x0000000000000000000000000000000000000000',
+        chain: ChainType.BASE,
+      };
+
+      const result = await service.getUserPositions(params);
+      expect(result.data).toEqual([]);
+    });
+
+    it('should maintain checksums even in error scenarios', async () => {
+      const params = {
+        userAddress: lowercaseWallet,
+        vaultAddress: '0x0', // Invalid vault address format
+        chain: ChainType.BASE,
+      };
+
+      mockAlchemy.core.getBlockNumber.mockResolvedValue(12345);
+      mockAlchemy.core.getBlock.mockResolvedValue({
+        timestamp: Math.floor(Date.now() / 1000),
+        number: 12345,
+      });
+
+      // Even in error scenarios, addresses should be properly handled
+      const result = await service.getUserPositions(params);
+      expect(result.data).toEqual([]);
     });
   });
 

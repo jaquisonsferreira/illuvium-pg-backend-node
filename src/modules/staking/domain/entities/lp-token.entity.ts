@@ -63,7 +63,7 @@ export class LPToken implements ILPTokenData {
         blockNumber: this.blockNumber,
         source: 'calculated',
       };
-    } catch (error) {
+    } catch {
       return {
         lpTokenAddress: this.address,
         token0: this.token0,
@@ -120,7 +120,7 @@ export class LPToken implements ILPTokenData {
         lpTokenAmount: (lpTokensToMint * Math.pow(10, 18)).toString(),
         shareOfPool: shareOfPool * 100,
       };
-    } catch (error) {
+    } catch {
       return {
         lpTokenAmount: '0',
         shareOfPool: 0,
@@ -154,7 +154,7 @@ export class LPToken implements ILPTokenData {
         token1Amount: (token1Amount * Math.pow(10, token1Decimals)).toString(),
         shareOfPool: shareOfPool * 100,
       };
-    } catch (error) {
+    } catch {
       return {
         token0Amount: '0',
         token1Amount: '0',
@@ -179,7 +179,7 @@ export class LPToken implements ILPTokenData {
       } else {
         return (amount / (reserve1 + amount)) * 100;
       }
-    } catch (error) {
+    } catch {
       return 0;
     }
   }

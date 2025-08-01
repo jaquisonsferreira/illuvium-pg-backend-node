@@ -116,7 +116,7 @@ export class PriceFeedService implements IPriceFeedRepository {
       },
       (error) => {
         this.logger.error('CoinGecko request error:', error);
-        return Promise.reject(error);
+        return Promise.reject(new Error(error.message));
       },
     );
 
@@ -495,8 +495,8 @@ export class PriceFeedService implements IPriceFeedRepository {
 
   // Placeholder implementations for other methods
   async searchToken(
-    query: string,
-    chain?: ChainType,
+    _query?: string,
+    _chain?: ChainType,
   ): Promise<
     {
       id: string;
@@ -517,8 +517,8 @@ export class PriceFeedService implements IPriceFeedRepository {
   }
 
   async getTokenAddressByCoinGeckoId(
-    coinGeckoId: string,
-    platform: string,
+    _coinGeckoId?: string,
+    _platform?: string,
   ): Promise<string | null> {
     throw new Error('Method not implemented yet');
   }
@@ -532,8 +532,8 @@ export class PriceFeedService implements IPriceFeedRepository {
   }
 
   async getTokenMarketData(
-    tokenAddress: string,
-    chain: ChainType,
+    _tokenAddress?: string,
+    _chain?: ChainType,
   ): Promise<{
     marketCap: number;
     volume24h: number;
@@ -670,7 +670,7 @@ export class PriceFeedService implements IPriceFeedRepository {
   }
 
   // Additional placeholder methods
-  async getDeFiProtocolData(protocolId: string): Promise<{
+  async getDeFiProtocolData(_protocolId: string): Promise<{
     name: string;
     tvl: number;
     tokenAddress?: string;
@@ -680,19 +680,18 @@ export class PriceFeedService implements IPriceFeedRepository {
   }
 
   async getTokenIcon(
-    tokenAddress: string,
-    chain: ChainType,
-    size?: 'small' | 'large',
+    _tokenAddress?: string,
+    _chain?: ChainType,
+    _size?: 'small' | 'large',
   ): Promise<string | null> {
-    const metadata = await this.getTokenMetadata(tokenAddress, chain);
     // Icon URL would be extracted from metadata if available
     return null;
   }
 
   async getMultipleTokenIcons(
-    tokenAddresses: string[],
-    chain: ChainType,
-    size?: 'small' | 'large',
+    _tokenAddresses?: string[],
+    _chain?: ChainType,
+    _size?: 'small' | 'large',
   ): Promise<Map<string, string>> {
     throw new Error('Method not implemented yet');
   }

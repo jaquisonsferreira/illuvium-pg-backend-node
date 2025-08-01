@@ -1,12 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  Alchemy,
-  Network,
-  AssetTransfersCategory,
-  SortingOrder,
-} from 'alchemy-sdk';
-import { ethers } from 'ethers';
+import { Alchemy, Network } from 'alchemy-sdk';
+import { ethers, getAddress } from 'ethers';
 import {
   IStakingSubgraphRepository,
   VaultPosition,
@@ -21,7 +16,6 @@ import {
   PaginatedResponse,
   DataResponse,
   ChainType,
-  TransactionType,
   TransactionStatus,
 } from '../../domain/types/staking-types';
 import { VaultPositionEntity } from '../../domain/entities/vault-position.entity';
@@ -100,7 +94,7 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
       case ChainType.OBELISK:
         return Network.BASE_SEPOLIA;
       default:
-        throw new Error(`Unsupported chain: ${chain}`);
+        throw new Error(`Unsupported chain: ${String(chain)}`);
     }
   }
 
@@ -133,7 +127,7 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
       // Create a JsonRpcProvider with Alchemy URL
       const alchemyUrl = this.getAlchemyUrl(chain as ChainType, config.apiKey);
       const provider = new ethers.JsonRpcProvider(alchemyUrl, 84532); // Base Sepolia chainId
-      
+
       // Override resolveName to prevent ENS lookups
       provider.resolveName = async (name: string) => {
         // Just return the input if it's already an address
@@ -143,7 +137,7 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
         // Return null for any ENS names
         return null;
       };
-      
+
       this.providers.set(chain as ChainType, provider);
 
       this.logger.log(`Initialized Alchemy client for ${chain}`);
@@ -201,8 +195,6 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
           chain,
           userAddress,
           vault,
-          fromBlock,
-          toBlock,
         );
 
         if (position && position.hasBalance && position.hasBalance()) {
@@ -472,29 +464,32 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
     chain: ChainType,
     userAddress: string,
     vaultAddress: string,
-    fromBlock?: number,
-    toBlock?: number,
   ): Promise<VaultPosition | null> {
     try {
       const currentBlock = await client.core.getBlockNumber();
       const blockDetails = await client.core.getBlock(currentBlock);
 
-      this.logger.log(`Creating contract for vault: ${vaultAddress} on chain: ${chain}`);
-      
+      this.logger.log(
+        `Creating contract for vault: ${vaultAddress} on chain: ${chain}`,
+      );
+
       if (!vaultAddress || vaultAddress === '0' || vaultAddress === '0x0') {
         this.logger.error(`Invalid vault address: ${vaultAddress}`);
         return null;
       }
-      
+
       const contract = new ethers.Contract(
         vaultAddress,
         this.VAULT_ABI,
         this.getProvider(chain),
       );
 
+      const checksummedUserAddress = getAddress(userAddress);
       const [shares, assets] = await Promise.all([
-        contract.balanceOf(userAddress),
-        contract.convertToAssets(await contract.balanceOf(userAddress)),
+        contract.balanceOf(checksummedUserAddress),
+        contract.convertToAssets(
+          await contract.balanceOf(checksummedUserAddress),
+        ),
       ]);
 
       if (shares.toString() === '0') {
@@ -503,7 +498,7 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
 
       return VaultPositionEntity.fromSubgraphData({
         vault: vaultAddress,
-        user: userAddress,
+        user: checksummedUserAddress,
         shares: shares.toString(),
         assets: assets.toString(),
         blockNumber: currentBlock,
@@ -527,18 +522,23 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
   ): Promise<ParsedVaultEvent[]> {
     // Get the actual block numbers
     const latestBlock = await client.core.getBlockNumber();
-    
+
     // Default to last 7 days if no timestamp provided to avoid scanning too many blocks
-    const defaultFromTimestamp = fromTimestamp || Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60);
-    
-    let fromBlock = await this.getBlockByTimestamp(client, defaultFromTimestamp);
+    const defaultFromTimestamp =
+      fromTimestamp || Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
+
+    let fromBlock = await this.getBlockByTimestamp(
+      client,
+      defaultFromTimestamp,
+    );
     const toBlock = toTimestamp
       ? await this.getBlockByTimestamp(client, toTimestamp)
       : latestBlock;
 
     const topics: (string | null)[] = [];
     if (userAddress) {
-      topics.push(null, ethers.zeroPadValue(userAddress, 32));
+      const checksummedUserAddress = getAddress(userAddress);
+      topics.push(null, ethers.zeroPadValue(checksummedUserAddress, 32));
     }
 
     // Alchemy has a limit of 500 blocks per request
@@ -549,18 +549,26 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
     // Limit the range to avoid scanning too many blocks
     const blocksToScan = toBlock - fromBlock + 1;
     if (blocksToScan > MAX_BLOCKS_TO_SCAN) {
-      this.logger.warn(`Block range too large (${blocksToScan} blocks). Limiting to last ${MAX_BLOCKS_TO_SCAN} blocks`);
+      this.logger.warn(
+        `Block range too large (${blocksToScan} blocks). Limiting to last ${MAX_BLOCKS_TO_SCAN} blocks`,
+      );
       fromBlock = Math.max(0, toBlock - MAX_BLOCKS_TO_SCAN + 1);
     }
 
     // Process in chunks of 500 blocks
-    this.logger.log(`Scanning blocks ${fromBlock} to ${toBlock} (${toBlock - fromBlock + 1} blocks)`);
-    
-    for (let startBlock = fromBlock; startBlock <= toBlock; startBlock += BLOCK_CHUNK_SIZE) {
+    this.logger.log(
+      `Scanning blocks ${fromBlock} to ${toBlock} (${toBlock - fromBlock + 1} blocks)`,
+    );
+
+    for (
+      let startBlock = fromBlock;
+      startBlock <= toBlock;
+      startBlock += BLOCK_CHUNK_SIZE
+    ) {
       const endBlock = Math.min(startBlock + BLOCK_CHUNK_SIZE - 1, toBlock);
-      
+
       this.logger.debug(`Processing blocks ${startBlock} to ${endBlock}`);
-      
+
       try {
         const [depositLogs, withdrawalLogs] = await Promise.all([
           client.core.getLogs({
@@ -670,13 +678,18 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
       `KNOWN_VAULT_ADDRESSES_${chain}`,
       '',
     );
-    
+
     if (!addresses) {
-      this.logger.warn(`No known vault addresses configured for chain ${chain}`);
+      this.logger.warn(
+        `No known vault addresses configured for chain ${chain}`,
+      );
       return [];
     }
-    
-    return addresses.split(',').map(addr => addr.trim()).filter(addr => addr);
+
+    return addresses
+      .split(',')
+      .map((addr) => addr.trim())
+      .filter((addr) => addr);
   }
 
   private async getBlockByTimestamp(
@@ -684,29 +697,29 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
     timestamp: number,
   ): Promise<number> {
     const latestBlock = await client.core.getBlockNumber();
-    
+
     // Get the latest block to estimate block time
     const latestBlockData = await client.core.getBlock(latestBlock);
     const currentTimestamp = latestBlockData.timestamp;
-    
+
     // If target timestamp is in the future, return latest block
     if (timestamp >= currentTimestamp) {
       return latestBlock;
     }
-    
+
     // Estimate starting block based on average block time (2 seconds on Base)
     const secondsDiff = currentTimestamp - timestamp;
     const estimatedBlocksDiff = Math.floor(secondsDiff / 2);
     const estimatedStartBlock = Math.max(0, latestBlock - estimatedBlocksDiff);
-    
+
     // Start binary search from a closer range
     let low = Math.max(0, estimatedStartBlock - 1000); // Add some buffer
     let high = Math.min(latestBlock, estimatedStartBlock + 1000);
-    
+
     // First, check if we need to expand the range
     const lowBlock = await client.core.getBlock(low);
     const highBlock = await client.core.getBlock(high);
-    
+
     if (lowBlock.timestamp > timestamp) {
       low = 0;
     }
@@ -900,37 +913,25 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
     }
   }
 
-  async getMultipleLPTokensData(
-    tokenAddresses: string[],
-    chain: ChainType,
-  ): Promise<DataResponse<LPTokenData[]>> {
+  async getMultipleLPTokensData(): Promise<DataResponse<LPTokenData[]>> {
     throw new Error(
       'Multiple LP tokens data method not implemented for Alchemy service',
     );
   }
 
-  async getVaultAnalytics(
-    vaultAddress: string,
-    chain: ChainType,
-  ): Promise<DataResponse<VaultAnalytics>> {
+  async getVaultAnalytics(): Promise<DataResponse<VaultAnalytics>> {
     throw new Error(
       'Vault analytics method not implemented for Alchemy service',
     );
   }
 
-  async getVaultTVLHistory(
-    chain: ChainType,
-    vaultAddress: string,
-    fromTimestamp?: number,
-    toTimestamp?: number,
-    granularity: 'hour' | 'day' | 'week' = 'day',
-  ): Promise<TVLDataPoint[]> {
+  async getVaultTVLHistory(): Promise<TVLDataPoint[]> {
     // For now, return empty array as historical data requires event indexing
     // In production, this would query historical events or use a dedicated indexing service
     return [];
   }
 
-  async getEcosystemStats(chain: ChainType): Promise<
+  async getEcosystemStats(): Promise<
     DataResponse<{
       totalValueLocked: string;
       totalValueLockedUsd: number;
@@ -961,33 +962,19 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
     };
   }
 
-  async searchUserPositions(
-    addressPattern: string,
-    chain: ChainType,
-    limit: number = 50,
-  ): Promise<DataResponse<VaultPosition[]>> {
+  async searchUserPositions(): Promise<DataResponse<VaultPosition[]>> {
     throw new Error(
       'Search user positions method not implemented for Alchemy service',
     );
   }
 
-  async getPositionChanges(
-    vaultAddress: string,
-    fromBlock: number,
-    toBlock: number,
-    chain: ChainType,
-  ): Promise<DataResponse<VaultPosition[]>> {
+  async getPositionChanges(): Promise<DataResponse<VaultPosition[]>> {
     throw new Error(
       'Position changes method not implemented for Alchemy service',
     );
   }
 
-  async getLPTokenReservesHistory(
-    tokenAddress: string,
-    chain: ChainType,
-    fromTimestamp?: number,
-    toTimestamp?: number,
-  ): Promise<
+  async getLPTokenReservesHistory(): Promise<
     DataResponse<
       {
         timestamp: number;
@@ -1003,12 +990,7 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
     );
   }
 
-  async getLPTokenTransfers(
-    tokenAddress: string,
-    chain: ChainType,
-    fromBlock?: number,
-    toBlock?: number,
-  ): Promise<
+  async getLPTokenTransfers(): Promise<
     DataResponse<
       {
         from: string;
@@ -1059,7 +1041,6 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
     chain: ChainType,
     vaultAddresses: string[],
   ): Promise<Record<string, { totalAssets: string; sharePrice: number }>> {
-    const client = this.getClient(chain);
     const result: Record<string, { totalAssets: string; sharePrice: number }> =
       {};
 
@@ -1100,27 +1081,27 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
     }
   }
 
-  async getVolume24h(chain: ChainType): Promise<number> {
+  async getVolume24h(): Promise<number> {
     // For now, return 0 as we need historical event data to calculate volume
     // This would require more complex implementation with event filtering
     return 0;
   }
 
-  async getVolume7d(chain: ChainType): Promise<number> {
+  async getVolume7d(): Promise<number> {
     throw new Error('Volume 7d method not implemented for Alchemy service');
   }
 
   async getVaultData(chain: ChainType, vaultAddress: string): Promise<any> {
-    const client = this.getClient(chain);
-
     try {
-      this.logger.log(`Creating contract for vault: ${vaultAddress} on chain: ${chain}`);
-      
+      this.logger.log(
+        `Creating contract for vault: ${vaultAddress} on chain: ${chain}`,
+      );
+
       if (!vaultAddress || vaultAddress === '0' || vaultAddress === '0x0') {
         this.logger.error(`Invalid vault address: ${vaultAddress}`);
         return null;
       }
-      
+
       const contract = new ethers.Contract(
         vaultAddress,
         this.VAULT_ABI,
@@ -1156,21 +1137,13 @@ export class AlchemyStakingService implements IStakingSubgraphRepository {
     }
   }
 
-  async getVaultVolumeHistory(
-    chain: ChainType,
-    vaultAddress: string,
-    startTime: number,
-    endTime: number,
-  ): Promise<any[]> {
+  async getVaultVolumeHistory(): Promise<any[]> {
     // For now, return empty array as volume history requires event indexing
     // In production, this would query historical deposit/withdraw events
     return [];
   }
 
-  async getVaultHistoricalStats(
-    chain: ChainType,
-    vaultAddress: string,
-  ): Promise<{
+  async getVaultHistoricalStats(): Promise<{
     totalDeposits: number;
     totalWithdrawals: number;
     highestTVL: number;
