@@ -1,11 +1,17 @@
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
-import { tableExists, indexExists, constraintExists } from '../utils/migration-helpers';
+import {
+  tableExists,
+  indexExists,
+  constraintExists,
+} from '../utils/migration-helpers';
 
 export const createDeveloperContributionsTable = {
   up: async (db: Kysely<any>): Promise<void> => {
     if (await tableExists(db, 'developer_contributions')) {
-      console.log('Developer contributions table already exists, skipping creation');
+      console.log(
+        'Developer contributions table already exists, skipping creation',
+      );
       return;
     }
 

@@ -1,6 +1,10 @@
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
-import { tableExists, indexExists, constraintExists } from '../utils/migration-helpers';
+import {
+  tableExists,
+  indexExists,
+  constraintExists,
+} from '../utils/migration-helpers';
 
 export const createReferralsTable = {
   up: async (db: Kysely<any>): Promise<void> => {

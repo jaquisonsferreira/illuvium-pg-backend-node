@@ -34,7 +34,13 @@ export const createPriceHistoryTable = {
       await db.schema
         .createIndex('idx_price_history_unique')
         .on('price_history')
-        .columns(['token_address', 'chain', 'timestamp', 'granularity', 'source'])
+        .columns([
+          'token_address',
+          'chain',
+          'timestamp',
+          'granularity',
+          'source',
+        ])
         .unique()
         .execute();
     }

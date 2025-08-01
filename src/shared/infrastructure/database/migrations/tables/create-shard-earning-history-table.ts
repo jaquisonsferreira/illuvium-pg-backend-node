@@ -1,11 +1,17 @@
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
-import { tableExists, indexExists, constraintExists } from '../utils/migration-helpers';
+import {
+  tableExists,
+  indexExists,
+  constraintExists,
+} from '../utils/migration-helpers';
 
 export const createShardEarningHistoryTable = {
   up: async (db: Kysely<any>): Promise<void> => {
     if (await tableExists(db, 'shard_earning_history')) {
-      console.log('Shard earning history table already exists, skipping creation');
+      console.log(
+        'Shard earning history table already exists, skipping creation',
+      );
       return;
     }
 
