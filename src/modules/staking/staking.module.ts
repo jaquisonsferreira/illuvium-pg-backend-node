@@ -5,6 +5,7 @@ import { SharedModule } from '@shared/shared.module';
 
 import { StakingPositionsController } from './interface/controllers/staking-positions.controller';
 import { StakingTransactionsController } from './interface/controllers/staking-transactions.controller';
+import { VaultsController } from './interface/controllers/vaults.controller';
 import { StakingSubgraphService } from './infrastructure/services/staking-subgraph.service';
 import { StakingBlockchainService } from './infrastructure/services/staking-blockchain.service';
 import { PriceFeedService } from './infrastructure/services/price-feed.service';
@@ -17,10 +18,13 @@ import { GetUserPositionsUseCase } from './application/use-cases/get-user-positi
 import { GetUserStakingPositionsUseCase } from './application/use-cases/get-user-staking-positions.use-case';
 import { GetUserStakingTransactionsUseCase } from './application/use-cases/get-user-staking-transactions.use-case';
 import { CalculateLPTokenPriceUseCase } from './application/use-cases/calculate-lp-token-price.use-case';
+import { GetVaultsUseCase } from './application/use-cases/get-vaults.use-case';
+import { GetVaultDetailsUseCase } from './application/use-cases/get-vault-details.use-case';
+import { GetStakingStatsUseCase } from './application/use-cases/get-staking-stats.use-case';
 
 @Module({
   imports: [ConfigModule, HttpModule, SharedModule],
-  controllers: [StakingPositionsController, StakingTransactionsController],
+  controllers: [StakingPositionsController, StakingTransactionsController, VaultsController],
   providers: [
     VaultConfigService,
     TokenDecimalsService,
@@ -46,6 +50,9 @@ import { CalculateLPTokenPriceUseCase } from './application/use-cases/calculate-
     GetUserStakingPositionsUseCase,
     GetUserStakingTransactionsUseCase,
     CalculateLPTokenPriceUseCase,
+    GetVaultsUseCase,
+    GetVaultDetailsUseCase,
+    GetStakingStatsUseCase,
   ],
   exports: [
     VaultConfigService,
@@ -63,6 +70,9 @@ import { CalculateLPTokenPriceUseCase } from './application/use-cases/calculate-
     GetUserStakingPositionsUseCase,
     GetUserStakingTransactionsUseCase,
     CalculateLPTokenPriceUseCase,
+    GetVaultsUseCase,
+    GetVaultDetailsUseCase,
+    GetStakingStatsUseCase,
   ],
 })
 export class StakingModule {}

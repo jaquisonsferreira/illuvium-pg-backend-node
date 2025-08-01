@@ -997,12 +997,12 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
   }
 
   async getVaultTVLHistory(
-    vaultAddress: string,
     chain: ChainType,
+    vaultAddress: string,
     fromTimestamp?: number,
     toTimestamp?: number,
     granularity: 'hour' | 'day' | 'week' = 'day',
-  ): Promise<DataResponse<TVLDataPoint[]>> {
+  ): Promise<TVLDataPoint[]> {
     const entity = granularity === 'hour' ? 'vaultHourDatas' : 'vaultDayDatas';
     const timeField = granularity === 'hour' ? 'hourStartUnix' : 'date';
 
@@ -1050,17 +1050,7 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
         blockNumber: 0, // Would need to be included in query if needed
       }));
 
-      const syncStatus = await this.getSyncStatus(chain);
-
-      return {
-        data: dataPoints,
-        metadata: {
-          source: 'subgraph',
-          lastUpdated: new Date(),
-          isStale: syncStatus.blocksBehind > 50,
-          syncStatus,
-        },
-      };
+      return dataPoints;
     } catch (error) {
       this.logger.error(
         `Failed to get TVL history for vault ${vaultAddress}:`,
@@ -1258,6 +1248,302 @@ export class StakingSubgraphService implements IStakingSubgraphRepository {
         lastBlock: 0,
         indexingErrors: [error.message],
       };
+    }
+  }
+
+  async getVaultsTVL(
+    chain: ChainType,
+    vaultAddresses: string[],
+  ): Promise<Record<string, { totalAssets: string; sharePrice: number }>> {
+    const addressList = vaultAddresses
+      .map((addr) => `"${addr.toLowerCase()}"`)
+      .join(', ');
+
+    const query = `
+      query GetVaultsTVL {
+        vaults(where: { id_in: [${addressList}] }) {
+          id
+          totalAssets
+          totalShares
+          sharePrice
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        vaults: Array<{
+          id: string;
+          totalAssets: string;
+          totalShares: string;
+          sharePrice: string;
+        }>;
+      }>(chain, query);
+
+      const result: Record<string, { totalAssets: string; sharePrice: number }> = {};
+      
+      response.vaults.forEach((vault) => {
+        result[vault.id] = {
+          totalAssets: vault.totalAssets,
+          sharePrice: parseFloat(vault.sharePrice) || 1,
+        };
+      });
+
+      return result;
+    } catch (error) {
+      this.logger.error('Failed to get vaults TVL:', error);
+      return {};
+    }
+  }
+
+  async getVolume24h(chain: ChainType): Promise<number> {
+    const query = `
+      query GetVolume24h {
+        protocolDayDatas(
+          orderBy: date
+          orderDirection: desc
+          first: 1
+        ) {
+          dailyVolumeUSD
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        protocolDayDatas: Array<{
+          dailyVolumeUSD: string;
+        }>;
+      }>(chain, query);
+
+      if (response.protocolDayDatas.length > 0) {
+        return parseFloat(response.protocolDayDatas[0].dailyVolumeUSD);
+      }
+      return 0;
+    } catch (error) {
+      this.logger.error('Failed to get 24h volume:', error);
+      return 0;
+    }
+  }
+
+  async getVolume7d(chain: ChainType): Promise<number> {
+    const sevenDaysAgo = Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60);
+    
+    const query = `
+      query GetVolume7d {
+        protocolDayDatas(
+          where: { date_gte: ${sevenDaysAgo} }
+          orderBy: date
+          orderDirection: desc
+        ) {
+          dailyVolumeUSD
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        protocolDayDatas: Array<{
+          dailyVolumeUSD: string;
+        }>;
+      }>(chain, query);
+
+      const totalVolume = response.protocolDayDatas.reduce(
+        (sum, day) => sum + parseFloat(day.dailyVolumeUSD),
+        0
+      );
+
+      return totalVolume;
+    } catch (error) {
+      this.logger.error('Failed to get 7d volume:', error);
+      return 0;
+    }
+  }
+
+  async getVaultData(chain: ChainType, vaultAddress: string): Promise<any> {
+    const query = `
+      query GetVaultData {
+        vault(id: "${vaultAddress.toLowerCase()}") {
+          id
+          totalAssets
+          totalShares
+          sharePrice
+          totalParticipants
+          createdAt
+          updatedAt
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        vault: {
+          id: string;
+          totalAssets: string;
+          totalShares: string;
+          sharePrice: string;
+          totalParticipants: string;
+          createdAt: string;
+          updatedAt: string;
+        } | null;
+      }>(chain, query);
+
+      return response.vault;
+    } catch (error) {
+      this.logger.error(`Failed to get vault data for ${vaultAddress}:`, error);
+      return null;
+    }
+  }
+
+  async getVaultVolumeHistory(
+    chain: ChainType,
+    vaultAddress: string,
+    startTime: number,
+    endTime: number,
+  ): Promise<any[]> {
+    const query = `
+      query GetVaultVolumeHistory {
+        vaultDayDatas(
+          where: {
+            vault: "${vaultAddress.toLowerCase()}"
+            date_gte: ${startTime}
+            date_lte: ${endTime}
+          }
+          orderBy: date
+          orderDirection: asc
+        ) {
+          date
+          dailyVolumeUSD
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        vaultDayDatas: Array<{
+          date: number;
+          dailyVolumeUSD: string;
+        }>;
+      }>(chain, query);
+
+      return response.vaultDayDatas.map((data) => ({
+        timestamp: data.date,
+        value: parseFloat(data.dailyVolumeUSD),
+      }));
+    } catch (error) {
+      this.logger.error(`Failed to get vault volume history:`, error);
+      return [];
+    }
+  }
+
+  async getVaultHistoricalStats(
+    chain: ChainType,
+    vaultAddress: string,
+  ): Promise<{
+    totalDeposits: number;
+    totalWithdrawals: number;
+    highestTVL: number;
+  }> {
+    const query = `
+      query GetVaultHistoricalStats {
+        vault(id: "${vaultAddress.toLowerCase()}") {
+          totalDeposits
+          totalWithdrawals
+          highestTVL
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        vault: {
+          totalDeposits: string;
+          totalWithdrawals: string;
+          highestTVL: string;
+        } | null;
+      }>(chain, query);
+
+      if (response.vault) {
+        return {
+          totalDeposits: parseFloat(response.vault.totalDeposits),
+          totalWithdrawals: parseFloat(response.vault.totalWithdrawals),
+          highestTVL: parseFloat(response.vault.highestTVL),
+        };
+      }
+
+      return {
+        totalDeposits: 0,
+        totalWithdrawals: 0,
+        highestTVL: 0,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get vault historical stats:`, error);
+      return {
+        totalDeposits: 0,
+        totalWithdrawals: 0,
+        highestTVL: 0,
+      };
+    }
+  }
+
+  async getUserPosition(
+    chain: ChainType,
+    vaultAddress: string,
+    walletAddress: string,
+  ): Promise<VaultPosition | null> {
+    const query = `
+      query GetUserVaultPosition {
+        vaultPositions(
+          where: { 
+            user: "${walletAddress.toLowerCase()}"
+            vault: "${vaultAddress.toLowerCase()}"
+          }
+          orderBy: blockNumber
+          orderDirection: desc
+          first: 1
+        ) {
+          id
+          vault
+          user
+          shares
+          assets
+          blockNumber
+          timestamp
+        }
+      }
+    `;
+
+    try {
+      const response = await this.query<{
+        vaultPositions: Array<{
+          id: string;
+          vault: string;
+          user: string;
+          shares: string;
+          assets: string;
+          blockNumber: number;
+          timestamp: number;
+        }>;
+      }>(chain, query);
+
+      if (response.vaultPositions.length > 0) {
+        const positionData = response.vaultPositions[0];
+        const position = VaultPositionEntity.fromSubgraphData({
+          vault: positionData.vault,
+          user: positionData.user,
+          shares: positionData.shares,
+          assets: positionData.assets,
+          blockNumber: positionData.blockNumber,
+          timestamp: positionData.timestamp,
+        });
+
+        return position.hasBalance() ? position : null;
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error(`Failed to get user position:`, error);
+      return null;
     }
   }
 

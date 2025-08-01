@@ -1,8 +1,15 @@
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
+import { tableExists, indexExists } from '../utils/migration-helpers';
 
 export const createTokenMetadataTable = {
   up: async (db: Kysely<any>): Promise<void> => {
+    if (await tableExists(db, 'token_metadata')) {
+      console.log('Token metadata table already exists, skipping creation');
+      return;
+    }
+
+    console.log('Creating token_metadata table...');
     await db.schema
       .createTable('token_metadata')
       .addColumn('id', 'uuid', (col) =>
@@ -38,37 +45,49 @@ export const createTokenMetadataTable = {
       .execute();
 
     // Add unique constraint
-    await db.schema
-      .createIndex('idx_token_metadata_unique')
-      .on('token_metadata')
-      .columns(['token_address', 'chain'])
-      .unique()
-      .execute();
+    if (!(await indexExists(db, 'idx_token_metadata_unique'))) {
+      await db.schema
+        .createIndex('idx_token_metadata_unique')
+        .on('token_metadata')
+        .columns(['token_address', 'chain'])
+        .unique()
+        .execute();
+    }
 
     // Add indexes
-    await db.schema
-      .createIndex('idx_token_metadata_symbol')
-      .on('token_metadata')
-      .column('symbol')
-      .execute();
+    if (!(await indexExists(db, 'idx_token_metadata_symbol'))) {
+      await db.schema
+        .createIndex('idx_token_metadata_symbol')
+        .on('token_metadata')
+        .column('symbol')
+        .execute();
+    }
 
-    await db.schema
-      .createIndex('idx_token_metadata_coingecko_id')
-      .on('token_metadata')
-      .column('coingecko_id')
-      .execute();
+    if (!(await indexExists(db, 'idx_token_metadata_coingecko_id'))) {
+      await db.schema
+        .createIndex('idx_token_metadata_coingecko_id')
+        .on('token_metadata')
+        .column('coingecko_id')
+        .execute();
+    }
 
-    await db.schema
-      .createIndex('idx_token_metadata_is_lp')
-      .on('token_metadata')
-      .column('is_lp_token')
-      .execute();
+    if (!(await indexExists(db, 'idx_token_metadata_is_lp'))) {
+      await db.schema
+        .createIndex('idx_token_metadata_is_lp')
+        .on('token_metadata')
+        .column('is_lp_token')
+        .execute();
+    }
 
-    await db.schema
-      .createIndex('idx_token_metadata_last_updated')
-      .on('token_metadata')
-      .column('last_updated')
-      .execute();
+    if (!(await indexExists(db, 'idx_token_metadata_last_updated'))) {
+      await db.schema
+        .createIndex('idx_token_metadata_last_updated')
+        .on('token_metadata')
+        .column('last_updated')
+        .execute();
+    }
+
+    console.log('Token metadata table created successfully');
   },
 
   down: async (db: Kysely<any>): Promise<void> => {

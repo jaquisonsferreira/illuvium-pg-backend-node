@@ -1,8 +1,15 @@
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
+import { tableExists, indexExists } from '../utils/migration-helpers';
 
 export const createSeasonsTable = {
   up: async (db: Kysely<any>): Promise<void> => {
+    if (await tableExists(db, 'seasons')) {
+      console.log('Seasons table already exists, skipping creation');
+      return;
+    }
+
+    console.log('Creating seasons table...');
     await db.schema
       .createTable('seasons')
       .addColumn('id', 'serial', (col) => col.primaryKey())
@@ -29,17 +36,23 @@ export const createSeasonsTable = {
       .execute();
 
     // Add indexes
-    await db.schema
-      .createIndex('idx_seasons_status')
-      .on('seasons')
-      .column('status')
-      .execute();
+    if (!(await indexExists(db, 'idx_seasons_status'))) {
+      await db.schema
+        .createIndex('idx_seasons_status')
+        .on('seasons')
+        .column('status')
+        .execute();
+    }
 
-    await db.schema
-      .createIndex('idx_seasons_chain')
-      .on('seasons')
-      .column('chain')
-      .execute();
+    if (!(await indexExists(db, 'idx_seasons_chain'))) {
+      await db.schema
+        .createIndex('idx_seasons_chain')
+        .on('seasons')
+        .column('chain')
+        .execute();
+    }
+
+    console.log('Seasons table created successfully');
   },
 
   down: async (db: Kysely<any>): Promise<void> => {

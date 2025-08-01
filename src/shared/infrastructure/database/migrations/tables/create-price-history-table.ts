@@ -1,8 +1,15 @@
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
+import { tableExists, indexExists } from '../utils/migration-helpers';
 
 export const createPriceHistoryTable = {
   up: async (db: Kysely<any>): Promise<void> => {
+    if (await tableExists(db, 'price_history')) {
+      console.log('Price history table already exists, skipping creation');
+      return;
+    }
+
+    console.log('Creating price_history table...');
     await db.schema
       .createTable('price_history')
       .addColumn('id', 'uuid', (col) =>
@@ -23,37 +30,49 @@ export const createPriceHistoryTable = {
       .execute();
 
     // Add unique constraint to prevent duplicate entries
-    await db.schema
-      .createIndex('idx_price_history_unique')
-      .on('price_history')
-      .columns(['token_address', 'chain', 'timestamp', 'granularity', 'source'])
-      .unique()
-      .execute();
+    if (!(await indexExists(db, 'idx_price_history_unique'))) {
+      await db.schema
+        .createIndex('idx_price_history_unique')
+        .on('price_history')
+        .columns(['token_address', 'chain', 'timestamp', 'granularity', 'source'])
+        .unique()
+        .execute();
+    }
 
     // Add indexes for common queries
-    await db.schema
-      .createIndex('idx_price_history_token_chain')
-      .on('price_history')
-      .columns(['token_address', 'chain'])
-      .execute();
+    if (!(await indexExists(db, 'idx_price_history_token_chain'))) {
+      await db.schema
+        .createIndex('idx_price_history_token_chain')
+        .on('price_history')
+        .columns(['token_address', 'chain'])
+        .execute();
+    }
 
-    await db.schema
-      .createIndex('idx_price_history_timestamp')
-      .on('price_history')
-      .column('timestamp')
-      .execute();
+    if (!(await indexExists(db, 'idx_price_history_timestamp'))) {
+      await db.schema
+        .createIndex('idx_price_history_timestamp')
+        .on('price_history')
+        .column('timestamp')
+        .execute();
+    }
 
-    await db.schema
-      .createIndex('idx_price_history_source')
-      .on('price_history')
-      .column('source')
-      .execute();
+    if (!(await indexExists(db, 'idx_price_history_source'))) {
+      await db.schema
+        .createIndex('idx_price_history_source')
+        .on('price_history')
+        .column('source')
+        .execute();
+    }
 
-    await db.schema
-      .createIndex('idx_price_history_granularity')
-      .on('price_history')
-      .column('granularity')
-      .execute();
+    if (!(await indexExists(db, 'idx_price_history_granularity'))) {
+      await db.schema
+        .createIndex('idx_price_history_granularity')
+        .on('price_history')
+        .column('granularity')
+        .execute();
+    }
+
+    console.log('Price history table created successfully');
   },
 
   down: async (db: Kysely<any>): Promise<void> => {

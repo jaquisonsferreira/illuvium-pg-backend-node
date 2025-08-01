@@ -108,12 +108,12 @@ export interface IStakingSubgraphRepository {
    * Gets historical TVL data for a vault
    */
   getVaultTVLHistory(
-    vaultAddress: string,
     chain: ChainType,
+    vaultAddress: string,
     fromTimestamp?: number,
     toTimestamp?: number,
     granularity?: 'hour' | 'day' | 'week',
-  ): Promise<DataResponse<TVLDataPoint[]>>;
+  ): Promise<TVLDataPoint[]>;
 
   /**
    * Gets aggregated data across all vaults for ecosystem stats
@@ -211,4 +211,58 @@ export interface IStakingSubgraphRepository {
     lastBlock: number;
     indexingErrors?: string[];
   }>;
+
+  /**
+   * Gets TVL data for multiple vaults
+   */
+  getVaultsTVL(
+    chain: ChainType,
+    vaultAddresses: string[],
+  ): Promise<Record<string, { totalAssets: string; sharePrice: number }>>;
+
+  /**
+   * Gets 24 hour volume for the chain
+   */
+  getVolume24h(chain: ChainType): Promise<number>;
+
+  /**
+   * Gets 7 day volume for the chain
+   */
+  getVolume7d(chain: ChainType): Promise<number>;
+
+  /**
+   * Gets vault data
+   */
+  getVaultData(chain: ChainType, vaultAddress: string): Promise<any>;
+
+  /**
+   * Gets volume history for a vault
+   */
+  getVaultVolumeHistory(
+    chain: ChainType,
+    vaultAddress: string,
+    startTime: number,
+    endTime: number,
+  ): Promise<any[]>;
+
+  /**
+   * Gets historical stats for a vault
+   */
+  getVaultHistoricalStats(
+    chain: ChainType,
+    vaultAddress: string,
+  ): Promise<{
+    totalDeposits: number;
+    totalWithdrawals: number;
+    highestTVL: number;
+  }>;
+
+  /**
+   * Gets position for a user in a specific vault
+   */
+  getUserPosition(
+    chain: ChainType,
+    vaultAddress: string,
+    walletAddress: string,
+  ): Promise<VaultPosition | null>;
 }
