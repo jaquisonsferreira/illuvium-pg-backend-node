@@ -7,7 +7,6 @@ function getParamDecoratorFactory(
   decorator: (...args: any[]) => ParameterDecorator,
 ) {
   class TestDecorator {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public test(@decorator() _value: any) {}
   }
 
