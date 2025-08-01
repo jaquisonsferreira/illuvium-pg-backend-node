@@ -11,7 +11,7 @@
       "migrationStatus": "stable",
       "features": {
         "depositsEnabled": true,
-        "withdrawalsEnabled": false,
+        "withdrawalsEnabled": true,
         "lockedUntilMainnet": true,
         "rewardsMultiplier": 1.0
       },
@@ -59,58 +59,68 @@
   "vaultConfigs": {
     "ILV_vault_base": {
       "vaultId": "ILV_vault_base",
-      "vaultAddress": "0xbBfadF4149D7fc67b6a1C33dd7424003F09Ed484",
+      "vaultAddress": "0x9645C49150C62428d7831181DDD905FE47397F4A",
       "name": "Illuvium Staking",
       "chain": "base",
       "seasonId": 1,
       "status": "active",
       "underlyingAsset": "ILV",
-      "underlyingAssetAddress": "0xC3fcc8530F6d6997adD7EA9439F0C7F6855bF8e8",
+      "underlyingAssetAddress": "0x562e7B8E87ad901f71bD84cCb4ebAc98d99Cd514",
       "mechanics": {
-        "withdrawalEnabled": false,
-        "lockedUntilMainnet": true
+        "withdrawalEnabled": true,
+        "lockedUntilMainnet": false,
+        "minLockDuration": 1,
+        "maxLockDuration": 31536000,
+        "redeemDelayDays": 0
       }
     },
     "ILV_vault_obelisk": {
       "vaultId": "ILV_vault_obelisk",
-      "vaultAddress": "0xbBfadF4149D7fc67b6a1C33dd7424003F09Ed484",
+      "vaultAddress": "0x9645C49150C62428d7831181DDD905FE47397F4A",
       "name": "Illuvium Staking",
       "chain": "obelisk",
       "seasonId": 2,
       "status": "planned",
       "underlyingAsset": "ILV",
-      "underlyingAssetAddress": "0xC3fcc8530F6d6997adD7EA9439F0C7F6855bF8e8",
+      "underlyingAssetAddress": "0x562e7B8E87ad901f71bD84cCb4ebAc98d99Cd514",
       "mechanics": {
         "withdrawalEnabled": true,
-        "redeemDelayDays": 14
+        "minLockDuration": 1,
+        "maxLockDuration": 31536000,
+        "redeemDelayDays": 0
       }
     },
     "ILV_ETH_LP_vault_base": {
       "vaultId": "ILV_ETH_LP_vault_base",
-      "vaultAddress": "0xF91971689C33C1a1545C9286530C300e59014F0F",
+      "vaultAddress": "0xfe170068C5d266e848b46D248daAc9254602093e",
       "name": "ILV/ETH LP Staking",
       "chain": "base",
       "seasonId": 1,
       "status": "active",
       "underlyingAsset": "ILV-ETH-LP",
-      "underlyingAssetAddress": "0x9470ed99A5797D3F4696B74732830B87BAc51d24",
+      "underlyingAssetAddress": "0x128a55aed29f113DBF95a369974523F2A9E7A8Ea",
       "mechanics": {
-        "withdrawalEnabled": false,
-        "lockedUntilMainnet": true
+        "withdrawalEnabled": true,
+        "lockedUntilMainnet": false,
+        "minLockDuration": 1,
+        "maxLockDuration": 31536000,
+        "redeemDelayDays": 0
       }
     },
     "ILV_ETH_LP_vault_obelisk": {
       "vaultId": "ILV_ETH_LP_vault_obelisk",
-      "vaultAddress": "0xF91971689C33C1a1545C9286530C300e59014F0F",
+      "vaultAddress": "0xfe170068C5d266e848b46D248daAc9254602093e",
       "name": "ILV/ETH LP Staking",
       "chain": "obelisk",
       "seasonId": 2,
       "status": "planned",
       "underlyingAsset": "ILV-ETH-LP",
-      "underlyingAssetAddress": "0x9470ed99A5797D3F4696B74732830B87BAc51d24",
+      "underlyingAssetAddress": "0x128a55aed29f113DBF95a369974523F2A9E7A8Ea",
       "mechanics": {
         "withdrawalEnabled": true,
-        "redeemDelayDays": 14
+        "minLockDuration": 1,
+        "maxLockDuration": 31536000,
+        "redeemDelayDays": 0
       }
     }
   }

@@ -39,10 +39,12 @@ export class CoinGeckoPriceFeedService implements IPriceFeedRepository {
     ['0xdAC17F958D2ee523a2206206994597C13D831ec7', 'tether'],
     ['0x6B175474E89094C44Da98b954EedeAC495271d0F', 'dai'],
     // Base Sepolia testnet addresses (mapped to mainnet equivalents for pricing)
-    ['0xC3fcc8530F6d6997adD7EA9439F0C7F6855bF8e8', 'illuvium'], // ILV on Base Sepolia
+    ['0xC3fcc8530F6d6997adD7EA9439F0C7F6855bF8e8', 'illuvium'], // Old ILV on Base Sepolia
+    ['0x562e7B8E87ad901f71bD84cCb4ebAc98d99Cd514', 'illuvium'], // New ILV on Base Sepolia
     ['0x4200000000000000000000000000000000000006', 'ethereum'], // WETH on Base
     ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', 'usd-coin'], // USDC on Base
-    ['0x9470ed99A5797D3F4696B74732830B87BAc51d24', 'illuvium'], // ILV/ETH LP (mapped to ILV)
+    ['0x9470ed99A5797D3F4696B74732830B87BAc51d24', 'illuvium'], // Old ILV/ETH LP
+    ['0x128a55aed29f113DBF95a369974523F2A9E7A8Ea', 'illuvium'], // New ILV/ETH LP (mapped to ILV)
   ]);
 
   constructor(
