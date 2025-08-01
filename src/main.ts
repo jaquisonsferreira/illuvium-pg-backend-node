@@ -89,6 +89,20 @@ async function bootstrap() {
 
   console.log(`🚀 Application is running on: http://localhost:${port}/api`);
   console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
+
+  // Enable graceful shutdown
+  app.enableShutdownHooks();
+
+  // Handle graceful shutdown
+  const gracefulShutdown = async (signal: string) => {
+    console.log(`\n🛑 Received ${signal}, shutting down gracefully...`);
+    await app.close();
+    console.log('✅ Application closed successfully');
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => void gracefulShutdown('SIGINT'));
 }
 
 bootstrap().catch((error) => {
