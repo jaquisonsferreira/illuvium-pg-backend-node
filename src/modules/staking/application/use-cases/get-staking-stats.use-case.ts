@@ -11,7 +11,7 @@ interface GetStakingStatsParams {
   timeframe: string;
 }
 
-interface StakingStatsResponse {
+export interface StakingStatsResponse {
   season_id: number;
   chain: string;
   tvl: string;
@@ -39,7 +39,8 @@ export class GetStakingStatsUseCase {
   async execute(params: GetStakingStatsParams): Promise<StakingStatsResponse> {
     try {
       const cacheKey = `staking:stats:${params.timeframe}`;
-      const cached = await this.cacheService.get<StakingStatsResponse>(cacheKey);
+      const cached =
+        await this.cacheService.get<StakingStatsResponse>(cacheKey);
       if (cached) return cached;
 
       const currentSeason = this.vaultConfigService.getCurrentSeason();
@@ -48,12 +49,11 @@ export class GetStakingStatsUseCase {
       }
 
       const activeVaults = this.vaultConfigService.getActiveVaults();
-      const vaultAddresses = activeVaults.map(v => v.address);
 
       const [tvlData, volume24h, volume7d] = await Promise.all([
         this.calculateTotalTVL(currentSeason.primaryChain, activeVaults),
         this.subgraphRepository.getVolume24h(currentSeason.primaryChain),
-        params.timeframe === '7d' 
+        params.timeframe === '7d'
           ? this.subgraphRepository.getVolume7d(currentSeason.primaryChain)
           : Promise.resolve(0),
       ]);
@@ -80,31 +80,54 @@ export class GetStakingStatsUseCase {
     }
   }
 
-  private async calculateTotalTVL(chain: ChainType, vaults: any[]): Promise<number> {
+  private async calculateTotalTVL(
+    chain: ChainType,
+    vaults: any[],
+  ): Promise<number> {
     const vaultTvlData = await this.subgraphRepository.getVaultsTVL(
       chain,
-      vaults.map(v => v.address),
+      vaults.map((v) => v.address),
     );
 
     const tokenAddresses = vaults
-      .map(v => v.tokenConfig.isLP ? [v.tokenConfig.token0, v.tokenConfig.token1] : [v.asset])
+      .map((v) =>
+        v.tokenConfig.isLP
+          ? [v.tokenConfig.token0, v.tokenConfig.token1]
+          : [v.asset],
+      )
       .flat()
       .filter((addr, index, self) => self.indexOf(addr) === index);
 
-    const tokenPrices = await this.priceFeedRepository.getMultipleTokenPrices(tokenAddresses, chain);
+    const tokenPrices = await this.priceFeedRepository.getMultipleTokenPrices(
+      tokenAddresses,
+      chain,
+    );
 
     let totalTvl = 0;
 
     for (const vault of vaults) {
-      const tvlData = vaultTvlData[vault.address.toLowerCase()] || { totalAssets: '0' };
-      
+      const tvlData = vaultTvlData[vault.address.toLowerCase()] || {
+        totalAssets: '0',
+      };
+
       if (vault.tokenConfig.isLP) {
-        const lpPrice = await this.calculateLPTokenPrice(vault, tokenPrices, chain);
-        const totalAssetsFormatted = parseFloat(formatUnits(tvlData.totalAssets, vault.tokenConfig.decimals));
+        const lpPrice = await this.calculateLPTokenPrice(
+          vault,
+          tokenPrices,
+          chain,
+        );
+        const totalAssetsFormatted = parseFloat(
+          formatUnits(tvlData.totalAssets, vault.tokenConfig.decimals),
+        );
         totalTvl += totalAssetsFormatted * lpPrice;
       } else {
-        const tokenPrice = tokenPrices.find(p => p.tokenAddress.toLowerCase() === vault.asset.toLowerCase())?.priceUsd || 0;
-        const totalAssetsFormatted = parseFloat(formatUnits(tvlData.totalAssets, vault.tokenConfig.decimals));
+        const tokenPrice =
+          tokenPrices.find(
+            (p) => p.tokenAddress.toLowerCase() === vault.asset.toLowerCase(),
+          )?.priceUsd || 0;
+        const totalAssetsFormatted = parseFloat(
+          formatUnits(tvlData.totalAssets, vault.tokenConfig.decimals),
+        );
         totalTvl += totalAssetsFormatted * tokenPrice;
       }
     }
@@ -118,11 +141,24 @@ export class GetStakingStatsUseCase {
     chain: ChainType,
   ): Promise<number> {
     try {
-      const lpData = await this.subgraphRepository.getLPTokenData(chain, vault.asset);
+      const lpData = await this.subgraphRepository.getLPTokenData(
+        chain,
+        vault.asset,
+      );
       if (!lpData || !lpData.data) return 0;
 
-      const token0Price = tokenPrices.find(p => p.tokenAddress.toLowerCase() === vault.tokenConfig.token0.toLowerCase())?.priceUsd || 0;
-      const token1Price = tokenPrices.find(p => p.tokenAddress.toLowerCase() === vault.tokenConfig.token1.toLowerCase())?.priceUsd || 0;
+      const token0Price =
+        tokenPrices.find(
+          (p) =>
+            p.tokenAddress.toLowerCase() ===
+            vault.tokenConfig.token0.toLowerCase(),
+        )?.priceUsd || 0;
+      const token1Price =
+        tokenPrices.find(
+          (p) =>
+            p.tokenAddress.toLowerCase() ===
+            vault.tokenConfig.token1.toLowerCase(),
+        )?.priceUsd || 0;
 
       const reserve0 = parseFloat(formatUnits(lpData.data.reserve0, 18));
       const reserve1 = parseFloat(formatUnits(lpData.data.reserve1, 18));
@@ -130,7 +166,7 @@ export class GetStakingStatsUseCase {
 
       if (totalSupply === 0) return 0;
 
-      const totalValue = (reserve0 * token0Price) + (reserve1 * token1Price);
+      const totalValue = reserve0 * token0Price + reserve1 * token1Price;
       return totalValue / totalSupply;
     } catch (error) {
       this.logger.error('Error calculating LP token price:', error);

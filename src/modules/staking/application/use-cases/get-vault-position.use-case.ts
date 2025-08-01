@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import {
   IStakingSubgraphRepository,
   IStakingBlockchainRepository,
@@ -38,8 +38,11 @@ export class GetVaultPositionUseCase {
   private readonly logger = new Logger(GetVaultPositionUseCase.name);
 
   constructor(
+    @Inject('IStakingSubgraphRepository')
     private readonly subgraphRepository: IStakingSubgraphRepository,
+    @Inject('IStakingBlockchainRepository')
     private readonly blockchainRepository: IStakingBlockchainRepository,
+    @Inject('IPriceFeedRepository')
     private readonly priceFeedRepository: IPriceFeedRepository,
     private readonly vaultConfigService: VaultConfigService,
   ) {}
@@ -172,11 +175,20 @@ export class GetVaultPositionUseCase {
     chain: ChainType,
   ): Promise<DataResponse<VaultPosition | null>> {
     try {
-      return await this.subgraphRepository.getUserPosition(
-        userAddress,
-        vaultAddress,
+      const position = await this.subgraphRepository.getUserPosition(
         chain,
+        vaultAddress,
+        userAddress,
       );
+
+      return {
+        data: position,
+        metadata: {
+          source: 'subgraph',
+          lastUpdated: new Date(),
+          isStale: false,
+        },
+      };
     } catch (error) {
       this.logger.warn(`Subgraph query failed for ${userAddress}:`, error);
       throw error;

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import {
   IStakingSubgraphRepository,
   IStakingBlockchainRepository,
@@ -47,8 +47,11 @@ export class GetUserPositionsUseCase {
   private readonly logger = new Logger(GetUserPositionsUseCase.name);
 
   constructor(
+    @Inject('IStakingSubgraphRepository')
     private readonly subgraphRepository: IStakingSubgraphRepository,
+    @Inject('IStakingBlockchainRepository')
     private readonly blockchainRepository: IStakingBlockchainRepository,
+    @Inject('IPriceFeedRepository')
     private readonly priceFeedRepository: IPriceFeedRepository,
     private readonly vaultConfigService: VaultConfigService,
     private readonly getVaultPositionUseCase: GetVaultPositionUseCase,

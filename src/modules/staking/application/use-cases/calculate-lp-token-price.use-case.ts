@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import {
   IStakingSubgraphRepository,
   IStakingBlockchainRepository,
@@ -54,8 +54,11 @@ export class CalculateLPTokenPriceUseCase {
   private readonly logger = new Logger(CalculateLPTokenPriceUseCase.name);
 
   constructor(
+    @Inject('IStakingSubgraphRepository')
     private readonly subgraphRepository: IStakingSubgraphRepository,
+    @Inject('IStakingBlockchainRepository')
     private readonly blockchainRepository: IStakingBlockchainRepository,
+    @Inject('IPriceFeedRepository')
     private readonly priceFeedRepository: IPriceFeedRepository,
     private readonly vaultConfigService: VaultConfigService,
     private readonly tokenDecimalsService: TokenDecimalsService,
@@ -186,6 +189,9 @@ export class CalculateLPTokenPriceUseCase {
     blockNumber?: number,
   ): Promise<LPTokenData> {
     try {
+      this.logger.log(
+        `Getting LP token data for ${lpTokenAddress} on chain ${chain}`,
+      );
       const subgraphResult = await this.subgraphRepository.getLPTokenData(
         lpTokenAddress,
         chain,
