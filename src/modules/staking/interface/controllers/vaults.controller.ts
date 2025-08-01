@@ -21,7 +21,7 @@ import { GetStakingStatsUseCase } from '../../application/use-cases/get-staking-
 import { isAddress, getAddress } from 'ethers';
 
 @ApiTags('staking')
-@Controller('api/staking')
+@Controller('staking')
 export class VaultsController {
   constructor(
     private readonly getVaultsUseCase: GetVaultsUseCase,
@@ -85,7 +85,9 @@ export class VaultsController {
         }
         walletAddress = getAddress(walletAddress);
       } catch (error) {
-        throw new BadRequestException('Invalid wallet address: ' + error.message);
+        throw new BadRequestException(
+          'Invalid wallet address: ' + (error as Error).message,
+        );
       }
     }
 

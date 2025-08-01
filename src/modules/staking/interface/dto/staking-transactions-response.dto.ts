@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { PaginationDto } from './common.dto';
 
 export class TransactionDto {
   @ApiProperty({
@@ -248,44 +249,6 @@ export class TransactionSummaryDto {
     example: '2025-03-20T14:45:00Z',
   })
   last_transaction_date: string;
-}
-
-export class PaginationDto {
-  @ApiProperty({
-    description: 'Current page number',
-    example: 1,
-  })
-  page: number;
-
-  @ApiProperty({
-    description: 'Number of items per page',
-    example: 20,
-  })
-  limit: number;
-
-  @ApiProperty({
-    description: 'Total number of items',
-    example: 45,
-  })
-  total: number;
-
-  @ApiProperty({
-    description: 'Total number of pages',
-    example: 3,
-  })
-  total_pages: number;
-
-  @ApiProperty({
-    description: 'Whether there is a next page',
-    example: true,
-  })
-  has_next: boolean;
-
-  @ApiProperty({
-    description: 'Whether there is a previous page',
-    example: false,
-  })
-  has_previous: boolean;
 }
 
 export class StakingTransactionsResponseDto {

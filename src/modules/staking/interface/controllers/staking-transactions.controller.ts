@@ -19,7 +19,7 @@ import { StakingTransactionsResponseDto } from '../dto/staking-transactions-resp
 import { GetUserStakingTransactionsUseCase } from '../../application/use-cases/get-user-staking-transactions.use-case';
 
 @ApiTags('staking')
-@Controller('api/staking')
+@Controller('staking')
 export class StakingTransactionsController {
   constructor(
     private readonly getUserStakingTransactionsUseCase: GetUserStakingTransactionsUseCase,

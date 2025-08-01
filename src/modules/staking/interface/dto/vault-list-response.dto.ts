@@ -1,19 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export class TokenIconsDto {
-  @ApiProperty({
-    description: 'Primary token icon URL',
-    example: 'https://coin-images.coingecko.com/coins/images/2588/large/ilv.png',
-  })
-  primary: string;
-
-  @ApiPropertyOptional({
-    description: 'Secondary token icon URL (for LP tokens)',
-    example: 'https://coin-images.coingecko.com/coins/images/279/large/ethereum.png',
-    nullable: true,
-  })
-  secondary?: string | null;
-}
+import { PaginationDto, TokenIconsDto } from './common.dto';
 
 export class VaultMechanicsDto {
   @ApiProperty({
@@ -140,26 +126,6 @@ export class VaultListItemDto {
     type: VaultMechanicsDto,
   })
   mechanics: VaultMechanicsDto;
-}
-
-export class PaginationDto {
-  @ApiProperty({ description: 'Current page number', example: 1 })
-  page: number;
-
-  @ApiProperty({ description: 'Items per page', example: 10 })
-  limit: number;
-
-  @ApiProperty({ description: 'Total number of items', example: 2 })
-  total: number;
-
-  @ApiProperty({ description: 'Total number of pages', example: 1 })
-  total_pages: number;
-
-  @ApiProperty({ description: 'Has next page', example: false })
-  has_next: boolean;
-
-  @ApiProperty({ description: 'Has previous page', example: false })
-  has_previous: boolean;
 }
 
 export class SeasonSummaryDto {

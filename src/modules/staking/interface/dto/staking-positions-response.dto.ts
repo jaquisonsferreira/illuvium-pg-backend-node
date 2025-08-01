@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PaginationDto } from './common.dto';
 
 export class TokenIconsDto {
   @ApiProperty({
@@ -269,44 +270,6 @@ export class UserSummaryDto {
     example: '10180',
   })
   total_user_earned_shards: string;
-}
-
-export class PaginationDto {
-  @ApiProperty({
-    description: 'Current page number',
-    example: 1,
-  })
-  page: number;
-
-  @ApiProperty({
-    description: 'Items per page',
-    example: 10,
-  })
-  limit: number;
-
-  @ApiProperty({
-    description: 'Total number of items',
-    example: 2,
-  })
-  total: number;
-
-  @ApiProperty({
-    description: 'Total number of pages',
-    example: 1,
-  })
-  total_pages: number;
-
-  @ApiProperty({
-    description: 'Whether there is a next page',
-    example: false,
-  })
-  has_next: boolean;
-
-  @ApiProperty({
-    description: 'Whether there is a previous page',
-    example: false,
-  })
-  has_previous: boolean;
 }
 
 export class StakingPositionsResponseDto {

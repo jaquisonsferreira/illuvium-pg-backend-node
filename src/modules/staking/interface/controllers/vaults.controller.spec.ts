@@ -4,7 +4,12 @@ import { VaultsController } from './vaults.controller';
 import { GetVaultsUseCase } from '../../application/use-cases/get-vaults.use-case';
 import { GetVaultDetailsUseCase } from '../../application/use-cases/get-vault-details.use-case';
 import { GetStakingStatsUseCase } from '../../application/use-cases/get-staking-stats.use-case';
-import { GetVaultsQueryDto, VaultSortBy, SortOrder, VaultStatus } from '../dto/get-vaults-query.dto';
+import {
+  GetVaultsQueryDto,
+  VaultSortBy,
+  SortOrder,
+  VaultStatus,
+} from '../dto/get-vaults-query.dto';
 import { VaultListResponseDto } from '../dto/vault-list-response.dto';
 
 describe('VaultsController', () => {
@@ -54,9 +59,11 @@ describe('VaultsController', () => {
             name: 'Illuvium',
             underlying_asset: 'Illuvium',
             underlying_asset_ticker: 'ILV',
-            underlying_asset_address: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
+            underlying_asset_address:
+              '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
             token_icons: {
-              primary: 'https://coin-images.coingecko.com/coins/images/2588/large/ilv.png',
+              primary:
+                'https://coin-images.coingecko.com/coins/images/2588/large/ilv.png',
               secondary: null,
             },
             chain: 'base',
@@ -154,7 +161,11 @@ describe('VaultsController', () => {
 
       getVaultDetailsUseCase.execute.mockResolvedValue(mockResponse as any);
 
-      const result = await controller.getVaultDetails(vaultId, undefined, '30d');
+      const result = await controller.getVaultDetails(
+        vaultId,
+        undefined,
+        '30d',
+      );
 
       expect(result).toEqual(mockResponse);
       expect(getVaultDetailsUseCase.execute).toHaveBeenCalledWith({
@@ -204,7 +215,11 @@ describe('VaultsController', () => {
 
       getVaultDetailsUseCase.execute.mockResolvedValue(mockResponse as any);
 
-      const result = await controller.getVaultDetails(vaultId, walletAddress, '7d');
+      const result = await controller.getVaultDetails(
+        vaultId,
+        walletAddress,
+        '7d',
+      );
 
       expect(result).toEqual(mockResponse);
       expect(getVaultDetailsUseCase.execute).toHaveBeenCalledWith({

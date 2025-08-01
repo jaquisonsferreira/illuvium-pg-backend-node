@@ -19,7 +19,7 @@ import { StakingPositionsResponseDto } from '../dto/staking-positions-response.d
 import { GetUserStakingPositionsUseCase } from '../../application/use-cases/get-user-staking-positions.use-case';
 
 @ApiTags('staking')
-@Controller('api/staking')
+@Controller('staking')
 export class StakingPositionsController {
   constructor(
     private readonly getUserStakingPositionsUseCase: GetUserStakingPositionsUseCase,
@@ -58,7 +58,9 @@ export class StakingPositionsController {
       }
       validatedAddress = getAddress(walletAddress);
     } catch (error) {
-      throw new BadRequestException('Invalid wallet address: ' + error.message);
+      throw new BadRequestException(
+        'Invalid wallet address: ' + (error as Error).message,
+      );
     }
 
     if (query.limit !== undefined && query.limit > 100) {
