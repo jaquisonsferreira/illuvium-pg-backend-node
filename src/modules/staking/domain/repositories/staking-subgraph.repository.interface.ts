@@ -27,15 +27,6 @@ export interface IStakingSubgraphRepository {
   ): Promise<DataResponse<VaultPosition[]>>;
 
   /**
-   * Gets vault position for a specific user and vault
-   */
-  getUserPosition(
-    userAddress: string,
-    vaultAddress: string,
-    chain: ChainType,
-  ): Promise<DataResponse<VaultPosition | null>>;
-
-  /**
    * Gets all positions for a specific vault (for analytics)
    */
   getVaultPositions(
@@ -258,7 +249,7 @@ export interface IStakingSubgraphRepository {
   }>;
 
   /**
-   * Gets position for a user in a specific vault
+   * Gets position for a user in a specific vault (blockchain fallback)
    */
   getUserPosition(
     chain: ChainType,

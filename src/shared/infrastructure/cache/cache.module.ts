@@ -1,7 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
-import { ValkeyCacheRepository } from './repositories/valkey-cache.repository';
+import { RedisCacheRepository } from './repositories/redis-cache.repository';
 import { CacheConfigService } from './config/cache.config';
 
 import { SetCacheUseCase } from '../../application/cache/use-cases/set-cache.use-case';
@@ -17,7 +17,7 @@ import { CACHE_REPOSITORY_TOKEN } from './contants';
     CacheConfigService,
     {
       provide: CACHE_REPOSITORY_TOKEN,
-      useClass: ValkeyCacheRepository,
+      useClass: RedisCacheRepository,
     },
     SetCacheUseCase,
     GetCacheUseCase,

@@ -42,12 +42,8 @@ export class OpenTelemetryObservabilityRepository
 
     const traceExporter = new OTLPTraceExporter(exporterOptions);
 
-    this.sdk = new NodeSDK({
+    const sdkConfig: any = {
       traceExporter,
-      metricReader: new PeriodicExportingMetricReader({
-        exporter: new ConsoleMetricExporter(),
-        exportIntervalMillis: 10000,
-      }),
       instrumentations: [
         getNodeAutoInstrumentations({
           '@opentelemetry/instrumentation-nestjs-core': { enabled: true },
@@ -62,8 +58,16 @@ export class OpenTelemetryObservabilityRepository
         [SEMRESATTRS_SERVICE_VERSION]: traceConfig.serviceVersion,
         [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: traceConfig.environment,
       }),
-    });
+    };
 
+    if (process.env.NODE_ENV !== 'development') {
+      sdkConfig.metricReader = new PeriodicExportingMetricReader({
+        exporter: new ConsoleMetricExporter(),
+        exportIntervalMillis: 10000,
+      });
+    }
+
+    this.sdk = new NodeSDK(sdkConfig);
     this.sdk.start();
 
     this.tracer = trace.getTracer(
