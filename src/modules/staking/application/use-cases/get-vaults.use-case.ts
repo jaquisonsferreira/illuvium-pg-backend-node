@@ -3,8 +3,16 @@ import { Inject } from '@nestjs/common';
 import { VaultConfigService } from '../../infrastructure/config/vault-config.service';
 import { IStakingSubgraphRepository } from '../../domain/repositories/staking-subgraph.repository.interface';
 import { IPriceFeedRepository } from '../../domain/repositories/price-feed.repository.interface';
-import { GetVaultsQueryDto, VaultStatus } from '../../interface/dto/get-vaults-query.dto';
-import { VaultListResponseDto, VaultListItemDto } from '../../interface/dto/vault-list-response.dto';
+import {
+  GetVaultsQueryDto,
+  VaultStatus,
+  VaultSortBy,
+  SortOrder,
+} from '../../interface/dto/get-vaults-query.dto';
+import {
+  VaultListResponseDto,
+  VaultListItemDto,
+} from '../../interface/dto/vault-list-response.dto';
 import { ChainType } from '../../domain/types/staking-types';
 import { formatUnits } from 'ethers';
 import { TokenPrice } from '../../domain/types/staking-types';
@@ -28,45 +36,62 @@ export class GetVaultsUseCase {
         throw new Error('No active season found');
       }
 
-      let vaults = this.vaultConfigService.getVaultsBySeason(currentSeason.seasonNumber);
+      let vaults = this.vaultConfigService.getVaultsBySeason(
+        currentSeason.seasonNumber,
+      );
 
       if (query.status) {
-        vaults = vaults.filter(vault => 
-          query.status === VaultStatus.ACTIVE ? vault.isActive : !vault.isActive
+        vaults = vaults.filter((vault) =>
+          query.status === VaultStatus.ACTIVE
+            ? vault.isActive
+            : !vault.isActive,
         );
       }
 
       if (query.asset) {
-        vaults = vaults.filter(vault => 
-          vault.tokenConfig.symbol.toLowerCase().includes(query.asset!.toLowerCase())
+        vaults = vaults.filter((vault) =>
+          vault.tokenConfig.symbol
+            .toLowerCase()
+            .includes(query.asset!.toLowerCase()),
         );
       }
 
       if (query.search) {
         const searchLower = query.search.toLowerCase();
-        vaults = vaults.filter(vault => 
-          vault.name.toLowerCase().includes(searchLower) ||
-          vault.tokenConfig.symbol.toLowerCase().includes(searchLower) ||
-          vault.tokenConfig.name.toLowerCase().includes(searchLower)
+        vaults = vaults.filter(
+          (vault) =>
+            vault.name.toLowerCase().includes(searchLower) ||
+            vault.tokenConfig.symbol.toLowerCase().includes(searchLower) ||
+            vault.tokenConfig.name.toLowerCase().includes(searchLower),
         );
       }
 
       const vaultTvlData = await this.subgraphRepository.getVaultsTVL(
         currentSeason.primaryChain,
-        vaults.map(v => v.address),
+        vaults.map((v) => v.address),
       );
 
       const tokenAddresses = vaults
-        .map(v => v.tokenConfig.isLP ? [v.tokenConfig.token0, v.tokenConfig.token1] : [v.asset])
+        .map((v) =>
+          v.tokenConfig.isLP
+            ? [v.tokenConfig.token0, v.tokenConfig.token1]
+            : [v.asset],
+        )
         .flat()
         .filter((addr, index, self) => self.indexOf(addr) === index);
 
-      const tokenPrices = await this.priceFeedRepository.getMultipleTokenPrices(tokenAddresses, currentSeason.primaryChain);
+      const tokenPrices = await this.priceFeedRepository.getMultipleTokenPrices(
+        tokenAddresses,
+        currentSeason.primaryChain,
+      );
 
       const vaultListItems: VaultListItemDto[] = await Promise.all(
         vaults.map(async (vault) => {
-          const tvlData = vaultTvlData[vault.address.toLowerCase()] || { totalAssets: '0', sharePrice: 0 };
-          
+          const tvlData = vaultTvlData[vault.address.toLowerCase()] || {
+            totalAssets: '0',
+            sharePrice: 0,
+          };
+
           let tvlUsd = 0;
           let vaultSizeFormatted = '0';
 
@@ -76,14 +101,28 @@ export class GetVaultsUseCase {
               tokenPrices,
               currentSeason.primaryChain,
             );
-            const totalAssetsFormatted = parseFloat(formatUnits(tvlData.totalAssets, vault.tokenConfig.decimals));
+            const totalAssetsFormatted = parseFloat(
+              formatUnits(tvlData.totalAssets, vault.tokenConfig.decimals),
+            );
             tvlUsd = totalAssetsFormatted * lpPrice;
-            vaultSizeFormatted = this.formatNumber(totalAssetsFormatted, 2) + ' ' + vault.tokenConfig.symbol;
+            vaultSizeFormatted =
+              this.formatNumber(totalAssetsFormatted, 2) +
+              ' ' +
+              vault.tokenConfig.symbol;
           } else {
-            const tokenPrice = tokenPrices.find(p => p.tokenAddress.toLowerCase() === vault.asset.toLowerCase())?.priceUsd || 0;
-            const totalAssetsFormatted = parseFloat(formatUnits(tvlData.totalAssets, vault.tokenConfig.decimals));
+            const tokenPrice =
+              tokenPrices.find(
+                (p) =>
+                  p.tokenAddress.toLowerCase() === vault.asset.toLowerCase(),
+              )?.priceUsd || 0;
+            const totalAssetsFormatted = parseFloat(
+              formatUnits(tvlData.totalAssets, vault.tokenConfig.decimals),
+            );
             tvlUsd = totalAssetsFormatted * tokenPrice;
-            vaultSizeFormatted = this.formatNumber(totalAssetsFormatted, 2) + ' ' + vault.tokenConfig.symbol;
+            vaultSizeFormatted =
+              this.formatNumber(totalAssetsFormatted, 2) +
+              ' ' +
+              vault.tokenConfig.symbol;
           }
 
           const rewardRate = this.calculateRewardRate(vault.seasonNumber);
@@ -96,9 +135,14 @@ export class GetVaultsUseCase {
             underlying_asset_ticker: vault.tokenConfig.symbol,
             underlying_asset_address: vault.asset,
             token_icons: {
-              primary: this.getTokenIcon(vault.tokenConfig.coingeckoId || vault.tokenConfig.symbol),
-              secondary: vault.tokenConfig.isLP ? 
-                this.getTokenIcon(this.getCoingeckoIdForToken(vault.tokenConfig.token1)) : null,
+              primary: this.getTokenIcon(
+                vault.tokenConfig.coingeckoId || vault.tokenConfig.symbol,
+              ),
+              secondary: vault.tokenConfig.isLP
+                ? this.getTokenIcon(
+                    this.getCoingeckoIdForToken(vault.tokenConfig.token1),
+                  )
+                : null,
             },
             chain: vault.chain,
             season_id: vault.seasonNumber,
@@ -108,33 +152,41 @@ export class GetVaultsUseCase {
             tvl_raw: tvlUsd.toFixed(2),
             vault_size: vaultSizeFormatted,
             mechanics: {
-              locked_until_mainnet: !this.vaultConfigService.isMainnetLaunched(),
+              locked_until_mainnet:
+                !this.vaultConfigService.isMainnetLaunched(),
               withdrawal_enabled: vault.withdrawalEnabled,
               redeem_delay_days: null,
-              minimum_deposit: formatUnits(vault.minimumDeposit, vault.tokenConfig.decimals),
-              maximum_deposit: vault.maximumDeposit ? 
-                formatUnits(vault.maximumDeposit, vault.tokenConfig.decimals) : null,
+              minimum_deposit: formatUnits(
+                vault.minimumDeposit,
+                vault.tokenConfig.decimals,
+              ),
+              maximum_deposit: vault.maximumDeposit
+                ? formatUnits(vault.maximumDeposit, vault.tokenConfig.decimals)
+                : null,
             },
           };
-        })
+        }),
       );
 
-      let sortedVaults = [...vaultListItems];
+      const sortedVaults = [...vaultListItems];
       if (query.sort_by) {
         sortedVaults.sort((a, b) => {
           let compareValue = 0;
           switch (query.sort_by) {
-            case 'tvl':
+            case VaultSortBy.TVL:
               compareValue = parseFloat(a.tvl_raw) - parseFloat(b.tvl_raw);
               break;
-            case 'vault_size':
-              compareValue = parseFloat(a.vault_size) - parseFloat(b.vault_size);
+            case VaultSortBy.VAULT_SIZE:
+              compareValue =
+                parseFloat(a.vault_size) - parseFloat(b.vault_size);
               break;
-            case 'participants':
+            case VaultSortBy.PARTICIPANTS:
               compareValue = 0;
               break;
           }
-          return query.sort_order === 'desc' ? -compareValue : compareValue;
+          return query.sort_order === SortOrder.DESC
+            ? -compareValue
+            : compareValue;
         });
       }
 
@@ -144,7 +196,10 @@ export class GetVaultsUseCase {
       const endIndex = startIndex + limit;
       const paginatedVaults = sortedVaults.slice(startIndex, endIndex);
 
-      const totalTvl = vaultListItems.reduce((sum, vault) => sum + parseFloat(vault.tvl_raw), 0);
+      const totalTvl = vaultListItems.reduce(
+        (sum, vault) => sum + parseFloat(vault.tvl_raw),
+        0,
+      );
 
       const volume24h = await this.getVolume24h(currentSeason.primaryChain);
 
@@ -163,7 +218,8 @@ export class GetVaultsUseCase {
           chain: currentSeason.primaryChain,
           tvl: this.formatLargeNumber(totalTvl),
           tvl_raw: totalTvl.toFixed(2),
-          active_vaults: vaultListItems.filter(v => v.status === 'active').length,
+          active_vaults: vaultListItems.filter((v) => v.status === 'active')
+            .length,
           volume_24h: this.formatLargeNumber(volume24h),
         },
       };
@@ -179,11 +235,22 @@ export class GetVaultsUseCase {
     chain: ChainType,
   ): Promise<number> {
     try {
-      const lpData = await this.subgraphRepository.getLPTokenData(chain, tokenConfig.address);
+      const lpData = await this.subgraphRepository.getLPTokenData(
+        chain,
+        tokenConfig.address,
+      );
       if (!lpData || !lpData.data) return 0;
 
-      const token0Price = tokenPrices.find(p => p.tokenAddress.toLowerCase() === tokenConfig.token0.toLowerCase())?.priceUsd || 0;
-      const token1Price = tokenPrices.find(p => p.tokenAddress.toLowerCase() === tokenConfig.token1.toLowerCase())?.priceUsd || 0;
+      const token0Price =
+        tokenPrices.find(
+          (p) =>
+            p.tokenAddress.toLowerCase() === tokenConfig.token0.toLowerCase(),
+        )?.priceUsd || 0;
+      const token1Price =
+        tokenPrices.find(
+          (p) =>
+            p.tokenAddress.toLowerCase() === tokenConfig.token1.toLowerCase(),
+        )?.priceUsd || 0;
 
       const reserve0 = parseFloat(formatUnits(lpData.data.reserve0, 18));
       const reserve1 = parseFloat(formatUnits(lpData.data.reserve1, 18));
@@ -191,7 +258,7 @@ export class GetVaultsUseCase {
 
       if (totalSupply === 0) return 0;
 
-      const totalValue = (reserve0 * token0Price) + (reserve1 * token1Price);
+      const totalValue = reserve0 * token0Price + reserve1 * token1Price;
       return totalValue / totalSupply;
     } catch (error) {
       this.logger.error('Error calculating LP token price:', error);
@@ -209,7 +276,7 @@ export class GetVaultsUseCase {
   }
 
   private generateVaultId(vault: any): string {
-    return `${vault.tokenConfig.symbol}_vault_${vault.chain}`.replace('/', '_');
+    return `${vault.tokenConfig.symbol.toLowerCase().replace('/', '_').replace('-lp', '')}_vault`;
   }
 
   private calculateRewardRate(seasonNumber: number): string {
@@ -223,14 +290,18 @@ export class GetVaultsUseCase {
 
   private getTokenIcon(coingeckoIdOrSymbol: string): string {
     const iconMap = {
-      'illuvium': 'https://coin-images.coingecko.com/coins/images/2588/large/ilv.png',
-      'ethereum': 'https://coin-images.coingecko.com/coins/images/279/large/ethereum.png',
-      'ilv': 'https://coin-images.coingecko.com/coins/images/2588/large/ilv.png',
-      'eth': 'https://coin-images.coingecko.com/coins/images/279/large/ethereum.png',
-      'usdc': 'https://coin-images.coingecko.com/coins/images/6319/large/USD_Coin_icon.png',
+      illuvium:
+        'https://coin-images.coingecko.com/coins/images/2588/large/ilv.png',
+      ethereum:
+        'https://coin-images.coingecko.com/coins/images/279/large/ethereum.png',
+      ilv: 'https://coin-images.coingecko.com/coins/images/2588/large/ilv.png',
+      eth: 'https://coin-images.coingecko.com/coins/images/279/large/ethereum.png',
+      usdc: 'https://coin-images.coingecko.com/coins/images/6319/large/USD_Coin_icon.png',
     };
-    return iconMap[coingeckoIdOrSymbol.toLowerCase()] || 
-      `https://coin-images.coingecko.com/coins/images/279/large/ethereum.png`;
+    return (
+      iconMap[coingeckoIdOrSymbol.toLowerCase()] ||
+      `https://coin-images.coingecko.com/coins/images/279/large/ethereum.png`
+    );
   }
 
   private getCoingeckoIdForToken(tokenAddress: string): string {
