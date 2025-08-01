@@ -34,6 +34,7 @@ export interface VaultPosition {
   readonly assets: string; // Raw BigInt as string
   readonly blockNumber: number;
   readonly timestamp: number;
+  hasBalance?(): boolean; // Optional method for entities
 }
 
 // Transaction Data from Subgraph
@@ -298,7 +299,7 @@ export interface PaginatedResponse<T> {
 export interface DataResponse<T> {
   readonly data: T;
   readonly metadata: {
-    readonly source: 'subgraph' | 'blockchain' | 'cache';
+    readonly source: 'subgraph' | 'blockchain' | 'cache' | 'alchemy';
     readonly lastUpdated: Date;
     readonly isStale: boolean;
     readonly syncStatus?: SubgraphSyncStatus;

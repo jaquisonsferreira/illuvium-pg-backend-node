@@ -7,6 +7,8 @@ import { StakingPositionsController } from './interface/controllers/staking-posi
 import { StakingTransactionsController } from './interface/controllers/staking-transactions.controller';
 import { VaultsController } from './interface/controllers/vaults.controller';
 import { StakingSubgraphService } from './infrastructure/services/staking-subgraph.service';
+import { AlchemyStakingService } from './infrastructure/services/alchemy-staking.service';
+import { StakingDataProviderFactory } from './infrastructure/services/staking-data-provider.factory';
 import { StakingBlockchainService } from './infrastructure/services/staking-blockchain.service';
 import { PriceFeedService } from './infrastructure/services/price-feed.service';
 import { CoinGeckoPriceFeedService } from './infrastructure/services/coingecko-price-feed.service';
@@ -24,13 +26,22 @@ import { GetStakingStatsUseCase } from './application/use-cases/get-staking-stat
 
 @Module({
   imports: [ConfigModule, HttpModule, SharedModule],
-  controllers: [StakingPositionsController, StakingTransactionsController, VaultsController],
+  controllers: [
+    StakingPositionsController,
+    StakingTransactionsController,
+    VaultsController,
+  ],
   providers: [
     VaultConfigService,
     TokenDecimalsService,
+    StakingSubgraphService,
+    AlchemyStakingService,
+    StakingDataProviderFactory,
     {
       provide: 'IStakingSubgraphRepository',
-      useClass: StakingSubgraphService,
+      useFactory: (factory: StakingDataProviderFactory) =>
+        factory.createProvider(),
+      inject: [StakingDataProviderFactory],
     },
     {
       provide: 'IStakingBlockchainRepository',
@@ -40,7 +51,6 @@ import { GetStakingStatsUseCase } from './application/use-cases/get-staking-stat
       provide: 'IPriceFeedRepository',
       useClass: CoinGeckoPriceFeedService,
     },
-    StakingSubgraphService,
     StakingBlockchainService,
     PriceFeedService,
     CoinGeckoPriceFeedService,
@@ -62,6 +72,8 @@ import { GetStakingStatsUseCase } from './application/use-cases/get-staking-stat
     'IPriceFeedRepository',
 
     StakingSubgraphService,
+    AlchemyStakingService,
+    StakingDataProviderFactory,
     StakingBlockchainService,
     PriceFeedService,
 
