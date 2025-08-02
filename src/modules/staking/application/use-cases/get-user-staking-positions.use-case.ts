@@ -100,6 +100,10 @@ export class GetUserStakingPositionsUseCase {
 
     const userPositions = positionsResponse.data || [];
 
+    this.logger.log(
+      `Subgraph returned ${userPositions.length} positions for wallet ${walletAddress}`,
+    );
+
     const positionsByVault = new Map<string, VaultPosition[]>();
     for (const position of userPositions) {
       const vaultAddress = position.vault.toLowerCase();
@@ -198,18 +202,15 @@ export class GetUserStakingPositionsUseCase {
           }
         }
 
-        const totalStaked = vaultPositions.reduce(
-          (sum, pos) => sum + BigInt(pos.assets || '0'),
-          BigInt(0),
-        );
-
         const decimals = await this.tokenDecimalsService.getDecimals(
           vault.asset,
           vault.chain,
         );
 
-        const formattedTotalStaked = formatUnits(totalStaked, decimals);
-        const totalStakedUsd = parseFloat(formattedTotalStaked) * tokenPrice;
+        let totalStaked = BigInt(0);
+        let totalStakedFormatted = '0';
+
+        const totalStakedUsd = parseFloat(totalStakedFormatted) * tokenPrice;
 
         const shardsRate = this.rewardsConfigService.getRewardRate(vault.type);
         const totalEarnedShards = (totalStakedUsd / 1000) * shardsRate;
@@ -231,32 +232,148 @@ export class GetUserStakingPositionsUseCase {
           );
         }
 
-        const formattedPositions = await Promise.all(
-          vaultPositions.map(async (pos, index) => {
-            const stakedAmount = formatUnits(pos.assets || '0', decimals);
-            const remainingLockDays = this.calculateLockDuration(pos.timestamp);
-            const isLocked = remainingLockDays > 0;
-            const totalLockDays = 365;
+        let depositInfo: {
+          timestamps: bigint[];
+          lockDurations: bigint[];
+          shareAmounts: bigint[];
+        } | null = null;
+        try {
+          depositInfo = await this.blockchainRepository.getUserDepositInfo(
+            walletAddress,
+            vaultAddress,
+            vault.chain,
+          );
 
-            const daysSinceDeposit = Math.floor(
-              (Date.now() / 1000 - pos.timestamp) / (24 * 60 * 60),
+          if (depositInfo) {
+            this.logger.log(
+              `Got deposit info for ${walletAddress} in vault ${vaultAddress}: ${depositInfo.lockDurations.length} positions`,
             );
-            const effectiveLockDays = Math.min(daysSinceDeposit, totalLockDays);
-            const shardsMultiplier =
-              this.rewardsConfigService.calculateShardsMultiplier(
-                effectiveLockDays,
+          }
+        } catch (error) {
+          this.logger.warn(
+            `Failed to get deposit info from contract for ${walletAddress} in vault ${vaultAddress}:`,
+            error,
+          );
+        }
+
+        if (depositInfo && depositInfo.shareAmounts.length > 0) {
+          const totalShares = depositInfo.shareAmounts.reduce(
+            (sum, shares) => sum + shares,
+            BigInt(0),
+          );
+
+          if (totalShares > BigInt(0)) {
+            const totalAssets =
+              await this.blockchainRepository.convertSharesToAssets(
+                totalShares.toString(),
+                vaultAddress,
+                vault.chain,
+              );
+            totalStaked = BigInt(totalAssets);
+            totalStakedFormatted = formatUnits(totalAssets, decimals);
+          }
+        } else if (vaultPositions.length > 0) {
+          totalStaked = vaultPositions.reduce(
+            (sum, pos) => sum + BigInt(pos.assets || '0'),
+            BigInt(0),
+          );
+          totalStakedFormatted = formatUnits(totalStaked, decimals);
+        }
+
+        let formattedPositions: any[] = [];
+
+        if (depositInfo && depositInfo.timestamps.length > 0) {
+          formattedPositions = await Promise.all(
+            depositInfo.timestamps.map(async (timestamp, index) => {
+              const shareAmount = depositInfo.shareAmounts[index];
+              const lockDurationSeconds = Number(
+                depositInfo.lockDurations[index],
+              );
+              const totalLockDays = Math.floor(
+                lockDurationSeconds / (24 * 60 * 60),
+              );
+              const depositTimestamp = Number(timestamp);
+
+              // Convert shares to assets
+              const assets =
+                await this.blockchainRepository.convertSharesToAssets(
+                  shareAmount.toString(),
+                  vaultAddress,
+                  vault.chain,
+                );
+
+              const stakedAmount = formatUnits(assets, decimals);
+
+              this.logger.log(
+                `Position ${index}: Lock duration from contract: ${lockDurationSeconds}s = ${totalLockDays} days, shares: ${shareAmount}, assets: ${assets}`,
               );
 
-            const vaultId = `${vault.tokenConfig.symbol.toLowerCase().replace('/', '_').replace('-lp', '').replace('-', '_')}_vault`;
+              const remainingLockDays = this.calculateLockDuration(
+                depositTimestamp,
+                totalLockDays,
+              );
+              const isLocked = remainingLockDays > 0;
 
-            const unlockDate = new Date(
-              (pos.timestamp + totalLockDays * 24 * 60 * 60) * 1000,
-            );
+              const shardsMultiplier =
+                this.rewardsConfigService.calculateShardsMultiplier(
+                  totalLockDays,
+                );
 
-            const uniquePositionId = `${vault.address.toLowerCase()}_${pos.user.toLowerCase()}_${pos.blockNumber}_${pos.timestamp}`;
+              const vaultId = `${vault.tokenConfig.symbol.toLowerCase().replace('/', '_').replace('-lp', '').replace('-', '_')}_vault`;
 
-            return {
-              position_id: `${vault.tokenConfig.symbol} #${index + 1}`,
+              const unlockDate =
+                totalLockDays > 0
+                  ? new Date(
+                      (depositTimestamp + totalLockDays * 24 * 60 * 60) * 1000,
+                    )
+                  : new Date(depositTimestamp * 1000);
+
+              const uniquePositionId = `${vault.address.toLowerCase()}_${walletAddress.toLowerCase()}_${index}_${depositTimestamp}`;
+
+              return {
+                position_id: `${vault.tokenConfig.symbol} #${index + 1}`,
+                unique_id: uniquePositionId,
+                vault_id: vaultId,
+                underlying_asset_ticker: vault.tokenConfig.symbol,
+                earned_shards: Math.floor(
+                  ((parseFloat(stakedAmount) * tokenPrice) / 1000) *
+                    shardsRate *
+                    shardsMultiplier,
+                ).toString(),
+                staked_amount: stakedAmount,
+                staked_amount_raw: assets,
+                lock_duration: isLocked
+                  ? `${remainingLockDays} days`
+                  : 'Unlocked',
+                shards_multiplier: shardsMultiplier.toFixed(2),
+                isLocked,
+                deposit_date: new Date(depositTimestamp * 1000).toISOString(),
+                unlock_date: unlockDate.toISOString(),
+                block_number: 0, // We don't have block number from contract data
+                timestamp: depositTimestamp,
+              };
+            }),
+          );
+        } else if (vaultPositions.length > 0) {
+          const pos = vaultPositions[0];
+          const stakedAmount = formatUnits(pos.assets || '0', decimals);
+          const totalLockDays = 0;
+          const remainingLockDays = this.calculateLockDuration(
+            pos.timestamp,
+            totalLockDays,
+          );
+          const isLocked = remainingLockDays > 0;
+
+          const shardsMultiplier =
+            this.rewardsConfigService.calculateShardsMultiplier(totalLockDays);
+
+          const vaultId = `${vault.tokenConfig.symbol.toLowerCase().replace('/', '_').replace('-lp', '').replace('-', '_')}_vault`;
+          const unlockDate = new Date(pos.timestamp * 1000);
+          const uniquePositionId = `${vault.address.toLowerCase()}_${pos.user.toLowerCase()}_${pos.blockNumber}_${pos.timestamp}`;
+
+          formattedPositions = [
+            {
+              position_id: `${vault.tokenConfig.symbol} #1`,
               unique_id: uniquePositionId,
               vault_id: vaultId,
               underlying_asset_ticker: vault.tokenConfig.symbol,
@@ -276,9 +393,9 @@ export class GetUserStakingPositionsUseCase {
               unlock_date: unlockDate.toISOString(),
               block_number: pos.blockNumber,
               timestamp: pos.timestamp,
-            };
-          }),
-        );
+            },
+          ];
+        }
 
         const tvl = parseFloat(formatUnits(tvlData.totalAssets, decimals));
         const tvlUsd = tvl * tokenPrice;
@@ -303,9 +420,9 @@ export class GetUserStakingPositionsUseCase {
               : `${price24hChange.toFixed(1)}%`,
           shards_rate: shardsRate.toString(),
           userHasStake: hasPositions,
-          user_total_staked: formattedTotalStaked,
+          user_total_staked: totalStakedFormatted,
           user_total_staked_raw: totalStaked.toString(),
-          user_active_positions_count: vaultPositions.length,
+          user_active_positions_count: formattedPositions.length,
           user_total_earned_shards: Math.floor(totalEarnedShards).toString(),
           underlying_asset_balance_in_wallet: walletBalance,
           underlying_asset_balance_in_wallet_raw: walletBalanceRaw,
@@ -336,17 +453,24 @@ export class GetUserStakingPositionsUseCase {
     };
   }
 
-  private calculateLockDuration(depositTimestamp: number): number {
-    const now = Math.floor(Date.now() / 1000);
-    const daysSinceDeposit = Math.floor(
-      (now - depositTimestamp) / (24 * 60 * 60),
-    );
-
-    if (daysSinceDeposit < 365) {
-      return 365 - daysSinceDeposit;
+  private calculateLockDuration(
+    depositTimestamp: number,
+    totalLockDays: number = 0,
+  ): number {
+    if (totalLockDays <= 0) {
+      return 0;
     }
 
-    return 0;
+    const now = Math.floor(Date.now() / 1000);
+    const unlockTimestamp = depositTimestamp + totalLockDays * 24 * 60 * 60;
+
+    if (now >= unlockTimestamp) {
+      return 0;
+    }
+    const remainingSeconds = unlockTimestamp - now;
+    const remainingDays = Math.ceil(remainingSeconds / (24 * 60 * 60));
+
+    return remainingDays;
   }
 
   private getChainDisplayName(chain: ChainType): string {

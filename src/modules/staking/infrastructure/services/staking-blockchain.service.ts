@@ -761,4 +761,43 @@ export class StakingBlockchainService implements IStakingBlockchainRepository {
       };
     }
   }
+
+  async getUserDepositInfo(
+    userAddress: string,
+    vaultAddress: string,
+    chain: ChainType,
+  ): Promise<{
+    timestamps: bigint[];
+    lockDurations: bigint[];
+    shareAmounts: bigint[];
+  } | null> {
+    try {
+      const vaultContract = this.getVaultContract(vaultAddress, chain);
+      const checksummedUserAddress = getAddress(userAddress);
+
+      const result = await vaultContract.getDepositInfo(checksummedUserAddress);
+
+      const timestamps = Array.isArray(result[0])
+        ? result[0]
+        : result.timestamps || [];
+      const lockDurations = Array.isArray(result[1])
+        ? result[1]
+        : result.lockDurations || [];
+      const shareAmounts = Array.isArray(result[2])
+        ? result[2]
+        : result.shareAmounts || [];
+
+      return {
+        timestamps: timestamps.map((t: any) => BigInt(t.toString())),
+        lockDurations: lockDurations.map((d: any) => BigInt(d.toString())),
+        shareAmounts: shareAmounts.map((s: any) => BigInt(s.toString())),
+      };
+    } catch (error) {
+      this.logger.warn(
+        `Failed to get deposit info for ${userAddress} in vault ${vaultAddress}:`,
+        error,
+      );
+      return null;
+    }
+  }
 }

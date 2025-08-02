@@ -267,6 +267,19 @@ export interface IStakingBlockchainRepository {
   } | null>;
 
   /**
+   * Gets detailed deposit information for a user including individual positions
+   */
+  getUserDepositInfo(
+    userAddress: string,
+    vaultAddress: string,
+    chain: ChainType,
+  ): Promise<{
+    timestamps: bigint[];
+    lockDurations: bigint[];
+    shareAmounts: bigint[];
+  } | null>;
+
+  /**
    * Batch call multiple contract functions in a single RPC call
    */
   batchCall(
