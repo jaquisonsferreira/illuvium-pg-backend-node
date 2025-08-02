@@ -1,0 +1,24 @@
+{
+  "Routes": {
+    "backend-node-api": {
+      "ClusterId": "backend-node",
+      "Match": {
+        "Path": "/api/v1/{**catch-all}"
+      },
+      "Transforms": [
+        {
+          "PathPattern": "/api/{**catch-all}"
+        }
+      ]
+    }
+  },
+  "Clusters": {
+    "backend-node": {
+      "Destinations": {
+        "backend-node": {
+          "Address": "http://obelisk-backend-node:5000/"
+        }
+      }
+    }
+  }
+}

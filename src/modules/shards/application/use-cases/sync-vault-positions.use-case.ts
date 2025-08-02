@@ -190,7 +190,7 @@ export class SyncVaultPositionsUseCase {
           positionData.balance,
           positionData.shares,
           positionData.usdValue,
-          4, // Default lock weeks
+          positionData.lockWeeks || 4,
           new Date(),
           positionData.blockNumber || 0,
           new Date(),

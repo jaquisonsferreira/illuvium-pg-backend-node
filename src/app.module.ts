@@ -15,6 +15,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { StakingModule } from './modules/staking/staking.module';
 
 import { ObservabilityModule } from './modules/observability/observability.module';
+import { SystemModule } from './modules/system/system.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ObservabilityModule } from './modules/observability/observability.modul
     DeveloperModule,
     ChatModule,
     StakingModule,
+    SystemModule,
   ],
   controllers: [AppController],
   providers: [AppService, AssetsModule, WebhooksModule],
