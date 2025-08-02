@@ -11,13 +11,8 @@ ENV NODE_ENV=development
 # Instalar @nestjs/cli globalmente
 RUN npm install -g @nestjs/cli
 
-# Instalar dependências e verificar instalação
-RUN npm install --legacy-peer-deps && \
-    echo "=== Verificando instalação ===" && \
-    ls -la node_modules/@nestjs/ && \
-    ls -la node_modules/kysely/ && \
-    echo "=== Total de módulos instalados ===" && \
-    find node_modules -maxdepth 1 -type d | wc -l
+# Instalar dependências
+RUN npm install --legacy-peer-deps
 
 # Copiar o resto do código DEPOIS de instalar as dependências
 # Isso evita que o .dockerignore interfira com node_modules
@@ -26,6 +21,6 @@ COPY . .
 # Adicionar node_modules/.bin ao PATH
 ENV PATH="/app/node_modules/.bin:${PATH}"
 
-EXPOSE 5000
+EXPOSE 4000
 
 CMD ["npm", "run", "start:dev"]
