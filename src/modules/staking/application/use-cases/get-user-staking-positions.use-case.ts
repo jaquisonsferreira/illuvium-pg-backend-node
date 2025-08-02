@@ -253,8 +253,11 @@ export class GetUserStakingPositionsUseCase {
               (pos.timestamp + totalLockDays * 24 * 60 * 60) * 1000,
             );
 
+            const uniquePositionId = `${vault.address.toLowerCase()}_${pos.user.toLowerCase()}_${pos.blockNumber}_${pos.timestamp}`;
+
             return {
               position_id: `${vault.tokenConfig.symbol} #${index + 1}`,
+              unique_id: uniquePositionId,
               vault_id: vaultId,
               underlying_asset_ticker: vault.tokenConfig.symbol,
               earned_shards: Math.floor(
@@ -271,6 +274,8 @@ export class GetUserStakingPositionsUseCase {
               isLocked,
               deposit_date: new Date(pos.timestamp * 1000).toISOString(),
               unlock_date: unlockDate.toISOString(),
+              block_number: pos.blockNumber,
+              timestamp: pos.timestamp,
             };
           }),
         );

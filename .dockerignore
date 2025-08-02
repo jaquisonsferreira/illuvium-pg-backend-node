@@ -48,7 +48,7 @@ docs
 .github
 .gitlab-ci.yml
 .travis.yml
-scripts
+# scripts
 
 # Docker
 Dockerfile
