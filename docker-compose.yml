@@ -5,14 +5,14 @@ services:
     image: localstack/localstack:3.0.2
     container_name: localstack
     ports:
-      - "4566:4566"
+      - '4566:4566'
     environment:
       - SERVICES=events,secretsmanager,sqs,kms
       - DEBUG=0
       - DEFAULT_REGION=us-west-2
       - DATA_DIR=/tmp/localstack/data
     volumes:
-      - "./scripts/localstack:/docker-entrypoint-initaws.d"
+      - './scripts/localstack:/docker-entrypoint-initaws.d'
     networks:
       - backend-network
 
@@ -20,8 +20,8 @@ services:
     image: cockroachdb/cockroach:v22.2.8
     container_name: backend-cockroachdb
     ports:
-      - "26257:26257"
-      - "8080:8080"
+      - '26257:26257'
+      - '8080:8080'
     command: start-single-node --insecure --store=type=mem,size=2G
     environment:
       - COCKROACH_DATABASE=illuvium
@@ -35,7 +35,7 @@ services:
     image: redis:7-alpine
     container_name: backend-redis
     ports:
-      - "6379:6379"
+      - '63798:6379'
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
@@ -56,8 +56,8 @@ services:
       - ./scripts/localstack:/scripts
     networks:
       - backend-network
-    entrypoint: ["/bin/sh"]
-    command: ["/scripts/wait-and-init.sh"]
+    entrypoint: ['/bin/sh']
+    command: ['/scripts/wait-and-init.sh']
 
   cockroachdb-init:
     image: cockroachdb/cockroach:v22.2.8
@@ -68,9 +68,8 @@ services:
       - ./scripts/cockroachdb:/scripts
     networks:
       - backend-network
-    entrypoint: ["/bin/sh"]
-    command: ["/scripts/init-db.sh"]
-
+    entrypoint: ['/bin/sh']
+    command: ['/scripts/init-db.sh']
 
   backend-node:
     build:
@@ -78,7 +77,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: backend-node
     ports:
-      - "4000:4000"
+      - '4000:4000'
     environment:
       - NODE_ENV=development
       - PORT=4000
