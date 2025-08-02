@@ -51,6 +51,9 @@ async function bootstrap() {
   // Global tracing interceptor for observability
   app.useGlobalInterceptors(app.get(TracingInterceptor));
 
+  // Global prefix - deve ser definido antes do Swagger
+  app.setGlobalPrefix('api');
+
   // CORS configuration
   app.enableCors({
     origin: configService.get<string>('CORS_ORIGIN', '*'),
@@ -63,16 +66,12 @@ async function bootstrap() {
       .setTitle('Illuvium API')
       .setDescription('API for Illuvium platform')
       .setVersion('1.0')
-      .setBasePath('api')
       .addBearerAuth()
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api/docs', app, document);
   }
-
-  // Global prefix
-  app.setGlobalPrefix('api');
 
   const port = configService.get<number>('PORT', 5000);
 
