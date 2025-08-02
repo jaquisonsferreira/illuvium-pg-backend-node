@@ -60,7 +60,7 @@ export class TracingInterceptor implements NestInterceptor {
     };
 
     // Record request duration
-    this.observabilityRepository.recordMetric({
+    void this.observabilityRepository.recordMetric({
       name: 'http_request_duration_ms',
       type: MetricType.HISTOGRAM,
       value: duration,
@@ -71,7 +71,7 @@ export class TracingInterceptor implements NestInterceptor {
     } as any);
 
     // Record request count
-    this.observabilityRepository.recordMetric({
+    void this.observabilityRepository.recordMetric({
       name: 'http_requests_total',
       type: MetricType.COUNTER,
       value: 1,
@@ -82,7 +82,7 @@ export class TracingInterceptor implements NestInterceptor {
 
     // Record error count if applicable
     if (hasError) {
-      this.observabilityRepository.recordMetric({
+      void this.observabilityRepository.recordMetric({
         name: 'http_request_errors_total',
         type: MetricType.COUNTER,
         value: 1,
@@ -94,6 +94,6 @@ export class TracingInterceptor implements NestInterceptor {
   }
 
   private recordException(error: Error): void {
-    this.observabilityRepository.recordException(error);
+    void this.observabilityRepository.recordException(error);
   }
 }

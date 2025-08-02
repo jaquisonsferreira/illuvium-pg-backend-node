@@ -149,7 +149,7 @@ export class VaultSyncService {
           balance.toString(),
           shares.toString(),
           usdValue,
-          4, // 4 weeks
+          4, // Default lock weeks
           snapshotDate,
           targetBlock,
           new Date(),
@@ -225,7 +225,7 @@ export class VaultSyncService {
           balance.toString(),
           shares.toString(),
           usdValue,
-          4,
+          4, // Default lock weeks
           snapshotDate,
           blockNumber,
           new Date(),
@@ -326,7 +326,7 @@ export class VaultSyncService {
       balance.toString(),
       shares.toString(),
       usdValue,
-      4,
+      4, // Default lock weeks
       new Date(),
       blockNumber || 0,
       new Date(),

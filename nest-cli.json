@@ -12,6 +12,17 @@
           "introspectComments": true
         }
       }
-    ]
+    ],
+    "watchAssets": true,
+    "assets": []
+  },
+  "watchOptions": {
+    "followSymlinks": false,
+    "interval": 1000,
+    "binaryInterval": 1000,
+    "awaitWriteFinish": {
+      "stabilityThreshold": 2000,
+      "pollInterval": 100
+    }
   }
 }

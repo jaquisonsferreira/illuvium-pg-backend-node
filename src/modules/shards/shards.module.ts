@@ -8,6 +8,8 @@ import { ReferralsController } from './interface/controllers/referrals.controlle
 import { LeaderboardController } from './interface/controllers/leaderboard.controller';
 import { SeasonsController } from './interface/controllers/seasons.controller';
 import { SystemStatusController } from './interface/controllers/system-status.controller';
+import { PricesController } from './interface/controllers/prices.controller';
+import { TokensController } from './interface/controllers/tokens.controller';
 
 // Use Cases
 import { CalculateDailyShardsUseCase } from './application/use-cases/calculate-daily-shards.use-case';
@@ -16,6 +18,12 @@ import { GetLeaderboardUseCase } from './application/use-cases/get-leaderboard.u
 import { ManageReferralUseCase } from './application/use-cases/manage-referral.use-case';
 import { ManageSeasonUseCase } from './application/use-cases/manage-season.use-case';
 import { SyncVaultPositionsUseCase } from './application/use-cases/sync-vault-positions.use-case';
+import { PopulatePriceHistoryUseCase } from './application/use-cases/populate-price-history.use-case';
+import { GetTokenPriceUseCase } from './application/use-cases/get-token-price.use-case';
+import { CleanupOldPricesUseCase } from './application/use-cases/cleanup-old-prices.use-case';
+import { CacheTokenMetadataUseCase } from './application/use-cases/cache-token-metadata.use-case';
+import { GetTokenMetadataUseCase } from './application/use-cases/get-token-metadata.use-case';
+import { SyncLpTokensUseCase } from './application/use-cases/sync-lp-tokens.use-case';
 
 // Domain Services
 import { ShardCalculationDomainService } from './domain/services/shard-calculation.domain-service';
@@ -36,15 +44,20 @@ import { SeasonRepository } from './infrastructure/repositories/season.repositor
 import { ReferralRepository } from './infrastructure/repositories/referral.repository';
 import { ShardBalanceRepository } from './infrastructure/repositories/shard-balance.repository';
 import { ShardEarningHistoryRepository } from './infrastructure/repositories/shard-earning-history.repository';
+import { PriceHistoryRepository } from './infrastructure/repositories/price-history.repository';
+import { TokenMetadataRepository } from './infrastructure/repositories/token-metadata.repository';
 
 // Jobs
 import { DailyShardProcessorJob } from './infrastructure/jobs/daily-shard-processor.job';
 import { VaultBalanceSyncJob } from './infrastructure/jobs/vault-balance-sync.job';
 import { SocialContributionSyncJob } from './infrastructure/jobs/social-contribution-sync.job';
 import { DeveloperContributionSyncJob } from './infrastructure/jobs/developer-contribution-sync.job';
+import { PriceUpdateProcessorJob } from './infrastructure/jobs/price-update-processor.job';
+import { TokenMetadataSyncJob } from './infrastructure/jobs/token-metadata-sync.job';
 
-// Scheduler
+// Schedulers
 import { ShardProcessingScheduler } from './interface/schedulers/shard-processing.scheduler';
+import { PriceHistoryScheduler } from './interface/schedulers/price-history-scheduler';
 
 // External Modules
 import { BlockchainModule } from '../blockchain/blockchain.module';
@@ -70,6 +83,8 @@ import { SHARD_QUEUES } from './constants';
       { name: SHARD_QUEUES.SOCIAL_SYNC },
       { name: SHARD_QUEUES.DEVELOPER_SYNC },
       { name: SHARD_QUEUES.REFERRAL_PROCESSOR },
+      { name: SHARD_QUEUES.PRICE_UPDATE },
+      { name: SHARD_QUEUES.TOKEN_METADATA_SYNC },
     ),
   ],
   controllers: [
@@ -78,6 +93,8 @@ import { SHARD_QUEUES } from './constants';
     LeaderboardController,
     SeasonsController,
     SystemStatusController,
+    PricesController,
+    TokensController,
   ],
   providers: [
     // Use Cases
@@ -87,6 +104,12 @@ import { SHARD_QUEUES } from './constants';
     ManageReferralUseCase,
     ManageSeasonUseCase,
     SyncVaultPositionsUseCase,
+    PopulatePriceHistoryUseCase,
+    GetTokenPriceUseCase,
+    CleanupOldPricesUseCase,
+    CacheTokenMetadataUseCase,
+    GetTokenMetadataUseCase,
+    SyncLpTokensUseCase,
 
     // Domain Services
     ShardCalculationDomainService,
@@ -107,6 +130,8 @@ import { SHARD_QUEUES } from './constants';
     ReferralRepository,
     ShardBalanceRepository,
     ShardEarningHistoryRepository,
+    PriceHistoryRepository,
+    TokenMetadataRepository,
 
     // Repository interface providers
     {
@@ -133,15 +158,26 @@ import { SHARD_QUEUES } from './constants';
       provide: 'IShardEarningHistoryRepository',
       useClass: ShardEarningHistoryRepository,
     },
+    {
+      provide: 'IPriceHistoryRepository',
+      useClass: PriceHistoryRepository,
+    },
+    {
+      provide: 'ITokenMetadataRepository',
+      useClass: TokenMetadataRepository,
+    },
 
     // Jobs
     DailyShardProcessorJob,
     VaultBalanceSyncJob,
     SocialContributionSyncJob,
     DeveloperContributionSyncJob,
+    PriceUpdateProcessorJob,
+    TokenMetadataSyncJob,
 
-    // Scheduler
+    // Schedulers
     ShardProcessingScheduler,
+    PriceHistoryScheduler,
   ],
   exports: [
     CalculateDailyShardsUseCase,

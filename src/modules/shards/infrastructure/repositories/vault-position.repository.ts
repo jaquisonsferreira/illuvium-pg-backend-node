@@ -91,7 +91,7 @@ export class VaultPositionRepository implements IVaultPositionRepository {
 
   async findByWalletAndSeason(
     walletAddress: string,
-    seasonId: number,
+    _seasonId: number,
   ): Promise<VaultPositionEntity[]> {
     const results = await this.db
       .selectFrom('vault_positions')
@@ -107,7 +107,7 @@ export class VaultPositionRepository implements IVaultPositionRepository {
   async findByWalletVaultAndSeason(
     walletAddress: string,
     vaultAddress: string,
-    seasonId: number,
+    _seasonId: number,
   ): Promise<VaultPositionEntity | null> {
     const result = await this.db
       .selectFrom('vault_positions')
@@ -120,7 +120,7 @@ export class VaultPositionRepository implements IVaultPositionRepository {
     return result ? this.toDomainModel(result) : null;
   }
 
-  async findActiveBySeason(seasonId: number): Promise<VaultPositionEntity[]> {
+  async findActiveBySeason(_seasonId: number): Promise<VaultPositionEntity[]> {
     const results = await this.db
       .selectFrom('vault_positions')
       .selectAll()

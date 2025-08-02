@@ -9,6 +9,8 @@ describe('ShardProcessingScheduler', () => {
   let vaultSyncQueue: Queue;
   let socialSyncQueue: Queue;
   let developerSyncQueue: Queue;
+  let priceUpdateQueue: Queue;
+  let tokenMetadataQueue: Queue;
 
   const mockQueue = () => ({
     add: jest.fn(),
@@ -19,6 +21,8 @@ describe('ShardProcessingScheduler', () => {
     vaultSyncQueue = mockQueue() as any;
     socialSyncQueue = mockQueue() as any;
     developerSyncQueue = mockQueue() as any;
+    priceUpdateQueue = mockQueue() as any;
+    tokenMetadataQueue = mockQueue() as any;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -38,6 +42,14 @@ describe('ShardProcessingScheduler', () => {
         {
           provide: `BullQueue_${SHARD_QUEUES.DEVELOPER_SYNC}`,
           useValue: developerSyncQueue,
+        },
+        {
+          provide: `BullQueue_${SHARD_QUEUES.PRICE_UPDATE}`,
+          useValue: priceUpdateQueue,
+        },
+        {
+          provide: `BullQueue_${SHARD_QUEUES.TOKEN_METADATA_SYNC}`,
+          useValue: tokenMetadataQueue,
         },
       ],
     }).compile();

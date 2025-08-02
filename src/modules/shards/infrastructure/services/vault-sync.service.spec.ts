@@ -43,6 +43,7 @@ describe('VaultSyncService', () => {
     '111111111111111111111',
     '100000000000000000000',
     3333.33,
+    4, // Default lock weeks
     new Date('2024-01-15'),
     12345678,
     new Date('2024-01-15'),
@@ -450,6 +451,7 @@ describe('VaultSyncService', () => {
           '1000000000',
           '1000000000',
           1000,
+          4, // Default lock weeks
           new Date('2024-01-15'),
           12345678,
           new Date('2024-01-15'),
@@ -463,6 +465,7 @@ describe('VaultSyncService', () => {
           '500000000000000000000',
           '500000000000000000000',
           500,
+          4, // Default lock weeks
           new Date('2024-01-15'),
           12345678,
           new Date('2024-01-15'),

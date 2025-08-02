@@ -138,6 +138,7 @@ describe('CalculateDailyShardsUseCase', () => {
           balance: '5000',
           shares: '5000',
           usdValue: 5000,
+          lockWeeks: 4, // Default lock weeks
           snapshotDate: date,
           blockNumber: 1000,
         }),
@@ -224,6 +225,7 @@ describe('CalculateDailyShardsUseCase', () => {
           balance: '1000',
           shares: '1000',
           usdValue: 1000,
+          lockWeeks: 4, // Default lock weeks
           snapshotDate: date,
           blockNumber: 1000,
         }),
@@ -271,6 +273,7 @@ describe('CalculateDailyShardsUseCase', () => {
           balance: '1000000',
           shares: '1000000',
           usdValue: 1000000,
+          lockWeeks: 4, // Default lock weeks
           snapshotDate: date,
           blockNumber: 1000,
         }),
@@ -319,6 +322,7 @@ describe('CalculateDailyShardsUseCase', () => {
           balance: '5000',
           shares: '5000',
           usdValue: 5000,
+          lockWeeks: 4, // Default lock weeks
           snapshotDate: date,
           blockNumber: 1000,
         }),
@@ -330,6 +334,7 @@ describe('CalculateDailyShardsUseCase', () => {
           balance: '2',
           shares: '2',
           usdValue: 6000,
+          lockWeeks: 4, // Default lock weeks
           snapshotDate: date,
           blockNumber: 1000,
         }),

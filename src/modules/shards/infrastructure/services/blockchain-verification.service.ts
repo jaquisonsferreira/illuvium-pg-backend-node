@@ -22,7 +22,8 @@ interface BlockExplorerConfig {
 export class BlockchainVerificationService {
   private readonly logger = new Logger(BlockchainVerificationService.name);
   private readonly providers: Map<string, ethers.Provider> = new Map();
-  private readonly explorerConfigs: Map<string, BlockExplorerConfig> = new Map();
+  private readonly explorerConfigs: Map<string, BlockExplorerConfig> =
+    new Map();
 
   constructor(
     private readonly httpService: HttpService,
@@ -34,10 +35,33 @@ export class BlockchainVerificationService {
 
   private initializeProviders(): void {
     const chains = [
-      { name: 'ethereum', rpcUrl: this.configService.get('ETHEREUM_RPC_URL') || 'https://eth.llamarpc.com', chainId: 1 },
-      { name: 'base', rpcUrl: this.configService.get('BASE_RPC_URL') || 'https://mainnet.base.org', chainId: 8453 },
-      { name: 'arbitrum', rpcUrl: this.configService.get('ARBITRUM_RPC_URL') || 'https://arb1.arbitrum.io/rpc', chainId: 42161 },
-      { name: 'optimism', rpcUrl: this.configService.get('OPTIMISM_RPC_URL') || 'https://mainnet.optimism.io', chainId: 10 },
+      {
+        name: 'ethereum',
+        rpcUrl:
+          this.configService.get('ETHEREUM_RPC_URL') ||
+          'https://eth.llamarpc.com',
+        chainId: 1,
+      },
+      {
+        name: 'base',
+        rpcUrl:
+          this.configService.get('BASE_RPC_URL') || 'https://mainnet.base.org',
+        chainId: 8453,
+      },
+      {
+        name: 'arbitrum',
+        rpcUrl:
+          this.configService.get('ARBITRUM_RPC_URL') ||
+          'https://arb1.arbitrum.io/rpc',
+        chainId: 42161,
+      },
+      {
+        name: 'optimism',
+        rpcUrl:
+          this.configService.get('OPTIMISM_RPC_URL') ||
+          'https://mainnet.optimism.io',
+        chainId: 10,
+      },
     ];
 
     for (const chain of chains) {
@@ -94,18 +118,26 @@ export class BlockchainVerificationService {
       }
 
       if (receipt.from.toLowerCase() !== deployerAddress.toLowerCase()) {
-        this.logger.warn(`Deployer mismatch: expected ${deployerAddress}, got ${receipt.from}`);
+        this.logger.warn(
+          `Deployer mismatch: expected ${deployerAddress}, got ${receipt.from}`,
+        );
         return null;
       }
 
-      if (receipt.contractAddress?.toLowerCase() !== contractAddress.toLowerCase()) {
-        this.logger.warn(`Contract address mismatch: expected ${contractAddress}, got ${receipt.contractAddress}`);
+      if (
+        receipt.contractAddress?.toLowerCase() !== contractAddress.toLowerCase()
+      ) {
+        this.logger.warn(
+          `Contract address mismatch: expected ${contractAddress}, got ${receipt.contractAddress}`,
+        );
         return null;
       }
 
       const code = await provider.getCode(contractAddress);
       if (code === '0x' || code === '0x0') {
-        this.logger.warn(`No code found at contract address ${contractAddress}`);
+        this.logger.warn(
+          `No code found at contract address ${contractAddress}`,
+        );
         return null;
       }
 
@@ -115,10 +147,13 @@ export class BlockchainVerificationService {
         return null;
       }
 
-      const isVerified = await this.checkContractVerification(contractAddress, chainName);
+      const isVerified = await this.checkContractVerification(
+        contractAddress,
+        chainName,
+      );
 
       return {
-        contractAddress: receipt.contractAddress!,
+        contractAddress: receipt.contractAddress,
         deployerAddress: receipt.from,
         transactionHash: receipt.hash,
         blockNumber: receipt.blockNumber,
@@ -138,17 +173,22 @@ export class BlockchainVerificationService {
     try {
       const explorerConfig = this.explorerConfigs.get(chainName);
       if (!explorerConfig || !explorerConfig.apiKey) {
-        this.logger.warn(`No explorer API key configured for chain: ${chainName}`);
+        this.logger.warn(
+          `No explorer API key configured for chain: ${chainName}`,
+        );
         return false;
       }
 
       const url = `${explorerConfig.apiUrl}?module=contract&action=getabi&address=${contractAddress}&apikey=${explorerConfig.apiKey}`;
-      
+
       const response = await firstValueFrom(
-        this.httpService.get<{ status: string; result: string }>(url)
+        this.httpService.get<{ status: string; result: string }>(url),
       );
 
-      if (response.data.status === '1' && response.data.result !== 'Contract source code not verified') {
+      if (
+        response.data.status === '1' &&
+        response.data.result !== 'Contract source code not verified'
+      ) {
         return true;
       }
 
@@ -170,12 +210,14 @@ export class BlockchainVerificationService {
     try {
       const explorerConfig = this.explorerConfigs.get(chainName);
       if (!explorerConfig || !explorerConfig.apiKey) {
-        this.logger.warn(`No explorer API key configured for chain: ${chainName}`);
+        this.logger.warn(
+          `No explorer API key configured for chain: ${chainName}`,
+        );
         return null;
       }
 
       const url = `${explorerConfig.apiUrl}?module=contract&action=getcontractcreation&contractaddresses=${contractAddress}&apikey=${explorerConfig.apiKey}`;
-      
+
       const response = await firstValueFrom(
         this.httpService.get<{
           status: string;
@@ -184,7 +226,7 @@ export class BlockchainVerificationService {
             txHash: string;
             blockNumber: string;
           }>;
-        }>(url)
+        }>(url),
       );
 
       if (response.data.status === '1' && response.data.result?.length > 0) {

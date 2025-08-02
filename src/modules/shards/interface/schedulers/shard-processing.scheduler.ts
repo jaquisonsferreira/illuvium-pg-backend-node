@@ -15,6 +15,10 @@ export class ShardProcessingScheduler {
     private socialSyncQueue: Queue,
     @InjectQueue(SHARD_QUEUES.DEVELOPER_SYNC)
     private developerSyncQueue: Queue,
+    @InjectQueue(SHARD_QUEUES.PRICE_UPDATE)
+    private priceUpdateQueue: Queue,
+    @InjectQueue(SHARD_QUEUES.TOKEN_METADATA_SYNC)
+    private tokenMetadataQueue: Queue,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_2AM)
