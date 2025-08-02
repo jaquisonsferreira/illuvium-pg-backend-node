@@ -21,9 +21,12 @@ export interface RewardsConfig {
   multipliers: {
     lockDuration: {
       description: string;
-      '30_days_or_less': number;
-      '365_days_or_more': number;
-      calculation: string;
+      formula: string;
+      examples: {
+        [key: string]: number;
+      };
+      min: number;
+      max: number;
     };
   };
   lastUpdated: string;
@@ -74,10 +77,17 @@ export class RewardsConfigService {
       },
       multipliers: {
         lockDuration: {
-          description: 'Multiplier based on lock duration',
-          '30_days_or_less': 1.0,
-          '365_days_or_more': 2.0,
-          calculation: '1 + (lockDays - 30) / 335',
+          description: 'Multiplier based on lock duration (RevDis formula)',
+          formula: '1 + lockDays / 365',
+          examples: {
+            '0_days': 1.0,
+            '30_days': 1.08,
+            '90_days': 1.25,
+            '180_days': 1.49,
+            '365_days': 2.0,
+          },
+          min: 1.0,
+          max: 2.0,
         },
       },
       lastUpdated: new Date().toISOString().split('T')[0],
@@ -124,15 +134,20 @@ export class RewardsConfigService {
 
   /**
    * Calculate shards multiplier based on lock duration
+   * Using RevDis formula: 1 + lockDays / 365
+   * Range: 1x (0 days) to 2x (365 days)
    */
   calculateShardsMultiplier(lockDays: number): number {
-    if (lockDays <= 30)
-      return this.rewardsConfig.multipliers.lockDuration['30_days_or_less'];
-    if (lockDays >= 365)
-      return this.rewardsConfig.multipliers.lockDuration['365_days_or_more'];
+    // Cap at 365 days for maximum 2x multiplier
+    const cappedDays = Math.min(lockDays, 365);
 
-    // Linear interpolation between 30 and 365 days
-    return 1 + (lockDays - 30) / 335;
+    // Linear interpolation: 1 + days/365
+    // 0 days = 1.0x
+    // 30 days = 1.08x
+    // 90 days = 1.25x
+    // 180 days = 1.49x
+    // 365 days = 2.0x
+    return 1 + cappedDays / 365;
   }
 
   /**

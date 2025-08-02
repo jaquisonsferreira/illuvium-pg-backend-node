@@ -20,10 +20,17 @@
   },
   "multipliers": {
     "lockDuration": {
-      "description": "Multiplier based on lock duration",
-      "30_days_or_less": 1.0,
-      "365_days_or_more": 2.0,
-      "calculation": "1 + (lockDays - 30) / 335"
+      "description": "Multiplier based on lock duration (RevDis formula)",
+      "formula": "1 + lockDays / 365",
+      "examples": {
+        "0_days": 1.0,
+        "30_days": 1.08,
+        "90_days": 1.25,
+        "180_days": 1.49,
+        "365_days": 2.0
+      },
+      "min": 1.0,
+      "max": 2.0
     }
   },
   "lastUpdated": "2025-08-01",
