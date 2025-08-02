@@ -65,6 +65,7 @@ describe('SyncVaultPositionsUseCase', () => {
     '100',
     '100',
     1000,
+    4, // Default lock weeks
     new Date('2024-01-15'),
     12345,
     new Date('2024-01-15'),
@@ -79,6 +80,7 @@ describe('SyncVaultPositionsUseCase', () => {
     '200',
     '200',
     200,
+    4, // Default lock weeks
     new Date('2024-01-15'),
     12346,
     new Date('2024-01-15'),
@@ -395,6 +397,7 @@ describe('SyncVaultPositionsUseCase', () => {
       '100',
       '100',
       1000,
+      4, // Default lock weeks
       new Date('2024-01-01'),
       12345,
       new Date('2024-01-01'),

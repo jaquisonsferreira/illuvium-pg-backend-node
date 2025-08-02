@@ -85,10 +85,28 @@ async function bootstrap() {
     process.exit(1);
   }
 
-  await app.listen(port);
+  const server = await app.listen(port);
 
   console.log(`🚀 Application is running on: http://localhost:${port}/api`);
   console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
+
+  app.enableShutdownHooks();
+
+  const gracefulShutdown = async (signal: string) => {
+    console.log(`\n🛑 Received ${signal}, shutting down gracefully...`);
+
+    server.close(() => {
+      console.log('💻 HTTP server closed');
+    });
+
+    await app.close();
+    console.log('✅ Application closed successfully');
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => void gracefulShutdown('SIGINT'));
+  process.on('SIGUSR2', () => void gracefulShutdown('SIGUSR2'));
 }
 
 bootstrap().catch((error) => {

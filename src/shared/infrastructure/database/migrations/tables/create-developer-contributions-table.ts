@@ -1,8 +1,21 @@
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
+import {
+  tableExists,
+  indexExists,
+  constraintExists,
+} from '../utils/migration-helpers';
 
 export const createDeveloperContributionsTable = {
   up: async (db: Kysely<any>): Promise<void> => {
+    if (await tableExists(db, 'developer_contributions')) {
+      console.log(
+        'Developer contributions table already exists, skipping creation',
+      );
+      return;
+    }
+
+    console.log('Creating developer_contributions table...');
     await db.schema
       .createTable('developer_contributions')
       .addColumn('id', 'uuid', (col) =>
@@ -26,36 +39,48 @@ export const createDeveloperContributionsTable = {
       .execute();
 
     // Add indexes
-    await db.schema
-      .createIndex('idx_developer_contributions_wallet_season')
-      .on('developer_contributions')
-      .columns(['wallet_address', 'season_id'])
-      .execute();
+    if (!(await indexExists(db, 'idx_developer_contributions_wallet_season'))) {
+      await db.schema
+        .createIndex('idx_developer_contributions_wallet_season')
+        .on('developer_contributions')
+        .columns(['wallet_address', 'season_id'])
+        .execute();
+    }
 
-    await db.schema
-      .createIndex('idx_developer_contributions_action_type')
-      .on('developer_contributions')
-      .column('action_type')
-      .execute();
+    if (!(await indexExists(db, 'idx_developer_contributions_action_type'))) {
+      await db.schema
+        .createIndex('idx_developer_contributions_action_type')
+        .on('developer_contributions')
+        .column('action_type')
+        .execute();
+    }
 
-    await db.schema
-      .createIndex('idx_developer_contributions_verified')
-      .on('developer_contributions')
-      .column('verified')
-      .execute();
+    if (!(await indexExists(db, 'idx_developer_contributions_verified'))) {
+      await db.schema
+        .createIndex('idx_developer_contributions_verified')
+        .on('developer_contributions')
+        .column('verified')
+        .execute();
+    }
 
-    await db.schema
-      .createIndex('idx_developer_contributions_distributed')
-      .on('developer_contributions')
-      .column('distributed_at')
-      .execute();
+    if (!(await indexExists(db, 'idx_developer_contributions_distributed'))) {
+      await db.schema
+        .createIndex('idx_developer_contributions_distributed')
+        .on('developer_contributions')
+        .column('distributed_at')
+        .execute();
+    }
 
     // Add foreign key
-    await sql`
-      ALTER TABLE developer_contributions
-      ADD CONSTRAINT fk_developer_contributions_season
-      FOREIGN KEY (season_id) REFERENCES seasons(id)
-    `.execute(db);
+    if (!(await constraintExists(db, 'fk_developer_contributions_season'))) {
+      await sql`
+        ALTER TABLE developer_contributions
+        ADD CONSTRAINT fk_developer_contributions_season
+        FOREIGN KEY (season_id) REFERENCES seasons(id)
+      `.execute(db);
+    }
+
+    console.log('Developer contributions table created successfully');
   },
 
   down: async (db: Kysely<any>): Promise<void> => {

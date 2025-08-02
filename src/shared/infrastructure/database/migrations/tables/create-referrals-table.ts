@@ -1,8 +1,19 @@
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
+import {
+  tableExists,
+  indexExists,
+  constraintExists,
+} from '../utils/migration-helpers';
 
 export const createReferralsTable = {
   up: async (db: Kysely<any>): Promise<void> => {
+    if (await tableExists(db, 'referrals')) {
+      console.log('Referrals table already exists, skipping creation');
+      return;
+    }
+
+    console.log('Creating referrals table...');
     await db.schema
       .createTable('referrals')
       .addColumn('id', 'uuid', (col) =>
@@ -28,45 +39,59 @@ export const createReferralsTable = {
       .execute();
 
     // Add unique constraint
-    await db.schema
-      .createIndex('idx_referrals_referee_season')
-      .on('referrals')
-      .columns(['referee_address', 'season_id'])
-      .unique()
-      .execute();
+    if (!(await indexExists(db, 'idx_referrals_referee_season'))) {
+      await db.schema
+        .createIndex('idx_referrals_referee_season')
+        .on('referrals')
+        .columns(['referee_address', 'season_id'])
+        .unique()
+        .execute();
+    }
 
     // Add indexes
-    await db.schema
-      .createIndex('idx_referrals_referrer_season')
-      .on('referrals')
-      .columns(['referrer_address', 'season_id'])
-      .execute();
+    if (!(await indexExists(db, 'idx_referrals_referrer_season'))) {
+      await db.schema
+        .createIndex('idx_referrals_referrer_season')
+        .on('referrals')
+        .columns(['referrer_address', 'season_id'])
+        .execute();
+    }
 
-    await db.schema
-      .createIndex('idx_referrals_status')
-      .on('referrals')
-      .column('status')
-      .execute();
+    if (!(await indexExists(db, 'idx_referrals_status'))) {
+      await db.schema
+        .createIndex('idx_referrals_status')
+        .on('referrals')
+        .column('status')
+        .execute();
+    }
 
-    await db.schema
-      .createIndex('idx_referrals_activation_date')
-      .on('referrals')
-      .column('activation_date')
-      .execute();
+    if (!(await indexExists(db, 'idx_referrals_activation_date'))) {
+      await db.schema
+        .createIndex('idx_referrals_activation_date')
+        .on('referrals')
+        .column('activation_date')
+        .execute();
+    }
 
     // Add foreign key
-    await sql`
-      ALTER TABLE referrals
-      ADD CONSTRAINT fk_referrals_season
-      FOREIGN KEY (season_id) REFERENCES seasons(id)
-    `.execute(db);
+    if (!(await constraintExists(db, 'fk_referrals_season'))) {
+      await sql`
+        ALTER TABLE referrals
+        ADD CONSTRAINT fk_referrals_season
+        FOREIGN KEY (season_id) REFERENCES seasons(id)
+      `.execute(db);
+    }
 
     // Add check constraint
-    await sql`
-      ALTER TABLE referrals
-      ADD CONSTRAINT chk_referrals_different_addresses
-      CHECK (referrer_address != referee_address)
-    `.execute(db);
+    if (!(await constraintExists(db, 'chk_referrals_different_addresses'))) {
+      await sql`
+        ALTER TABLE referrals
+        ADD CONSTRAINT chk_referrals_different_addresses
+        CHECK (referrer_address != referee_address)
+      `.execute(db);
+    }
+
+    console.log('Referrals table created successfully');
   },
 
   down: async (db: Kysely<any>): Promise<void> => {

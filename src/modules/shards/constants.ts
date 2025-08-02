@@ -4,6 +4,8 @@ export const SHARD_QUEUES = {
   SOCIAL_SYNC: 'shard:social-sync',
   DEVELOPER_SYNC: 'shard:developer-sync',
   REFERRAL_PROCESSOR: 'shard:referral-processor',
+  PRICE_UPDATE: 'shard:price-update',
+  TOKEN_METADATA_SYNC: 'shard:token-metadata-sync',
 } as const;
 
 export const SHARD_CACHE_KEYS = {

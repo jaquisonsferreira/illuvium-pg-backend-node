@@ -22,6 +22,7 @@ describe('VaultPositionRepository', () => {
     balance: '1000000000', // 1000 USDC with 6 decimals
     shares: '1000000000',
     usd_value: '1000',
+    lock_weeks: 4, // Default lock weeks
     snapshot_date: new Date('2024-01-15T00:00:00.000Z'),
     block_number: '12345678',
     created_at: new Date('2024-01-15T12:00:00.000Z'),
@@ -373,6 +374,7 @@ describe('VaultPositionRepository', () => {
         balance: '2000000000000000000', // 2 WETH
         shares: '2000000000000000000',
         usdValue: 5000,
+        lockWeeks: 4, // Default lock weeks
         snapshotDate: new Date('2024-01-20'),
         blockNumber: 12345679,
       });
@@ -399,6 +401,7 @@ describe('VaultPositionRepository', () => {
         balance: '2000000000000000000',
         shares: '2000000000000000000',
         usd_value: '5000',
+        lock_weeks: 4,
         snapshot_date: newPosition.snapshotDate,
         block_number: '12345679',
       });
@@ -418,6 +421,7 @@ describe('VaultPositionRepository', () => {
           balance: '1000000',
           shares: '1000000',
           usdValue: 1,
+          lockWeeks: 4, // Default lock weeks
           snapshotDate: new Date('2024-01-20'),
           blockNumber: 12345680,
         }),
@@ -429,6 +433,7 @@ describe('VaultPositionRepository', () => {
           balance: '1000000000000000000',
           shares: '1000000000000000000',
           usdValue: 2500,
+          lockWeeks: 4, // Default lock weeks
           snapshotDate: new Date('2024-01-20'),
           blockNumber: 12345680,
         }),
@@ -483,6 +488,7 @@ describe('VaultPositionRepository', () => {
         balance: '2000000000', // Updated balance
         shares: '2000000000',
         usdValue: 2000,
+        lockWeeks: 4, // Default lock weeks
         snapshotDate: new Date('2024-01-15'),
         blockNumber: 12345679,
       });
@@ -523,6 +529,7 @@ describe('VaultPositionRepository', () => {
         balance: '1000000000000000000000',
         shares: '1000000000000000000000',
         usdValue: 1000,
+        lockWeeks: 4, // Default lock weeks
         snapshotDate: new Date('2024-01-20'),
         blockNumber: 12345680,
       });
@@ -553,6 +560,7 @@ describe('VaultPositionRepository', () => {
         '3000000000', // Updated balance
         '3000000000',
         3000,
+        4, // Default lock weeks
         new Date('2024-01-15'),
         12345678,
         new Date(),
@@ -588,6 +596,7 @@ describe('VaultPositionRepository', () => {
         '0',
         '0',
         0,
+        4, // Default lock weeks
         new Date(),
         0,
         new Date(),

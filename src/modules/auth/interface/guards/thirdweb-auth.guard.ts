@@ -4,7 +4,20 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 import { ValidateTokenUseCase } from '../../application/use-cases/validate-token.use-case';
+
+const getThirdwebClientId = (): string => {
+  const secretsPath = '/mnt/secrets';
+  const clientIdPath = join(secretsPath, 'thirdweb-client-id');
+
+  if (existsSync(clientIdPath)) {
+    return readFileSync(clientIdPath, 'utf8').trim();
+  }
+
+  return process.env.THIRDWEB_CLIENT_ID || '';
+};
 
 @Injectable()
 export class ThirdwebAuthGuard implements CanActivate {
@@ -18,7 +31,7 @@ export class ThirdwebAuthGuard implements CanActivate {
       throw new UnauthorizedException('Access token is required');
     }
 
-    const clientId = process.env.THIRDWEB_CLIENT_ID;
+    const clientId = getThirdwebClientId();
     if (!clientId) {
       throw new UnauthorizedException('Authentication service not configured');
     }
@@ -43,7 +56,7 @@ export class ThirdwebAuthGuard implements CanActivate {
       return undefined;
     }
 
-    const parts = authHeader.split(/\s+/); // Split on one or more whitespace characters
+    const parts = authHeader.split(/\s+/);
     if (parts.length !== 2 || parts[0] !== 'Bearer') {
       return undefined;
     }

@@ -19,6 +19,8 @@ import { createReferralsTable } from './tables/create-referrals-table';
 import { createVaultPositionsTable } from './tables/create-vault-positions-table';
 import { createDeveloperContributionsTable } from './tables/create-developer-contributions-table';
 import { addLockWeeksToVaultPositions } from './tables/add-lock-weeks-to-vault-positions';
+import { createPriceHistoryTable } from './tables/create-price-history-table';
+import { createTokenMetadataTable } from './tables/create-token-metadata-table';
 
 export const migrations = [
   createAssetsTable,
@@ -42,4 +44,6 @@ export const migrations = [
   createVaultPositionsTable,
   createDeveloperContributionsTable,
   addLockWeeksToVaultPositions,
+  createPriceHistoryTable,
+  createTokenMetadataTable,
 ];

@@ -71,6 +71,7 @@ services:
     entrypoint: ["/bin/sh"]
     command: ["/scripts/init-db.sh"]
 
+
   backend-node:
     build:
       context: .
