@@ -10,8 +10,8 @@ ENV NODE_ENV=development
 # Instalar @nestjs/cli globalmente para garantir que o comando nest esteja disponível
 RUN npm install -g @nestjs/cli
 
-# Instalar as dependências do projeto
-RUN npm install
+# Limpar cache do npm e instalar as dependências do projeto
+RUN npm cache clean --force && npm install --legacy-peer-deps
 
 COPY . .
 
