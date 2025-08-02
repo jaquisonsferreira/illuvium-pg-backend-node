@@ -4,6 +4,8 @@ WORKDIR /app
 
 COPY package.json ./
 
+# Garantir que todas as dependências sejam instaladas (incluindo devDependencies)
+ENV NODE_ENV=development
 RUN npm install
 
 COPY . .
