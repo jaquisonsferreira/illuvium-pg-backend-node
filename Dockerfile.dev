@@ -2,17 +2,25 @@ FROM node:22-slim
 
 WORKDIR /app
 
+# Copiar apenas package.json primeiro
 COPY package.json ./
 
 # Garantir que todas as dependências sejam instaladas (incluindo devDependencies)
 ENV NODE_ENV=development
 
-# Instalar @nestjs/cli globalmente para garantir que o comando nest esteja disponível
+# Instalar @nestjs/cli globalmente
 RUN npm install -g @nestjs/cli
 
-# Limpar cache do npm e instalar as dependências do projeto
-RUN npm cache clean --force && npm install --legacy-peer-deps
+# Instalar dependências e verificar instalação
+RUN npm install --legacy-peer-deps && \
+    echo "=== Verificando instalação ===" && \
+    ls -la node_modules/@nestjs/ && \
+    ls -la node_modules/kysely/ && \
+    echo "=== Total de módulos instalados ===" && \
+    find node_modules -maxdepth 1 -type d | wc -l
 
+# Copiar o resto do código DEPOIS de instalar as dependências
+# Isso evita que o .dockerignore interfira com node_modules
 COPY . .
 
 # Adicionar node_modules/.bin ao PATH
