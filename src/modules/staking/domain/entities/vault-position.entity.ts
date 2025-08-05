@@ -11,7 +11,7 @@ export class VaultPositionEntity implements IVaultPosition {
   ) {}
 
   hasBalance(): boolean {
-    return this.shares !== '0' && this.assets !== '0';
+    return this.shares !== '0' || this.assets !== '0';
   }
 
   formatBalance(decimals: number = 18): {
