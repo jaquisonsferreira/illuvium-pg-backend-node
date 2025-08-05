@@ -257,8 +257,9 @@ export class GetUserStakingPositionsUseCase {
         }
 
         if (depositInfo && depositInfo.shareAmounts.length > 0) {
+          // Only sum shares that are greater than 0 (non-withdrawn positions)
           const totalShares = depositInfo.shareAmounts.reduce(
-            (sum, shares) => sum + shares,
+            (sum, shares) => (shares > BigInt(0) ? sum + shares : sum),
             BigInt(0),
           );
 
@@ -283,9 +284,15 @@ export class GetUserStakingPositionsUseCase {
         let formattedPositions: any[] = [];
 
         if (depositInfo && depositInfo.timestamps.length > 0) {
-          formattedPositions = await Promise.all(
-            depositInfo.timestamps.map(async (timestamp, index) => {
+          const positionsPromises = depositInfo.timestamps.map(
+            async (timestamp, index) => {
               const shareAmount = depositInfo.shareAmounts[index];
+
+              // Skip positions with 0 shares (withdrawn positions)
+              if (shareAmount === BigInt(0)) {
+                return null;
+              }
+
               const lockDurationSeconds = Number(
                 depositInfo.lockDurations[index],
               );
@@ -352,8 +359,17 @@ export class GetUserStakingPositionsUseCase {
                 block_number: 0, // We don't have block number from contract data
                 timestamp: depositTimestamp,
               };
-            }),
+            },
           );
+
+          // Wait for all promises and filter out null values
+          const allPositions = await Promise.all(positionsPromises);
+          formattedPositions = allPositions
+            .filter((position) => position !== null)
+            .map((position, index) => ({
+              ...position,
+              position_id: `${vault.tokenConfig.symbol} #${index + 1}`,
+            }));
         } else if (vaultPositions.length > 0) {
           const pos = vaultPositions[0];
           const stakedAmount = formatUnits(pos.assets || '0', decimals);
