@@ -66,6 +66,7 @@ async function bootstrap() {
       .setTitle('Illuvium API')
       .setDescription('API for Illuvium platform')
       .setVersion('1.0')
+      .setBasePath('api')
       .addBearerAuth()
       .build();
 
