@@ -31,7 +31,7 @@ import {
 } from '../../constants';
 
 @ApiTags('referrals')
-@Controller('api/shards')
+@Controller('shards')
 export class ReferralsController {
   constructor(
     private readonly manageReferralUseCase: ManageReferralUseCase,

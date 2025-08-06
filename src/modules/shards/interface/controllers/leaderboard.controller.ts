@@ -15,7 +15,7 @@ import { GetLeaderboardUseCase } from '../../application/use-cases/get-leaderboa
 import { ManageSeasonUseCase } from '../../application/use-cases/manage-season.use-case';
 
 @ApiTags('leaderboard')
-@Controller('api/leaderboard')
+@Controller('leaderboard')
 export class LeaderboardController {
   constructor(
     private readonly getLeaderboardUseCase: GetLeaderboardUseCase,
@@ -103,7 +103,35 @@ export class LeaderboardController {
           error.statusCode,
         );
       }
-      throw error;
+
+      if (error instanceof Error && error.message.includes('Season')) {
+        return {
+          season_id: query.season || 1,
+          timeframe: query.timeframe || 'all_time',
+          data: [],
+          pagination: {
+            page: query.page || 1,
+            limit: query.limit || 100,
+            totalItems: 0,
+            totalPages: 0,
+          },
+          user_position: undefined,
+          last_updated: new Date().toISOString(),
+        };
+      }
+
+      throw new HttpException(
+        {
+          statusCode: 500,
+          error: 'INTERNAL_ERROR',
+          message:
+            'An unexpected error occurred while fetching the leaderboard',
+          details: error instanceof Error ? error.message : 'Unknown error',
+          path: '/api/leaderboard',
+          timestamp: new Date().toISOString(),
+        },
+        500,
+      );
     }
   }
 
@@ -112,9 +140,13 @@ export class LeaderboardController {
   }
 
   private async getCurrentSeasonId(): Promise<number> {
-    const currentSeason =
-      await this.manageSeasonUseCase.getCurrentSeason('base');
-    return currentSeason?.id || 1;
+    try {
+      const currentSeason =
+        await this.manageSeasonUseCase.getCurrentSeason('base');
+      return currentSeason?.id || 1;
+    } catch {
+      return 1;
+    }
   }
 
   private async getUserPosition(

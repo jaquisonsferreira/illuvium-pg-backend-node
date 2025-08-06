@@ -26,7 +26,7 @@ import {
 } from '../../constants';
 
 @ApiTags('shards')
-@Controller('api/shards')
+@Controller('shards')
 export class ShardsController {
   constructor(
     private readonly calculateDailyShardsUseCase: CalculateDailyShardsUseCase,

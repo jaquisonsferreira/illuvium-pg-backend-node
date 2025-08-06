@@ -29,7 +29,7 @@ import {
 import { GetTokenPriceUseCase } from '../../application/use-cases/get-token-price.use-case';
 
 @ApiTags('prices')
-@Controller('api/prices')
+@Controller('prices')
 export class PricesController {
   constructor(private readonly getTokenPriceUseCase: GetTokenPriceUseCase) {}
 

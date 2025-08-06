@@ -210,10 +210,7 @@ export class GetUserStakingPositionsUseCase {
         let totalStaked = BigInt(0);
         let totalStakedFormatted = '0';
 
-        const totalStakedUsd = parseFloat(totalStakedFormatted) * tokenPrice;
-
         const shardsRate = this.rewardsConfigService.getRewardRate(vault.type);
-        const totalEarnedShards = (totalStakedUsd / 1000) * shardsRate;
 
         let walletBalance = '0';
         let walletBalanceRaw = '0';
@@ -417,6 +414,10 @@ export class GetUserStakingPositionsUseCase {
         const tvlUsd = tvl * tokenPrice;
 
         const vaultId = `${vault.tokenConfig.symbol.toLowerCase().replace('/', '_').replace('-lp', '')}_vault`;
+
+        const totalEarnedShards = formattedPositions.reduce((sum, position) => {
+          return sum + parseInt(position.earned_shards);
+        }, 0);
 
         return {
           vault_id: vaultId,

@@ -4,6 +4,7 @@ import { Queue } from 'bull';
 import { Cron, CronExpression } from '@shared/decorators/cron.decorator';
 import { v4 as uuidv4 } from 'uuid';
 import { SubgraphService } from './subgraph.service';
+import { AlchemyShardsService } from './alchemy-shards.service';
 import { CoinGeckoService } from './coingecko.service';
 import { IVaultPositionRepository } from '../../domain/repositories/vault-position.repository.interface';
 import { VaultPositionEntity } from '../../domain/entities/vault-position.entity';
@@ -24,6 +25,7 @@ export class VaultSyncService {
     @InjectQueue(SHARD_QUEUES.VAULT_SYNC)
     private readonly vaultSyncQueue: Queue,
     private readonly subgraphService: SubgraphService,
+    private readonly alchemyShardsService: AlchemyShardsService,
     private readonly coinGeckoService: CoinGeckoService,
     @Inject('IVaultPositionRepository')
     private readonly vaultPositionRepository: IVaultPositionRepository,
@@ -47,8 +49,10 @@ export class VaultSyncService {
         `Syncing vaults for chain ${chain} on ${snapshotDate.toISOString()}`,
       );
 
-      const eligibleVaults =
-        await this.subgraphService.getEligibleVaults(chain);
+      const useAlchemy = process.env.DATA_PROVIDER === 'alchemy';
+      const eligibleVaults = useAlchemy
+        ? await this.alchemyShardsService.getEligibleVaults(chain)
+        : await this.subgraphService.getEligibleVaults(chain);
 
       if (eligibleVaults.length === 0) {
         this.logger.warn(`No eligible vaults found for chain ${chain}`);
@@ -96,25 +100,38 @@ export class VaultSyncService {
     try {
       this.logger.debug(`Processing vault sync: ${vaultAddress} on ${chain}`);
 
+      const useAlchemy = process.env.DATA_PROVIDER === 'alchemy';
+
       let targetBlock = blockNumber;
       if (!targetBlock) {
         const midnight = new Date(snapshotDate);
         midnight.setUTCHours(0, 0, 0, 0);
         const timestamp = Math.floor(midnight.getTime() / 1000);
-        targetBlock = await this.subgraphService.getBlockByTimestamp(
-          chain,
-          timestamp,
-        );
+        targetBlock = useAlchemy
+          ? await this.alchemyShardsService.getBlockByTimestamp(
+              chain,
+              timestamp,
+            )
+          : await this.subgraphService.getBlockByTimestamp(chain, timestamp);
       }
 
-      const [vaultData, positions] = await Promise.all([
-        this.subgraphService.getVaultData(vaultAddress, chain),
-        this.subgraphService.getVaultPositions(
-          vaultAddress,
-          chain,
-          targetBlock,
-        ),
-      ]);
+      const [vaultData, positions] = useAlchemy
+        ? await Promise.all([
+            this.alchemyShardsService.getVaultData(vaultAddress, chain),
+            this.alchemyShardsService.getVaultPositions(
+              vaultAddress,
+              chain,
+              targetBlock,
+            ),
+          ])
+        : await Promise.all([
+            this.subgraphService.getVaultData(vaultAddress, chain),
+            this.subgraphService.getVaultPositions(
+              vaultAddress,
+              chain,
+              targetBlock,
+            ),
+          ]);
 
       if (!vaultData) {
         this.logger.warn(`No vault data found for ${vaultAddress} on ${chain}`);

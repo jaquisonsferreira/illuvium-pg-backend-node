@@ -13,6 +13,7 @@ import { ConfigModule, RateLimitModule } from './shared/infrastructure/config';
 import { DeveloperModule } from './modules/developer/developer.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { StakingModule } from './modules/staking/staking.module';
+import { ShardsModule } from './modules/shards/shards.module';
 
 import { ObservabilityModule } from './modules/observability/observability.module';
 import { SystemModule } from './modules/system/system.module';
@@ -35,6 +36,7 @@ import { SystemModule } from './modules/system/system.module';
     DeveloperModule,
     ChatModule,
     StakingModule,
+    ShardsModule,
     SystemModule,
   ],
   controllers: [AppController],

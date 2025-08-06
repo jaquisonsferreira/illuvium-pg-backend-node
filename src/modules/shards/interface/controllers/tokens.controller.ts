@@ -26,7 +26,7 @@ import {
 import { GetTokenMetadataUseCase } from '../../application/use-cases/get-token-metadata.use-case';
 
 @ApiTags('tokens')
-@Controller('api/tokens')
+@Controller('tokens')
 export class TokensController {
   constructor(
     private readonly getTokenMetadataUseCase: GetTokenMetadataUseCase,

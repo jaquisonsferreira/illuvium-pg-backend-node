@@ -7,9 +7,10 @@ import { SHARD_QUEUES } from '../../constants';
 import { ManageSeasonUseCase } from '../../application/use-cases/manage-season.use-case';
 import { CoinGeckoService } from '../../infrastructure/services/coingecko.service';
 import { SubgraphService } from '../../infrastructure/services/subgraph.service';
+import { AlchemyShardsService } from '../../infrastructure/services/alchemy-shards.service';
 
 @ApiTags('system')
-@Controller('api/system')
+@Controller('system')
 export class SystemStatusController {
   constructor(
     @InjectQueue(SHARD_QUEUES.DAILY_PROCESSOR) private dailyQueue: Queue,
@@ -17,6 +18,7 @@ export class SystemStatusController {
     private readonly manageSeasonUseCase: ManageSeasonUseCase,
     private readonly coinGeckoService: CoinGeckoService,
     private readonly subgraphService: SubgraphService,
+    private readonly alchemyShardsService: AlchemyShardsService,
   ) {}
 
   @Get('status')
@@ -129,23 +131,46 @@ export class SystemStatusController {
       });
     }
 
-    try {
-      const subgraphStart = Date.now();
-      await this.subgraphService.getEligibleVaults('base');
-      services.push({
-        name: 'The Graph Protocol',
-        status: 'healthy' as const,
-        last_check: new Date().toISOString(),
-        response_time_ms: Date.now() - subgraphStart,
-      });
-    } catch (error) {
-      console.error(error);
-      services.push({
-        name: 'The Graph Protocol',
-        status: 'degraded' as const,
-        last_check: new Date().toISOString(),
-        response_time_ms: Date.now() - startTime,
-      });
+    const useAlchemy = process.env.DATA_PROVIDER === 'alchemy';
+
+    if (useAlchemy) {
+      try {
+        const alchemyStart = Date.now();
+        await this.alchemyShardsService.getEligibleVaults('base');
+        services.push({
+          name: 'Alchemy API',
+          status: 'healthy' as const,
+          last_check: new Date().toISOString(),
+          response_time_ms: Date.now() - alchemyStart,
+        });
+      } catch (error) {
+        console.error(error);
+        services.push({
+          name: 'Alchemy API',
+          status: 'degraded' as const,
+          last_check: new Date().toISOString(),
+          response_time_ms: Date.now() - startTime,
+        });
+      }
+    } else {
+      try {
+        const subgraphStart = Date.now();
+        await this.subgraphService.getEligibleVaults('base');
+        services.push({
+          name: 'The Graph Protocol',
+          status: 'healthy' as const,
+          last_check: new Date().toISOString(),
+          response_time_ms: Date.now() - subgraphStart,
+        });
+      } catch (error) {
+        console.error(error);
+        services.push({
+          name: 'The Graph Protocol',
+          status: 'degraded' as const,
+          last_check: new Date().toISOString(),
+          response_time_ms: Date.now() - startTime,
+        });
+      }
     }
 
     // Kaito AI is not integrated yet, so we'll show it as unhealthy

@@ -29,7 +29,7 @@ import {
 import { ManageSeasonUseCase } from '../../application/use-cases/manage-season.use-case';
 
 @ApiTags('seasons')
-@Controller('api/seasons')
+@Controller('seasons')
 export class SeasonsController {
   constructor(private readonly manageSeasonUseCase: ManageSeasonUseCase) {}
 

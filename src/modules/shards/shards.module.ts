@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
-import { HttpModule } from '@shared/modules/http.module';
+import { HttpModule } from '@nestjs/axios';
 
 // Controllers
 import { ShardsController } from './interface/controllers/shards.controller';
@@ -28,10 +28,12 @@ import { SyncLpTokensUseCase } from './application/use-cases/sync-lp-tokens.use-
 // Domain Services
 import { ShardCalculationDomainService } from './domain/services/shard-calculation.domain-service';
 import { FraudDetectionDomainService } from './domain/services/fraud-detection.domain-service';
+import { AntiFraudDomainService } from './domain/services/anti-fraud.domain-service';
 
 // Infrastructure Services
 import { CoinGeckoService } from './infrastructure/services/coingecko.service';
 import { SubgraphService } from './infrastructure/services/subgraph.service';
+import { AlchemyShardsService } from './infrastructure/services/alchemy-shards.service';
 import { VaultSyncService } from './infrastructure/services/vault-sync.service';
 import { DeveloperContributionProcessor } from './infrastructure/services/developer-contribution.processor';
 import { BlockchainVerificationService } from './infrastructure/services/blockchain-verification.service';
@@ -114,10 +116,12 @@ import { SHARD_QUEUES } from './constants';
     // Domain Services
     ShardCalculationDomainService,
     FraudDetectionDomainService,
+    AntiFraudDomainService,
 
     // Infrastructure Services
     CoinGeckoService,
     SubgraphService,
+    AlchemyShardsService,
     VaultSyncService,
     DeveloperContributionProcessor,
     BlockchainVerificationService,
@@ -186,6 +190,7 @@ import { SHARD_QUEUES } from './constants';
     // Export domain services
     ShardCalculationDomainService,
     FraudDetectionDomainService,
+    AntiFraudDomainService,
   ],
 })
 export class ShardsModule {}
