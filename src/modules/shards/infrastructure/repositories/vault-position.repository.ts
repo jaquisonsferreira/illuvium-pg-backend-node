@@ -339,4 +339,14 @@ export class VaultPositionRepository implements IVaultPositionRepository {
 
     return results.map(this.toDomainModel);
   }
+
+  async findUniqueWallets(_seasonId: number): Promise<string[]> {
+    const results = await this.db
+      .selectFrom('vault_positions')
+      .select('wallet_address')
+      .distinct()
+      .execute();
+
+    return results.map((row) => row.wallet_address);
+  }
 }

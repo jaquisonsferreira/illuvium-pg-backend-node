@@ -10,6 +10,7 @@ import { SeasonsController } from './interface/controllers/seasons.controller';
 import { SystemStatusController } from './interface/controllers/system-status.controller';
 import { PricesController } from './interface/controllers/prices.controller';
 import { TokensController } from './interface/controllers/tokens.controller';
+import { AdminShardsController } from './interface/controllers/admin.controller';
 
 // Use Cases
 import { CalculateDailyShardsUseCase } from './application/use-cases/calculate-daily-shards.use-case';
@@ -38,6 +39,7 @@ import { VaultSyncService } from './infrastructure/services/vault-sync.service';
 import { DeveloperContributionProcessor } from './infrastructure/services/developer-contribution.processor';
 import { BlockchainVerificationService } from './infrastructure/services/blockchain-verification.service';
 import { GitHubVerificationService } from './infrastructure/services/github-verification.service';
+import { DatabaseSeedService } from './infrastructure/services/database-seed.service';
 
 // Repositories
 import { VaultPositionRepository } from './infrastructure/repositories/vault-position.repository';
@@ -97,6 +99,7 @@ import { SHARD_QUEUES } from './constants';
     SystemStatusController,
     PricesController,
     TokensController,
+    AdminShardsController,
   ],
   providers: [
     // Use Cases
@@ -126,6 +129,7 @@ import { SHARD_QUEUES } from './constants';
     DeveloperContributionProcessor,
     BlockchainVerificationService,
     GitHubVerificationService,
+    DatabaseSeedService,
 
     // Repositories
     VaultPositionRepository,
