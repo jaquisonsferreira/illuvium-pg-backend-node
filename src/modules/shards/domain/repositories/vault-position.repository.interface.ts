@@ -63,4 +63,6 @@ export interface IVaultPositionRepository {
     snapshotDate: Date,
     limit: number,
   ): Promise<VaultPositionEntity[]>;
+
+  findUniqueWallets(seasonId: number): Promise<string[]>;
 }
