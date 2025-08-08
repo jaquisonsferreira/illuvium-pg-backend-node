@@ -55,6 +55,8 @@ export class AlchemyShardsService {
     'function totalSupply() view returns (uint256)',
     'function asset() view returns (address)',
     'function balanceOf(address account) view returns (uint256)',
+    'function shares(address account) view returns (uint256)', // Some vaults use shares
+    'function deposited(address account) view returns (uint256)', // Some vaults use deposited
     'function symbol() view returns (string)',
     'function decimals() view returns (uint8)',
     'function stakingToken() view returns (address)', // Alternativa para asset()
@@ -119,8 +121,11 @@ export class AlchemyShardsService {
         });
         this.alchemyClients.set(chain, alchemy);
 
+        const isProduction =
+          this.configService.get<string>('NODE_ENV') === 'production';
+        const networkType = isProduction ? 'mainnet' : 'sepolia';
         const provider = new ethers.JsonRpcProvider(
-          `https://${chain}-mainnet.g.alchemy.com/v2/${config.apiKey}`,
+          `https://${chain}-${networkType}.g.alchemy.com/v2/${config.apiKey}`,
         );
         this.providers.set(chain, provider);
 
@@ -152,7 +157,6 @@ export class AlchemyShardsService {
         provider,
       );
 
-      // Try to get total value - try different function names
       let totalAssets: any;
       try {
         totalAssets = await vaultContract.totalAssets();
@@ -163,14 +167,12 @@ export class AlchemyShardsService {
           try {
             totalAssets = await vaultContract.totalStaked();
           } catch {
-            // If none work, use a default value with smaller decimals
             totalAssets = ethers.parseUnits('1000000', 6);
             this.logger.warn(`Using default totalAssets for ${vaultAddress}`);
           }
         }
       }
 
-      // Try to get total supply
       let totalSupply: any;
       try {
         totalSupply = await vaultContract.totalSupply();
@@ -178,13 +180,11 @@ export class AlchemyShardsService {
         try {
           totalSupply = await vaultContract.totalStaked();
         } catch {
-          // If none work, use same as totalAssets
           totalSupply = totalAssets;
           this.logger.warn(`Using default totalSupply for ${vaultAddress}`);
         }
       }
 
-      // Try to get asset address - try different function names
       let assetAddress: string;
       try {
         assetAddress = await vaultContract.asset();
@@ -192,7 +192,6 @@ export class AlchemyShardsService {
         try {
           assetAddress = await vaultContract.stakingToken();
         } catch {
-          // Use hardcoded ILV token address for Base Sepolia
           assetAddress = '0x0Ca878d9333F7ebeD2bE2ED40aE9d4cF5E1FB09e';
           this.logger.warn(
             `Using default ILV token address for ${vaultAddress}`,
@@ -206,21 +205,20 @@ export class AlchemyShardsService {
         provider,
       );
 
-      // Try to get token symbol and decimals
       let symbol: string;
       let decimals: number;
 
       try {
         symbol = await assetContract.symbol();
       } catch {
-        symbol = 'ILV'; // Default to ILV
+        symbol = 'ILV';
         this.logger.warn(`Using default symbol for token ${assetAddress}`);
       }
 
       try {
         decimals = await assetContract.decimals();
       } catch {
-        decimals = 18; // Default to 18 decimals
+        decimals = 18;
         this.logger.warn(`Using default decimals for token ${assetAddress}`);
       }
 
@@ -346,21 +344,21 @@ export class AlchemyShardsService {
 
       const positions: VaultPositionData[] = [];
 
-      const logs = await alchemy.core.getLogs({
-        address: vaultAddress,
-        topics: [ethers.id('Transfer(address,address,uint256)')],
-        fromBlock: blockNumber ? blockNumber - 1000 : 'earliest',
-        toBlock: blockNumber || 'latest',
-      });
+      // Get all unique wallet addresses from Transfer events
+      const uniqueAddresses = await this.getVaultHolders(
+        vaultAddress,
+        chain,
+        blockNumber,
+      );
 
-      const uniqueAddresses = new Set<string>();
-      logs.forEach((log) => {
-        if (log.topics[2]) {
-          uniqueAddresses.add(
-            ethers.getAddress(`0x${log.topics[2].slice(26)}`),
-          );
-        }
-      });
+      if (uniqueAddresses.size === 0) {
+        this.logger.warn(`No holders found for vault ${vaultAddress}`);
+        return [];
+      }
+
+      this.logger.log(
+        `Checking balances for ${uniqueAddresses.size} wallets in vault ${vaultAddress}`,
+      );
 
       const provider = this.providers.get(chain);
       if (!provider) {
@@ -373,13 +371,49 @@ export class AlchemyShardsService {
         provider,
       );
 
+      this.logger.log(`Provider URL: ${provider._getConnection().url}`);
+      this.logger.log(`Vault contract address: ${vaultAddress}`);
+
       for (const address of uniqueAddresses) {
         try {
-          const shares = blockNumber
-            ? await vaultContract.balanceOf(address, {
-                blockTag: blockNumber,
-              })
-            : await vaultContract.balanceOf(address);
+          let shares: bigint = 0n;
+
+          try {
+            const formattedAddress = ethers.getAddress(address);
+            this.logger.log(
+              `Checking balance for formatted address: ${formattedAddress}`,
+            );
+            shares = await vaultContract.balanceOf(formattedAddress);
+          } catch (e1) {
+            this.logger.error(`Error calling balanceOf: ${e1.message}`);
+            try {
+              shares = blockNumber
+                ? await vaultContract.shares(address, { blockTag: blockNumber })
+                : await vaultContract.shares(address);
+              this.logger.log(
+                `Using 'shares' method for vault ${vaultAddress}`,
+              );
+            } catch {
+              try {
+                shares = blockNumber
+                  ? await vaultContract.deposited(address, {
+                      blockTag: blockNumber,
+                    })
+                  : await vaultContract.deposited(address);
+                this.logger.log(
+                  `Using 'deposited' method for vault ${vaultAddress}`,
+                );
+              } catch {
+                this.logger.warn(
+                  `Could not get balance for ${address} in vault ${vaultAddress}`,
+                );
+              }
+            }
+          }
+
+          this.logger.log(
+            `Wallet ${address} has ${shares.toString()} shares in vault ${vaultAddress}`,
+          );
 
           if (shares > 0n) {
             positions.push({
@@ -499,6 +533,113 @@ export class AlchemyShardsService {
 
   private getEligibleAssetSymbols(): string[] {
     return ['ETH', 'WETH', 'USDC', 'USDT', 'DAI', 'WBTC'];
+  }
+
+  private async getVaultHolders(
+    vaultAddress: string,
+    chain: string,
+    blockNumber?: number,
+  ): Promise<Set<string>> {
+    const uniqueAddresses = new Set<string>();
+    const isTestnet =
+      !this.configService.get<string>('NODE_ENV') ||
+      this.configService.get<string>('NODE_ENV') !== 'production';
+
+    try {
+      const alchemy = this.alchemyClients.get(chain);
+      if (!alchemy) {
+        this.logger.warn(`No Alchemy client for ${chain}, returning empty set`);
+        return uniqueAddresses;
+      }
+
+      const MAX_BLOCK_RANGE = 499;
+      const currentBlock = blockNumber || (await alchemy.core.getBlockNumber());
+      const lookbackBlocks = isTestnet ? 10000 : 100000;
+      const startBlock = Math.max(0, currentBlock - lookbackBlocks);
+
+      this.logger.log(
+        `Scanning Transfer events from block ${startBlock} to ${currentBlock} for vault ${vaultAddress}`,
+      );
+
+      let processedChunks = 0;
+      const totalChunks = Math.ceil(
+        (currentBlock - startBlock) / MAX_BLOCK_RANGE,
+      );
+
+      for (
+        let fromBlock = startBlock;
+        fromBlock <= currentBlock;
+        fromBlock += MAX_BLOCK_RANGE + 1
+      ) {
+        const toBlock = Math.min(fromBlock + MAX_BLOCK_RANGE, currentBlock);
+        processedChunks++;
+
+        if (processedChunks % 10 === 0 || processedChunks === 1) {
+          this.logger.log(
+            `Processing chunk ${processedChunks}/${totalChunks} (blocks ${fromBlock}-${toBlock})`,
+          );
+        }
+
+        try {
+          const transfersTo = await alchemy.core.getLogs({
+            fromBlock,
+            toBlock,
+            address: vaultAddress,
+            topics: [
+              ethers.id('Transfer(address,address,uint256)'),
+              null,
+              null,
+            ],
+          });
+
+          for (const log of transfersTo) {
+            if (log.topics[2]) {
+              const toAddress = '0x' + log.topics[2].slice(-40);
+              uniqueAddresses.add(toAddress.toLowerCase());
+            }
+          }
+
+          const transfersFrom = await alchemy.core.getLogs({
+            fromBlock,
+            toBlock,
+            address: vaultAddress,
+            topics: [ethers.id('Transfer(address,address,uint256)')],
+          });
+
+          for (const log of transfersFrom) {
+            if (log.topics[1]) {
+              const fromAddress = '0x' + log.topics[1].slice(-40);
+              if (
+                fromAddress !== '0x0000000000000000000000000000000000000000'
+              ) {
+                uniqueAddresses.add(fromAddress.toLowerCase());
+              }
+            }
+          }
+        } catch (error) {
+          this.logger.warn(
+            `Error fetching logs for blocks ${fromBlock}-${toBlock}: ${error.message}`,
+          );
+        }
+      }
+
+      this.logger.log(
+        `Found ${uniqueAddresses.size} unique addresses from Transfer events`,
+      );
+
+      // If no addresses found from events and we're on testnet, add known test wallets
+      if (uniqueAddresses.size === 0 && isTestnet) {
+        this.logger.warn(
+          'No addresses found from events, adding known test wallets',
+        );
+        uniqueAddresses.add('0x6f9ec7f82891d0e7a773f2f2eeb5677493d066c2');
+        uniqueAddresses.add('0x5c33ab938e8eb4ffd469359e484c9a2d46bb0dda');
+      }
+    } catch (error) {
+      this.logger.error(`Failed to get vault holders: ${error}`);
+    }
+
+    return uniqueAddresses;
   }
 
   private async getFallbackVaultPositions(
