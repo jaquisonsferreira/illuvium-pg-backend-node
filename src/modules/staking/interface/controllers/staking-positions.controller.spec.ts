@@ -90,6 +90,7 @@ describe('StakingPositionsController', () => {
           total_user_staked_ilv: '200.50',
           total_user_staked_ilv_eth: '0',
           total_user_earned_shards: '6400',
+          shards_earned_last_day: '0',
         },
         pagination: {
           page: 1,
@@ -161,6 +162,7 @@ describe('StakingPositionsController', () => {
           total_user_staked_ilv: '200.50',
           total_user_staked_ilv_eth: '0',
           total_user_earned_shards: '0',
+          shards_earned_last_day: '0',
         },
         pagination: {
           page: 1,
@@ -205,6 +207,7 @@ describe('StakingPositionsController', () => {
           total_user_staked_ilv: '0',
           total_user_staked_ilv_eth: '0',
           total_user_earned_shards: '0',
+          shards_earned_last_day: '0',
         },
         pagination: {
           page: 2,
@@ -250,6 +253,7 @@ describe('StakingPositionsController', () => {
           total_user_staked_ilv: '0',
           total_user_staked_ilv_eth: '0',
           total_user_earned_shards: '0',
+          shards_earned_last_day: '0',
         },
         pagination: {
           page: 1,
@@ -300,6 +304,7 @@ describe('StakingPositionsController', () => {
           total_user_staked_ilv: '0',
           total_user_staked_ilv_eth: '0',
           total_user_earned_shards: '0',
+          shards_earned_last_day: '0',
         },
         pagination: {
           page: 1,
@@ -367,6 +372,7 @@ describe('StakingPositionsController', () => {
           total_user_staked_ilv: '0',
           total_user_staked_ilv_eth: '179.50',
           total_user_earned_shards: '0',
+          shards_earned_last_day: '0',
         },
         pagination: {
           page: 1,

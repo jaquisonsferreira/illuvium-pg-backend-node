@@ -530,10 +530,24 @@ export class GetUserStakingPositionsUseCase {
       .filter((vault) => vault.underlying_asset_ticker.includes('ILV/ETH'))
       .reduce((sum, vault) => sum + parseFloat(vault.user_total_staked), 0);
 
-    const totalEarnedShards = vaults.reduce(
-      (sum, vault) => sum + parseInt(vault.user_total_earned_shards),
-      0,
-    );
+    let totalEarnedShards = 0;
+    try {
+      const historicalSummary =
+        await this.shardEarningHistoryRepository.getSummaryByWallet(
+          walletAddress,
+          seasonId,
+        );
+      totalEarnedShards = Math.floor(historicalSummary.breakdown.staking);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to fetch historical shard data for wallet ${walletAddress}, falling back to active positions:`,
+        error,
+      );
+      totalEarnedShards = vaults.reduce(
+        (sum, vault) => sum + parseInt(vault.user_total_earned_shards),
+        0,
+      );
+    }
 
     const totalPortfolioValue = vaults.reduce((sum, vault) => {
       const staked = parseFloat(vault.user_total_staked);
