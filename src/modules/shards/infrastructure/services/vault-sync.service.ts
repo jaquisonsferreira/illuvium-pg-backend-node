@@ -138,6 +138,10 @@ export class VaultSyncService {
         return;
       }
 
+      this.logger.log(
+        `Found ${positions.length} positions for vault ${vaultAddress} on ${chain}`,
+      );
+
       let tokenPrice: number;
       try {
         tokenPrice = await this.coinGeckoService.getTokenPrice(
@@ -162,8 +166,9 @@ export class VaultSyncService {
         const balance = (shares * totalAssets) / totalSupply;
 
         const decimals = position.vault.asset.decimals;
-        const balanceNumber = Number(balance) / Math.pow(10, decimals);
-        const usdValue = balanceNumber * tokenPrice;
+        const balanceDecimal = Number(balance) / Math.pow(10, decimals);
+        const sharesDecimal = Number(shares) / Math.pow(10, decimals);
+        const usdValue = balanceDecimal * tokenPrice;
 
         const entity = new VaultPositionEntity(
           uuidv4(),
@@ -171,8 +176,8 @@ export class VaultSyncService {
           vaultAddress,
           position.vault.asset.symbol,
           chain,
-          balance.toString(),
-          shares.toString(),
+          balanceDecimal.toFixed(6),
+          sharesDecimal.toFixed(6),
           usdValue,
           4,
           snapshotDate,
@@ -238,8 +243,9 @@ export class VaultSyncService {
         const tokenPrice = tokenPrices.get(position.vault.asset.symbol) || 0;
 
         const decimals = position.vault.asset.decimals;
-        const balanceNumber = Number(balance) / Math.pow(10, decimals);
-        const usdValue = balanceNumber * tokenPrice;
+        const balanceDecimal = Number(balance) / Math.pow(10, decimals);
+        const sharesDecimal = Number(shares) / Math.pow(10, decimals);
+        const usdValue = balanceDecimal * tokenPrice;
 
         const entity = new VaultPositionEntity(
           uuidv4(),
@@ -247,8 +253,8 @@ export class VaultSyncService {
           position.vault.id,
           position.vault.asset.symbol,
           chain,
-          balance.toString(),
-          shares.toString(),
+          balanceDecimal.toFixed(6),
+          sharesDecimal.toFixed(6),
           usdValue,
           4,
           snapshotDate,
@@ -339,8 +345,9 @@ export class VaultSyncService {
 
     const balance = (shares * totalAssets) / totalSupply;
     const decimals = targetPosition.vault.asset.decimals;
-    const balanceNumber = Number(balance) / Math.pow(10, decimals);
-    const usdValue = balanceNumber * tokenPrice;
+    const balanceDecimal = Number(balance) / Math.pow(10, decimals);
+    const sharesDecimal = Number(shares) / Math.pow(10, decimals);
+    const usdValue = balanceDecimal * tokenPrice;
 
     return new VaultPositionEntity(
       uuidv4(),
@@ -348,8 +355,8 @@ export class VaultSyncService {
       vaultAddress,
       targetPosition.vault.asset.symbol,
       chain,
-      balance.toString(),
-      shares.toString(),
+      balanceDecimal.toFixed(6),
+      sharesDecimal.toFixed(6),
       usdValue,
       4, // Default lock weeks
       new Date(),
