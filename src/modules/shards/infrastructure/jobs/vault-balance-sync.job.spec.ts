@@ -1,16 +1,35 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { VaultBalanceSyncJob } from './vault-balance-sync.job';
+import { VaultSyncService } from '../services/vault-sync.service';
 import { Job } from 'bull';
 
 describe('VaultBalanceSyncJob', () => {
   let job: VaultBalanceSyncJob;
+  let vaultSyncService: jest.Mocked<VaultSyncService>;
 
   beforeEach(async () => {
+    const mockVaultSyncService = {
+      syncChainVaults: jest.fn(),
+      processVaultSync: jest.fn(),
+      syncWalletPositions: jest.fn(),
+      scheduleDailyVaultSync: jest.fn(),
+      getHistoricalVaultValue: jest.fn(),
+      getTotalVaultValue: jest.fn(),
+      getVaultPosition: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [VaultBalanceSyncJob],
+      providers: [
+        VaultBalanceSyncJob,
+        {
+          provide: VaultSyncService,
+          useValue: mockVaultSyncService,
+        },
+      ],
     }).compile();
 
     job = module.get<VaultBalanceSyncJob>(VaultBalanceSyncJob);
+    vaultSyncService = module.get(VaultSyncService);
   });
 
   it('should be defined', () => {
@@ -24,16 +43,17 @@ describe('VaultBalanceSyncJob', () => {
         data: { test: 'data' },
       } as Job<any>;
 
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const loggerSpy = jest.spyOn(job['logger'], 'log').mockImplementation();
+      vaultSyncService.syncChainVaults.mockResolvedValue();
 
       await job.process(mockJob);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Processing vault balance sync job:',
-        '123',
+      expect(loggerSpy).toHaveBeenCalledWith(
+        'Processing vault balance sync job: 123',
       );
+      expect(vaultSyncService.syncChainVaults).toHaveBeenCalled();
 
-      consoleSpy.mockRestore();
+      loggerSpy.mockRestore();
     });
   });
 
@@ -52,16 +72,20 @@ describe('VaultBalanceSyncJob', () => {
         },
       } as Job<any>;
 
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const loggerSpy = jest.spyOn(job['logger'], 'log').mockImplementation();
+      vaultSyncService.syncChainVaults.mockResolvedValue();
 
       await job.syncVaultPositions(mockJob);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Syncing vault positions:',
-        mockJob.data,
+      expect(loggerSpy).toHaveBeenCalledWith(
+        `Syncing vault positions: ${JSON.stringify(mockJob.data)}`,
+      );
+      expect(vaultSyncService.syncChainVaults).toHaveBeenCalledWith(
+        'ethereum',
+        expect.any(Date),
       );
 
-      consoleSpy.mockRestore();
+      loggerSpy.mockRestore();
     });
   });
 
@@ -90,16 +114,18 @@ describe('VaultBalanceSyncJob', () => {
         },
       } as Job<any>;
 
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const loggerSpy = jest.spyOn(job['logger'], 'log').mockImplementation();
+      vaultSyncService.syncChainVaults.mockResolvedValue();
 
       await job.updateVaultBalances(mockJob);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerSpy).toHaveBeenCalledWith(
         'Updating vault balances:',
         mockJob.data,
       );
+      expect(vaultSyncService.syncChainVaults).toHaveBeenCalled();
 
-      consoleSpy.mockRestore();
+      loggerSpy.mockRestore();
     });
   });
 
@@ -130,16 +156,23 @@ describe('VaultBalanceSyncJob', () => {
         },
       } as Job<any>;
 
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const loggerSpy = jest.spyOn(job['logger'], 'log').mockImplementation();
+      const loggerWarnSpy = jest
+        .spyOn(job['logger'], 'warn')
+        .mockImplementation();
 
       await job.calculateVaultRewards(mockJob);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerSpy).toHaveBeenCalledWith(
         'Calculating vault rewards:',
         mockJob.data,
       );
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        'Vault rewards calculation not yet implemented',
+      );
 
-      consoleSpy.mockRestore();
+      loggerSpy.mockRestore();
+      loggerWarnSpy.mockRestore();
     });
   });
 });

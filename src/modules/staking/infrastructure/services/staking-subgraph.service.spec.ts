@@ -195,14 +195,14 @@ describe('StakingSubgraphService', () => {
         .mockResolvedValue(1000100);
 
       const result = await service.getVaultTVLHistory(
-        vaultAddress,
         ChainType.BASE,
+        vaultAddress,
       );
 
-      expect(result.data).toHaveLength(2);
-      expect(result.data[0].timestamp).toBe(1705302600000);
-      expect(result.data[0].totalAssetsUsd).toBe(10000);
-      expect(result.data[1].totalAssetsUsd).toBe(11000);
+      expect(result).toHaveLength(2);
+      expect(result[0].timestamp).toBe(1705302600000);
+      expect(result[0].totalAssetsUsd).toBe(10000);
+      expect(result[1].totalAssetsUsd).toBe(11000);
     });
 
     it('should apply timestamp filters', async () => {
@@ -232,8 +232,8 @@ describe('StakingSubgraphService', () => {
         .mockResolvedValue(1000100);
 
       await service.getVaultTVLHistory(
-        vaultAddress,
         ChainType.BASE,
+        vaultAddress,
         fromTimestamp,
         toTimestamp,
       );

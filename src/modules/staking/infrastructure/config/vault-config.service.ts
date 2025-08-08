@@ -1,7 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as fs from 'fs';
-import * as path from 'path';
 import {
   ChainType,
   VaultType,
@@ -10,10 +8,10 @@ import {
 } from '../../domain/types/staking-types';
 import {
   SeasonConfig as SeasonConfigFromFile,
-  SeasonConfigFile,
   VaultSeasonConfig,
   SeasonStatusType,
 } from '../../domain/types/season.types';
+import { SeasonsConfigService } from './seasons.config';
 
 interface SeasonConfig {
   seasonNumber: number;
@@ -53,7 +51,10 @@ export class VaultConfigService {
   private readonly vaultSeasonConfigs: Map<string, VaultSeasonConfig> =
     new Map();
 
+  private readonly seasonsConfigService: SeasonsConfigService;
+
   constructor(private readonly configService: ConfigService) {
+    this.seasonsConfigService = new SeasonsConfigService(configService);
     this.initializeConfigurations();
 
     this.logger.log(`Initialized ${this.vaultConfigs.size} vaults`);
@@ -76,7 +77,7 @@ export class VaultConfigService {
       this.configService.get<string>('NODE_ENV') === 'production';
 
     const baseConfig: ChainConfig = {
-      chainId: isProduction ? 8453 : 84532, // Base mainnet : Base Sepolia
+      chainId: isProduction ? 8453 : 84532,
       name: isProduction ? 'Base' : 'Base Sepolia',
       rpcUrl: this.configService.get<string>(
         'BASE_RPC_URL',
@@ -141,17 +142,24 @@ export class VaultConfigService {
   }
 
   private loadSeasonConfigFromFile(): void {
-    const configPath = path.join(__dirname, 'seasons.config.json');
+    const seasons = this.seasonsConfigService.getSeasons();
+    const vaultConfigs = this.seasonsConfigService.getVaultConfigs();
 
-    if (!fs.existsSync(configPath)) {
-      throw new Error(`Season config file not found at ${configPath}`);
-    }
-
-    const configFile = fs.readFileSync(configPath, 'utf8');
-    const seasonConfigData: SeasonConfigFile = JSON.parse(configFile);
-
-    Object.values(seasonConfigData.seasons).forEach((seasonConfig) => {
-      this.seasonConfigsFromFile.set(seasonConfig.seasonId, seasonConfig);
+    Object.values(seasons).forEach((seasonConfig) => {
+      const domainSeasonConfig: SeasonConfigFromFile = {
+        seasonId: seasonConfig.seasonId,
+        seasonName: seasonConfig.seasonName,
+        chain: seasonConfig.chain,
+        startDate: seasonConfig.startDate,
+        endDate: seasonConfig.endDate,
+        status: seasonConfig.status,
+        withdrawalEnabled: seasonConfig.withdrawalEnabled,
+        migrationStatus: seasonConfig.migrationStatus,
+        features: seasonConfig.features,
+        vaultMechanics: seasonConfig.vaultMechanics,
+        migrationConfig: seasonConfig.migrationConfig,
+      };
+      this.seasonConfigsFromFile.set(seasonConfig.seasonId, domainSeasonConfig);
 
       const legacySeasonConfig: SeasonConfig = {
         seasonNumber: seasonConfig.seasonId,
@@ -185,12 +193,27 @@ export class VaultConfigService {
       this.seasonConfigs.set(seasonConfig.seasonId, legacySeasonConfig);
     });
 
-    Object.values(seasonConfigData.vaultConfigs).forEach((vaultConfig) => {
-      this.vaultSeasonConfigs.set(vaultConfig.vaultId, vaultConfig);
+    Object.values(vaultConfigs).forEach((vaultConfig) => {
+      const domainVaultConfig: VaultSeasonConfig = {
+        vaultId: vaultConfig.vaultId,
+        vaultAddress: vaultConfig.vaultAddress,
+        name: vaultConfig.name,
+        chain: vaultConfig.chain,
+        seasonId: vaultConfig.seasonId,
+        status: vaultConfig.status,
+        underlyingAsset: vaultConfig.underlyingAsset,
+        underlyingAssetAddress: vaultConfig.underlyingAssetAddress,
+        mechanics: {
+          withdrawalEnabled: vaultConfig.mechanics.withdrawalEnabled,
+          lockedUntilMainnet: vaultConfig.mechanics.lockedUntilMainnet,
+          redeemDelayDays: vaultConfig.mechanics.redeemDelayDays,
+        },
+      };
+      this.vaultSeasonConfigs.set(vaultConfig.vaultId, domainVaultConfig);
     });
 
     this.logger.log(
-      `Loaded ${Object.keys(seasonConfigData.seasons).length} season configurations from file`,
+      `Loaded ${Object.keys(seasons).length} season configurations from TypeScript config`,
     );
   }
 
@@ -223,7 +246,6 @@ export class VaultConfigService {
   }
 
   private initializeTokenConfigs(): void {
-    // Use environment variables for token addresses to support both mainnet and testnet
     const ilvTokenAddress = this.configService.get<string>(
       'TOKEN_ILV_ADDRESS',
       '0xC3fcc8530F6d6997adD7EA9439F0C7F6855bF8e8',
@@ -236,7 +258,7 @@ export class VaultConfigService {
 
     const wethAddress = this.configService.get<string>(
       'TOKEN_WETH_ADDRESS',
-      '0x4200000000000000000000000000000000000006', // Default Base WETH
+      '0x4200000000000000000000000000000000000006',
     );
 
     this.tokenConfigs.set('ilv', {
@@ -328,9 +350,11 @@ export class VaultConfigService {
       ilvEthLpVaultBase,
     );
 
-    const season1 = this.seasonConfigs.get(1)!;
-    season1.vaults = [ilvVaultBase, ilvEthLpVaultBase];
-    this.seasonConfigs.set(1, season1);
+    const season1 = this.seasonConfigs.get(1);
+    if (season1) {
+      season1.vaults = [ilvVaultBase, ilvEthLpVaultBase];
+      this.seasonConfigs.set(1, season1);
+    }
   }
 
   getChainConfig(chain: ChainType): ChainConfig | undefined {

@@ -1,16 +1,55 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { DailyShardProcessorJob } from './daily-shard-processor.job';
+import { CalculateDailyShardsUseCase } from '../../application/use-cases/calculate-daily-shards.use-case';
 import { Job } from 'bull';
 
 describe('DailyShardProcessorJob', () => {
   let job: DailyShardProcessorJob;
+  let module: TestingModule;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [DailyShardProcessorJob],
+    module = await Test.createTestingModule({
+      providers: [
+        DailyShardProcessorJob,
+        {
+          provide: CalculateDailyShardsUseCase,
+          useValue: {
+            execute: jest.fn(),
+          },
+        },
+        {
+          provide: 'IVaultPositionRepository',
+          useValue: {
+            findByWalletAndDate: jest.fn(),
+            findActivePositions: jest.fn(),
+            findUniqueWallets: jest
+              .fn()
+              .mockResolvedValue([
+                '0x1234567890abcdef1234567890abcdef12345678',
+              ]),
+            create: jest.fn(),
+            update: jest.fn(),
+          },
+        },
+        {
+          provide: 'ISeasonRepository',
+          useValue: {
+            findById: jest.fn(),
+            findCurrentSeason: jest.fn(),
+            findAll: jest.fn(),
+            findActive: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     job = module.get<DailyShardProcessorJob>(DailyShardProcessorJob);
+
+    // Mock logger methods
+    jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    jest.spyOn(Logger.prototype, 'error').mockImplementation();
   });
 
   it('should be defined', () => {
@@ -24,16 +63,13 @@ describe('DailyShardProcessorJob', () => {
         data: { test: 'data' },
       } as Job<any>;
 
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const loggerSpy = jest.spyOn(job['logger'], 'log');
 
       await job.process(mockJob);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Processing daily shards job:',
-        '123',
+      expect(loggerSpy).toHaveBeenCalledWith(
+        'Processing daily shards job: 123',
       );
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -47,16 +83,29 @@ describe('DailyShardProcessorJob', () => {
         },
       } as Job<any>;
 
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      // Get the mocked repositories
+      const seasonRepository = module.get('ISeasonRepository');
+      const calculateDailyShardsUseCase = module.get(
+        CalculateDailyShardsUseCase,
+      );
+
+      // Setup mock returns
+      seasonRepository.findActive.mockResolvedValue({
+        id: 1,
+        name: 'Season 1',
+      });
+      calculateDailyShardsUseCase.execute.mockResolvedValue({ success: true });
+
+      const loggerSpy = jest.spyOn(job['logger'], 'log');
 
       await job.calculateDailyShards(mockJob);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Calculating daily shards:',
+      expect(loggerSpy).toHaveBeenCalledWith(
+        'Starting daily shards calculation:',
         mockJob.data,
       );
-
-      consoleSpy.mockRestore();
+      expect(seasonRepository.findActive).toHaveBeenCalled();
+      expect(calculateDailyShardsUseCase.execute).toHaveBeenCalled();
     });
   });
 
@@ -74,16 +123,14 @@ describe('DailyShardProcessorJob', () => {
         },
       } as Job<any>;
 
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const loggerSpy = jest.spyOn(job['logger'], 'log');
 
       await job.aggregateEarnings(mockJob);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerSpy).toHaveBeenCalledWith(
         'Aggregating earnings:',
         mockJob.data,
       );
-
-      consoleSpy.mockRestore();
     });
   });
 });

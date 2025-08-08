@@ -4,9 +4,11 @@ import { IStakingSubgraphRepository } from '../../domain/repositories/staking-su
 import { IStakingBlockchainRepository } from '../../domain/repositories/staking-blockchain.repository.interface';
 import { IPriceFeedRepository } from '../../domain/repositories/price-feed.repository.interface';
 import { VaultConfigService } from '../../infrastructure/config/vault-config.service';
+import { RewardsConfigService } from '../../infrastructure/services/rewards-config.service';
 import { TokenDecimalsService } from '../../infrastructure/services/token-decimals.service';
 import { CalculateLPTokenPriceUseCase } from './calculate-lp-token-price.use-case';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ChainType,
   VaultType,
@@ -33,6 +35,7 @@ describe('GetUserStakingPositionsUseCase', () => {
           useValue: {
             getUserPositions: jest.fn(),
             getLPTokenData: jest.fn(),
+            getVaultsTVL: jest.fn(),
           },
         },
         {
@@ -71,6 +74,22 @@ describe('GetUserStakingPositionsUseCase', () => {
             execute: jest.fn(),
           },
         },
+        {
+          provide: RewardsConfigService,
+          useValue: {
+            getRewardsConfig: jest.fn(),
+            calculateApr: jest.fn(),
+            getMultipliers: jest.fn(),
+            getRewardRate: jest.fn().mockReturnValue(100),
+            calculateShardsMultiplier: jest.fn().mockReturnValue(1.0),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -88,6 +107,9 @@ describe('GetUserStakingPositionsUseCase', () => {
     jest.spyOn(Logger.prototype, 'log').mockImplementation();
     jest.spyOn(Logger.prototype, 'error').mockImplementation();
     jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    // Set up default mock for getVaultsTVL
+    stakingSubgraphRepository.getVaultsTVL.mockResolvedValue({});
   });
 
   describe('execute', () => {
@@ -726,6 +748,8 @@ describe('GetUserStakingPositionsUseCase', () => {
         isActive: true,
         startTimestamp: Date.now() / 1000 - 86400,
       });
+
+      (vaultConfigService.getActiveVaults as jest.Mock).mockReturnValue([]);
 
       stakingSubgraphRepository.getUserPositions.mockRejectedValue(
         new Error('Subgraph unavailable'),

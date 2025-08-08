@@ -181,7 +181,7 @@ describe('SeasonsController', () => {
 
     controller = module.get<SeasonsController>(SeasonsController);
     seasonContextService = module.get(SeasonContextService);
-    _seasonValidationService = module.get(SeasonValidationService);
+    module.get(SeasonValidationService);
     vaultConfigService = module.get(VaultConfigService);
     crossSeasonDataService = module.get(CrossSeasonDataService);
 

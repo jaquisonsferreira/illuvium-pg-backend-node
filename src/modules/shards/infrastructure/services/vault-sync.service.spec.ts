@@ -3,6 +3,7 @@ import { VaultSyncService } from './vault-sync.service';
 import { Queue } from 'bull';
 import { getQueueToken } from '@nestjs/bull';
 import { SubgraphService } from './subgraph.service';
+import { AlchemyShardsService } from './alchemy-shards.service';
 import { CoinGeckoService } from './coingecko.service';
 import { IVaultPositionRepository } from '../../domain/repositories/vault-position.repository.interface';
 import { VaultPositionEntity } from '../../domain/entities/vault-position.entity';
@@ -62,6 +63,14 @@ describe('VaultSyncService', () => {
       getUserVaultPositions: jest.fn(),
     };
 
+    const mockAlchemyShardsService = {
+      getEligibleVaults: jest.fn(),
+      getBlockByTimestamp: jest.fn(),
+      getVaultData: jest.fn(),
+      getVaultPositions: jest.fn(),
+      getUserVaultPositions: jest.fn(),
+    };
+
     const mockCoinGeckoService = {
       getTokenPrice: jest.fn(),
       getMultipleTokenPrices: jest.fn(),
@@ -86,6 +95,10 @@ describe('VaultSyncService', () => {
           useValue: mockSubgraphService,
         },
         {
+          provide: AlchemyShardsService,
+          useValue: mockAlchemyShardsService,
+        },
+        {
           provide: CoinGeckoService,
           useValue: mockCoinGeckoService,
         },
@@ -99,6 +112,7 @@ describe('VaultSyncService', () => {
     service = module.get<VaultSyncService>(VaultSyncService);
     vaultSyncQueue = module.get(getQueueToken(SHARD_QUEUES.VAULT_SYNC));
     subgraphService = module.get(SubgraphService);
+    module.get(AlchemyShardsService);
     coinGeckoService = module.get(CoinGeckoService);
     vaultPositionRepository = module.get('IVaultPositionRepository');
   });

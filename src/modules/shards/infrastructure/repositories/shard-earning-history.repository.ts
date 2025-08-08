@@ -68,8 +68,8 @@ export class ShardEarningHistoryRepository
       developer_shards: entity.developerShards.toString(),
       referral_shards: entity.referralShards.toString(),
       daily_total: entity.dailyTotal.toString(),
-      vault_breakdown: entity.vaultBreakdown,
-      metadata: entity.metadata,
+      vault_breakdown: JSON.parse(JSON.stringify(entity.vaultBreakdown || [])),
+      metadata: JSON.parse(JSON.stringify(entity.metadata || {})),
     };
   }
 
@@ -160,8 +160,24 @@ export class ShardEarningHistoryRepository
     entity: ShardEarningHistoryEntity,
   ): Promise<ShardEarningHistoryEntity> {
     const data = this.toDatabaseModel(entity);
-    const result = await this.repository.create(data);
-    return this.toDomainModel(result);
+
+    try {
+      // Use direct Kysely insert to ensure proper JSONB handling
+      const result = await this.db
+        .insertInto('shard_earning_history')
+        .values({
+          ...data,
+          vault_breakdown: JSON.stringify(data.vault_breakdown || []),
+          metadata: JSON.stringify(data.metadata || {}),
+        } as any)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      return this.toDomainModel(result);
+    } catch (error) {
+      console.error('Error creating shard earning history:', error);
+      throw error;
+    }
   }
 
   async createBatch(entities: ShardEarningHistoryEntity[]): Promise<void> {

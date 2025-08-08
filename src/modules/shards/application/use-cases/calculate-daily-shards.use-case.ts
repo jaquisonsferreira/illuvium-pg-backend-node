@@ -207,6 +207,22 @@ export class CalculateDailyShardsUseCase {
       usdValue: vault.usdValue,
     }));
 
+    // Ensure proper JSON structure for metadata
+    const metadata: Record<string, any> = {
+      refereeMultiplier: refereeMultiplier || 1,
+      calculatedAt: new Date().toISOString(),
+    };
+
+    // Only add fraudCheckResult if it exists and is valid
+    if (fraudCheckResult) {
+      metadata.fraudCheckResult = {
+        isSuspicious: fraudCheckResult.isSuspicious || false,
+        reasons: fraudCheckResult.reasons || [],
+        score: fraudCheckResult.score || 0,
+        recommendations: fraudCheckResult.recommendations || [],
+      };
+    }
+
     const earningHistory = new ShardEarningHistoryEntity(
       uuidv4(),
       walletAddress,
@@ -218,11 +234,7 @@ export class CalculateDailyShardsUseCase {
       finalCalculation.referralShards,
       finalCalculation.totalShards,
       historyVaultBreakdown,
-      {
-        refereeMultiplier,
-        fraudCheckResult,
-        calculatedAt: new Date().toISOString(),
-      },
+      metadata,
       new Date(),
     );
 
