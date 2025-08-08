@@ -20,6 +20,7 @@ import { SeasonContextService } from './infrastructure/services/season-context.s
 import { SeasonValidationService } from './infrastructure/services/season-validation.service';
 import { CrossSeasonDataService } from './infrastructure/services/cross-season-data.service';
 import { RewardsConfigService } from './infrastructure/services/rewards-config.service';
+import { ShardEarningHistoryRepository } from '../shards/infrastructure/repositories/shard-earning-history.repository';
 
 import { GetVaultPositionUseCase } from './application/use-cases/get-vault-position.use-case';
 import { GetUserPositionsUseCase } from './application/use-cases/get-user-positions.use-case';
@@ -63,9 +64,14 @@ import { GetStakingStatsUseCase } from './application/use-cases/get-staking-stat
       provide: 'IPriceFeedRepository',
       useClass: CoinGeckoPriceFeedService,
     },
+    {
+      provide: 'IShardEarningHistoryRepository',
+      useClass: ShardEarningHistoryRepository,
+    },
     StakingBlockchainService,
     PriceFeedService,
     CoinGeckoPriceFeedService,
+    ShardEarningHistoryRepository,
 
     GetVaultPositionUseCase,
     GetUserPositionsUseCase,

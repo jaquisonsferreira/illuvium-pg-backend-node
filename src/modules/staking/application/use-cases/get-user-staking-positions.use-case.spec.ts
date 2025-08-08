@@ -14,6 +14,7 @@ import {
   VaultType,
   VaultConfig,
 } from '../../domain/types/staking-types';
+import { ShardEarningHistoryEntity } from '../../../shards/domain/entities/shard-earning-history.entity';
 
 describe('GetUserStakingPositionsUseCase', () => {
   let useCase: GetUserStakingPositionsUseCase;
@@ -23,6 +24,7 @@ describe('GetUserStakingPositionsUseCase', () => {
   let vaultConfigService: VaultConfigService;
   let tokenDecimalsService: jest.Mocked<TokenDecimalsService>;
   let calculateLPTokenPriceUseCase: jest.Mocked<CalculateLPTokenPriceUseCase>;
+  let shardEarningHistoryRepository: any;
 
   const mockWalletAddress = '0x1234567890abcdef1234567890abcdef12345678';
 
@@ -50,6 +52,15 @@ describe('GetUserStakingPositionsUseCase', () => {
           useValue: {
             getTokenPrice: jest.fn(),
             getMultipleTokenPrices: jest.fn(),
+          },
+        },
+        {
+          provide: 'IShardEarningHistoryRepository',
+          useValue: {
+            findByWalletAndDate: jest.fn(),
+            findByWallet: jest.fn(),
+            create: jest.fn(),
+            upsert: jest.fn(),
           },
         },
         {
@@ -102,6 +113,9 @@ describe('GetUserStakingPositionsUseCase', () => {
     vaultConfigService = module.get(VaultConfigService);
     tokenDecimalsService = module.get(TokenDecimalsService);
     calculateLPTokenPriceUseCase = module.get(CalculateLPTokenPriceUseCase);
+    shardEarningHistoryRepository = module.get(
+      'IShardEarningHistoryRepository',
+    );
 
     // Mock logger
     jest.spyOn(Logger.prototype, 'log').mockImplementation();
@@ -698,6 +712,25 @@ describe('GetUserStakingPositionsUseCase', () => {
 
       tokenDecimalsService.formatTokenAmount.mockReturnValue('100');
 
+      // Mock shard earning history for yesterday
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setUTCHours(0, 0, 0, 0);
+
+      const mockShardEarning = ShardEarningHistoryEntity.create({
+        walletAddress: mockWalletAddress,
+        seasonId: 1,
+        date: yesterday,
+        stakingShards: 150,
+        socialShards: 25,
+        developerShards: 10,
+        referralShards: 5,
+      });
+
+      shardEarningHistoryRepository.findByWalletAndDate.mockResolvedValue(
+        mockShardEarning,
+      );
+
       const result = await useCase.execute({
         walletAddress: mockWalletAddress,
         page: 1,
@@ -707,6 +740,7 @@ describe('GetUserStakingPositionsUseCase', () => {
       expect(result.user_summary.total_user_positions).toBe(2);
       expect(result.user_summary.total_vaults_with_stakes).toBe(2);
       expect(result.user_summary.total_portfolio_value_usd).toBeTruthy();
+      expect(result.user_summary.shards_earned_last_day).toBe('150');
     });
 
     it('should handle empty positions gracefully', async () => {
@@ -762,6 +796,175 @@ describe('GetUserStakingPositionsUseCase', () => {
           limit: 10,
         }),
       ).rejects.toThrow('Subgraph unavailable');
+    });
+
+    describe('shards_earned_last_day', () => {
+      beforeEach(() => {
+        (vaultConfigService.getCurrentSeason as jest.Mock).mockReturnValue({
+          seasonNumber: 1,
+          primaryChain: ChainType.BASE,
+          vaults: [],
+          isActive: true,
+          startTimestamp: Date.now() / 1000 - 86400,
+        });
+
+        (vaultConfigService.getActiveVaults as jest.Mock).mockReturnValue([]);
+
+        stakingSubgraphRepository.getUserPositions.mockResolvedValue({
+          data: [],
+          metadata: {
+            source: 'subgraph',
+            lastUpdated: new Date(),
+            isStale: false,
+          },
+        });
+      });
+
+      it('should return correct shards_earned_last_day when data exists', async () => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setUTCHours(0, 0, 0, 0);
+
+        const mockShardEarning = ShardEarningHistoryEntity.create({
+          walletAddress: mockWalletAddress,
+          seasonId: 1,
+          date: yesterday,
+          stakingShards: 250,
+          socialShards: 50,
+          developerShards: 25,
+          referralShards: 15,
+        });
+
+        shardEarningHistoryRepository.findByWalletAndDate.mockResolvedValue(
+          mockShardEarning,
+        );
+
+        const result = await useCase.execute({
+          walletAddress: mockWalletAddress,
+          page: 1,
+          limit: 10,
+        });
+
+        expect(
+          shardEarningHistoryRepository.findByWalletAndDate,
+        ).toHaveBeenCalledWith(mockWalletAddress, yesterday, 1);
+        expect(result.user_summary.shards_earned_last_day).toBe('250');
+      });
+
+      it('should return "0" when no data exists for yesterday', async () => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setUTCHours(0, 0, 0, 0);
+
+        shardEarningHistoryRepository.findByWalletAndDate.mockResolvedValue(
+          null,
+        );
+
+        const result = await useCase.execute({
+          walletAddress: mockWalletAddress,
+          page: 1,
+          limit: 10,
+        });
+
+        expect(
+          shardEarningHistoryRepository.findByWalletAndDate,
+        ).toHaveBeenCalledWith(mockWalletAddress, yesterday, 1);
+        expect(result.user_summary.shards_earned_last_day).toBe('0');
+      });
+
+      it('should handle repository errors gracefully and return "0"', async () => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setUTCHours(0, 0, 0, 0);
+
+        const repositoryError = new Error('Database connection failed');
+        shardEarningHistoryRepository.findByWalletAndDate.mockRejectedValue(
+          repositoryError,
+        );
+
+        // Mock logger to verify warning was logged
+        const loggerWarnSpy = jest.spyOn(Logger.prototype, 'warn');
+
+        const result = await useCase.execute({
+          walletAddress: mockWalletAddress,
+          page: 1,
+          limit: 10,
+        });
+
+        expect(
+          shardEarningHistoryRepository.findByWalletAndDate,
+        ).toHaveBeenCalledWith(mockWalletAddress, yesterday, 1);
+        expect(result.user_summary.shards_earned_last_day).toBe('0');
+        expect(loggerWarnSpy).toHaveBeenCalledWith(
+          `Failed to fetch yesterday's shard earnings for wallet ${mockWalletAddress}:`,
+          repositoryError,
+        );
+      });
+
+      it('should handle different shard earning amounts correctly', async () => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setUTCHours(0, 0, 0, 0);
+
+        const testCases = [
+          { stakingShards: 0, expected: '0' },
+          { stakingShards: 1, expected: '1' },
+          { stakingShards: 999999, expected: '999999' },
+          { stakingShards: 123.45, expected: '123.45' },
+        ];
+
+        for (const testCase of testCases) {
+          const mockShardEarning = ShardEarningHistoryEntity.create({
+            walletAddress: mockWalletAddress,
+            seasonId: 1,
+            date: yesterday,
+            stakingShards: testCase.stakingShards,
+          });
+
+          shardEarningHistoryRepository.findByWalletAndDate.mockResolvedValue(
+            mockShardEarning,
+          );
+
+          const result = await useCase.execute({
+            walletAddress: mockWalletAddress,
+            page: 1,
+            limit: 10,
+          });
+
+          expect(result.user_summary.shards_earned_last_day).toBe(
+            testCase.expected,
+          );
+        }
+      });
+
+      it('should call repository with correct parameters for different seasons', async () => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setUTCHours(0, 0, 0, 0);
+
+        // Test with season 2
+        (vaultConfigService.getCurrentSeason as jest.Mock).mockReturnValue({
+          seasonNumber: 2,
+          primaryChain: ChainType.BASE,
+          vaults: [],
+          isActive: true,
+          startTimestamp: Date.now() / 1000 - 86400,
+        });
+
+        shardEarningHistoryRepository.findByWalletAndDate.mockResolvedValue(
+          null,
+        );
+
+        await useCase.execute({
+          walletAddress: mockWalletAddress,
+          page: 1,
+          limit: 10,
+        });
+
+        expect(
+          shardEarningHistoryRepository.findByWalletAndDate,
+        ).toHaveBeenCalledWith(mockWalletAddress, yesterday, 2);
+      });
     });
   });
 });

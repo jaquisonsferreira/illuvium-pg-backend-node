@@ -270,6 +270,12 @@ export class UserSummaryDto {
     example: '10180',
   })
   total_user_earned_shards: string;
+
+  @ApiProperty({
+    description: 'Total shards earned yesterday',
+    example: '125',
+  })
+  shards_earned_last_day: string;
 }
 
 export class StakingPositionsResponseDto {
