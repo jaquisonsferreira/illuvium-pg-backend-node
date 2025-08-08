@@ -262,8 +262,13 @@ export class CalculateLPTokenPriceUseCase {
       const reserve1ValueUsd = reserve1 * token1Price.priceUsd;
       const totalLiquidityUsd = reserve0ValueUsd + reserve1ValueUsd;
 
-      const pricePerToken =
-        totalSupply > 0 ? totalLiquidityUsd / totalSupply : 0;
+      const pricePerToken = this.calculateGeometricMeanPrice(
+        reserve0,
+        reserve1,
+        token0Price.priceUsd,
+        token1Price.priceUsd,
+        totalSupply,
+      );
 
       const token0Weight =
         totalLiquidityUsd > 0 ? reserve0ValueUsd / totalLiquidityUsd : 0;
@@ -295,6 +300,46 @@ export class CalculateLPTokenPriceUseCase {
     } catch (error) {
       this.logger.error(`Failed to calculate LP token price:`, error);
       throw error;
+    }
+  }
+
+  private calculateGeometricMeanPrice(
+    reserve0: number,
+    reserve1: number,
+    price0: number,
+    price1: number,
+    totalSupply: number,
+  ): number {
+    if (totalSupply <= 0 || reserve0 <= 0 || reserve1 <= 0) {
+      return 0;
+    }
+
+    try {
+      const sqrtReserveProduct = Math.sqrt(reserve0 * reserve1);
+      const sqrtPriceProduct = Math.sqrt(price0 * price1);
+      const geometricMeanPrice =
+        (2 * sqrtReserveProduct * sqrtPriceProduct) / totalSupply;
+
+      if (!isFinite(geometricMeanPrice) || geometricMeanPrice < 0) {
+        this.logger.warn(
+          `Invalid geometric mean price calculated: ${geometricMeanPrice}, falling back to arithmetic mean`,
+        );
+        const reserve0ValueUsd = reserve0 * price0;
+        const reserve1ValueUsd = reserve1 * price1;
+        const totalLiquidityUsd = reserve0ValueUsd + reserve1ValueUsd;
+        return totalLiquidityUsd / totalSupply;
+      }
+
+      return geometricMeanPrice;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to calculate geometric mean price, falling back to arithmetic mean:`,
+        error,
+      );
+      const reserve0ValueUsd = reserve0 * price0;
+      const reserve1ValueUsd = reserve1 * price1;
+      const totalLiquidityUsd = reserve0ValueUsd + reserve1ValueUsd;
+      return totalLiquidityUsd / totalSupply;
     }
   }
 
