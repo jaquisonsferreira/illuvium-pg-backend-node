@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
   HttpException,
   HttpStatus,
@@ -16,6 +17,26 @@ export class AdminShardsController {
     private readonly shardProcessingScheduler: ShardProcessingScheduler,
     private readonly databaseSeedService: DatabaseSeedService,
   ) {}
+
+  @Get('trigger-vault-sync')
+  @ApiOperation({
+    summary: 'Trigger vault sync manually',
+    description: 'Manually triggers the vault sync job for immediate execution',
+  })
+  async triggerVaultSync(): Promise<{ success: boolean; message: string }> {
+    try {
+      await this.shardProcessingScheduler.triggerManualProcessing('vault');
+      return {
+        success: true,
+        message: 'Vault sync triggered successfully',
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to trigger vault sync: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 
   @Post('trigger-processing')
   @ApiOperation({
@@ -60,6 +81,13 @@ export class AdminShardsController {
   ): Promise<{ success: boolean; message: string }> {
     try {
       const validTypes = ['daily', 'vault', 'social', 'developer'];
+
+      if (!body || !body.type) {
+        throw new HttpException(
+          'Processing type is required',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
 
       if (!validTypes.includes(body.type)) {
         throw new HttpException(

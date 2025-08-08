@@ -376,7 +376,7 @@ describe('LeaderboardController', () => {
       const query = {};
 
       await expect(controller.getLeaderboard(query)).rejects.toThrow(
-        'Generic error',
+        HttpException,
       );
     });
   });

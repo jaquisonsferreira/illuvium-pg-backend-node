@@ -5,6 +5,7 @@ import { SystemStatusController } from './system-status.controller';
 import { ManageSeasonUseCase } from '../../application/use-cases/manage-season.use-case';
 import { CoinGeckoService } from '../../infrastructure/services/coingecko.service';
 import { SubgraphService } from '../../infrastructure/services/subgraph.service';
+import { AlchemyShardsService } from '../../infrastructure/services/alchemy-shards.service';
 import { SHARD_QUEUES } from '../../constants';
 import {
   SeasonEntity,
@@ -95,6 +96,14 @@ describe('SystemStatusController', () => {
       healthCheck: jest.fn(),
     };
 
+    const mockAlchemyShardsService = {
+      getEligibleVaults: jest.fn(),
+      getBlockByTimestamp: jest.fn(),
+      getVaultData: jest.fn(),
+      getVaultPositions: jest.fn(),
+      getUserVaultPositions: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SystemStatusController],
       providers: [
@@ -118,6 +127,10 @@ describe('SystemStatusController', () => {
           provide: SubgraphService,
           useValue: mockSubgraphService,
         },
+        {
+          provide: AlchemyShardsService,
+          useValue: mockAlchemyShardsService,
+        },
       ],
     }).compile();
 
@@ -127,6 +140,7 @@ describe('SystemStatusController', () => {
     manageSeasonUseCase = module.get(ManageSeasonUseCase);
     coinGeckoService = module.get(CoinGeckoService);
     subgraphService = module.get(SubgraphService);
+    module.get(AlchemyShardsService);
   });
 
   describe('getSystemStatus', () => {

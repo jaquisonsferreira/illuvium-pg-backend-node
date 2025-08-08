@@ -4,7 +4,6 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 
 import { AppModule } from './app.module';
-import { json } from 'express';
 import { TracingInterceptor } from './modules/observability/interface/interceptors/tracing.interceptor';
 import { Kysely } from 'kysely';
 import {
@@ -13,29 +12,7 @@ import {
 } from './shared/infrastructure/database';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    rawBody: true,
-  });
-
-  // Configure raw body middleware for inbound webhook endpoints
-  app.use(
-    '/webhooks/inbound',
-    json({
-      verify: (req: any, res, buf) => {
-        req.rawBody = buf;
-      },
-    }),
-  );
-
-  // Legacy support for existing webhook endpoint
-  app.use(
-    '/webhooks',
-    json({
-      verify: (req: any, res, buf) => {
-        req.rawBody = buf;
-      },
-    }),
-  );
+  const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
 

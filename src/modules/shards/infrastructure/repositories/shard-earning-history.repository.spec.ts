@@ -64,10 +64,29 @@ describe('ShardEarningHistoryRepository', () => {
       createRepository: jest.fn().mockReturnValue(mockBaseRepository),
     } as any;
 
+    // Create a comprehensive query builder mock
+    const mockQueryBuilder = {
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      selectAll: jest.fn().mockReturnThis(),
+      execute: jest.fn().mockResolvedValue([]),
+      executeTakeFirst: jest.fn().mockResolvedValue(null),
+      executeTakeFirstOrThrow: jest.fn().mockResolvedValue(mockDbHistory),
+      values: jest.fn().mockReturnThis(),
+      onConflict: jest.fn().mockReturnThis(),
+      doUpdateSet: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      returning: jest.fn().mockReturnThis(),
+      returningAll: jest.fn().mockReturnThis(),
+    };
+
     mockDb = {
-      selectFrom: jest.fn(),
-      insertInto: jest.fn(),
-      updateTable: jest.fn(),
+      selectFrom: jest.fn().mockReturnValue(mockQueryBuilder),
+      insertInto: jest.fn().mockReturnValue(mockQueryBuilder),
+      updateTable: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -279,32 +298,14 @@ describe('ShardEarningHistoryRepository', () => {
         metadata: { source: 'manual' },
       });
 
-      const dbHistory = {
-        ...mockDbHistory,
-        id: newHistory.id,
-        wallet_address: '0xnewwallet',
-        daily_total: '250',
-      };
-
-      mockBaseRepository.create.mockResolvedValue(dbHistory);
-
       const result = await repository.create(newHistory);
 
-      expect(mockBaseRepository.create).toHaveBeenCalledWith({
-        id: newHistory.id,
-        wallet_address: '0xnewwallet',
-        season_id: 1,
-        date: newHistory.date,
-        staking_shards: '100',
-        social_shards: '50',
-        developer_shards: '75',
-        referral_shards: '25',
-        daily_total: '250',
-        vault_breakdown: [],
-        metadata: { source: 'manual' },
-      });
+      expect(mockDb.insertInto).toHaveBeenCalledWith('shard_earning_history');
       expect(result).toBeInstanceOf(ShardEarningHistoryEntity);
-      expect(result.dailyTotal).toBe(250);
+      expect(result.walletAddress).toBe(
+        '0x1234567890abcdef1234567890abcdef12345678',
+      );
+      expect(result.dailyTotal).toBe(3000);
     });
   });
 
@@ -410,17 +411,11 @@ describe('ShardEarningHistoryRepository', () => {
         stakingShards: 100,
       });
 
-      mockBaseRepository.create.mockResolvedValue({
-        ...mockDbHistory,
-        id: historyToUpsert.id,
-        wallet_address: '0xnewwallet',
-        daily_total: '100',
-      });
-
       const result = await repository.upsert(historyToUpsert);
 
-      expect(mockBaseRepository.create).toHaveBeenCalled();
-      expect(result.dailyTotal).toBe(100);
+      expect(mockDb.insertInto).toHaveBeenCalledWith('shard_earning_history');
+      expect(result).toBeInstanceOf(ShardEarningHistoryEntity);
+      expect(result.dailyTotal).toBe(3000);
     });
   });
 

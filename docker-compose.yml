@@ -86,7 +86,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_REGION=us-west-2
     env_file:
-      - .env.development
+      - .env
     depends_on:
       - localstack
       - cockroachdb
@@ -95,6 +95,7 @@ services:
       - cockroachdb-init
     volumes:
       - ./src:/app/src
+      - ./node_modules:/app/node_modules
     networks:
       - backend-network
     command: npm run start:dev

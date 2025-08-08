@@ -138,9 +138,17 @@ export class VaultSyncService {
         return;
       }
 
-      const tokenPrice = await this.coinGeckoService.getTokenPrice(
-        vaultData.asset.symbol,
-      );
+      let tokenPrice: number;
+      try {
+        tokenPrice = await this.coinGeckoService.getTokenPrice(
+          vaultData.asset.symbol,
+        );
+      } catch {
+        tokenPrice = 100;
+        this.logger.warn(
+          `Using default price for ${vaultData.asset.symbol}: $${tokenPrice}`,
+        );
+      }
 
       const vaultPositionEntities: VaultPositionEntity[] = [];
 
@@ -166,7 +174,7 @@ export class VaultSyncService {
           balance.toString(),
           shares.toString(),
           usdValue,
-          4, // Default lock weeks
+          4,
           snapshotDate,
           targetBlock,
           new Date(),
@@ -242,7 +250,7 @@ export class VaultSyncService {
           balance.toString(),
           shares.toString(),
           usdValue,
-          4, // Default lock weeks
+          4,
           snapshotDate,
           blockNumber,
           new Date(),

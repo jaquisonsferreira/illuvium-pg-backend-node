@@ -1,10 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { VaultConfigService } from './vault-config.service';
-import * as fs from 'fs';
-import * as path from 'path';
 import {
-  SeasonConfigFile,
   SeasonStatusType,
   MigrationStatus,
   VaultMechanicsType,
@@ -12,129 +9,135 @@ import {
 } from '../../domain/types/season.types';
 import { ChainType } from '../../domain/types/staking-types';
 
-jest.mock('fs');
-jest.mock('path');
+jest.mock('./seasons.config');
+const mockSeasonsData = {
+  '1': {
+    seasonId: 1,
+    seasonName: 'Season 1 - Genesis',
+    chain: 'base' as ChainType,
+    startDate: '2024-01-01T00:00:00Z',
+    endDate: '2024-06-01T00:00:00Z',
+    status: 'active' as SeasonStatusType,
+    withdrawalEnabled: false,
+    migrationStatus: 'stable' as MigrationStatus,
+    features: {
+      depositsEnabled: true,
+      withdrawalsEnabled: false,
+      lockedUntilMainnet: true,
+      rewardsMultiplier: 1.0,
+    },
+    vaultMechanics: {
+      type: 'locked' as VaultMechanicsType,
+      lockDuration: 0,
+      earlyWithdrawalPenalty: 0.1,
+      compoundingEnabled: true,
+      redeemDelayDays: 7,
+    },
+    migrationConfig: null,
+  },
+  '2': {
+    seasonId: 2,
+    seasonName: 'Season 2 - Evolution',
+    chain: 'obelisk' as ChainType,
+    startDate: '2024-06-01T00:00:00Z',
+    endDate: null,
+    status: 'planned' as SeasonStatusType,
+    withdrawalEnabled: true,
+    migrationStatus: 'upcoming' as MigrationStatus,
+    features: {
+      depositsEnabled: true,
+      withdrawalsEnabled: true,
+      lockedUntilMainnet: false,
+      rewardsMultiplier: 1.2,
+    },
+    vaultMechanics: {
+      type: 'erc4626' as VaultMechanicsType,
+      lockDuration: 0,
+      earlyWithdrawalPenalty: 0,
+      compoundingEnabled: true,
+      redeemDelayDays: 0,
+    },
+    migrationConfig: {
+      fromChain: 'base' as ChainType,
+      toChain: 'obelisk' as ChainType,
+      migrationStartTime: '2024-05-15T00:00:00Z',
+      migrationEndTime: '2024-05-31T23:59:59Z',
+      migrationDeadline: '2024-06-15T23:59:59Z',
+      userActionRequired: true,
+      migrationGuideUrl: 'https://docs.illuvium.io/migration-guide',
+    },
+  },
+  '3': {
+    seasonId: 3,
+    seasonName: 'Season 3 - Deprecated Test',
+    chain: 'base' as ChainType,
+    startDate: '2023-01-01T00:00:00Z',
+    endDate: '2023-12-31T23:59:59Z',
+    status: 'deprecated' as SeasonStatusType,
+    withdrawalEnabled: false,
+    migrationStatus: 'stable' as MigrationStatus,
+    features: {
+      depositsEnabled: false,
+      withdrawalsEnabled: false,
+      lockedUntilMainnet: false,
+      rewardsMultiplier: 1.0,
+    },
+    vaultMechanics: {
+      type: 'locked' as VaultMechanicsType,
+      lockDuration: 30,
+      earlyWithdrawalPenalty: 0.15,
+      compoundingEnabled: false,
+      redeemDelayDays: 14,
+    },
+    migrationConfig: null,
+  },
+};
+
+const mockVaultsData = {
+  'vault-s1-ilv': {
+    vaultId: 'vault-s1-ilv',
+    vaultAddress: '0x1234567890123456789012345678901234567890',
+    name: 'ILV Staking Vault S1',
+    chain: 'base' as ChainType,
+    seasonId: 1,
+    status: 'active' as VaultStatusType,
+    underlyingAsset: 'ILV',
+    mechanics: {
+      withdrawalEnabled: false,
+      lockedUntilMainnet: true,
+      redeemDelayDays: 7,
+    },
+  },
+  'vault-s2-ilv': {
+    vaultId: 'vault-s2-ilv',
+    vaultAddress: '0x2345678901234567890123456789012345678901',
+    name: 'ILV Staking Vault S2',
+    chain: 'obelisk' as ChainType,
+    seasonId: 2,
+    status: 'planned' as VaultStatusType,
+    underlyingAsset: 'ILV',
+    mechanics: {
+      withdrawalEnabled: true,
+      lockedUntilMainnet: false,
+      redeemDelayDays: 0,
+    },
+  },
+};
+
+const mockSeasonsConfigService = {
+  getSeasons: jest.fn(),
+  getVaultConfigs: jest.fn(),
+};
+
+jest.mock('./seasons.config', () => ({
+  SeasonsConfigService: jest
+    .fn()
+    .mockImplementation(() => mockSeasonsConfigService),
+}));
 
 describe('VaultConfigService - Season Methods', () => {
   let service: VaultConfigService;
   let configService: jest.Mocked<ConfigService>;
-  let mockFs: jest.Mocked<typeof fs>;
-  let mockPath: jest.Mocked<typeof path>;
-
-  const mockSeasonConfigFile: SeasonConfigFile = {
-    seasons: {
-      1: {
-        seasonId: 1,
-        seasonName: 'Season 1 - Genesis',
-        chain: ChainType.BASE,
-        startDate: '2024-01-01T00:00:00Z',
-        endDate: '2024-06-01T00:00:00Z',
-        status: SeasonStatusType.ACTIVE,
-        withdrawalEnabled: false,
-        migrationStatus: MigrationStatus.STABLE,
-        features: {
-          depositsEnabled: true,
-          withdrawalsEnabled: false,
-          lockedUntilMainnet: true,
-          rewardsMultiplier: 1.0,
-        },
-        vaultMechanics: {
-          type: VaultMechanicsType.LOCKED,
-          lockDuration: 0,
-          earlyWithdrawalPenalty: 0.1,
-          compoundingEnabled: true,
-          redeemDelayDays: 7,
-        },
-        migrationConfig: null,
-      },
-      2: {
-        seasonId: 2,
-        seasonName: 'Season 2 - Evolution',
-        chain: ChainType.BASE,
-        startDate: '2024-06-01T00:00:00Z',
-        endDate: null,
-        status: SeasonStatusType.PLANNED,
-        withdrawalEnabled: true,
-        migrationStatus: MigrationStatus.UPCOMING,
-        features: {
-          depositsEnabled: true,
-          withdrawalsEnabled: true,
-          lockedUntilMainnet: false,
-          rewardsMultiplier: 1.2,
-        },
-        vaultMechanics: {
-          type: VaultMechanicsType.ERC4626,
-          lockDuration: 0,
-          earlyWithdrawalPenalty: 0,
-          compoundingEnabled: true,
-          redeemDelayDays: 0,
-        },
-        migrationConfig: {
-          fromChain: ChainType.BASE,
-          toChain: ChainType.OBELISK,
-          migrationStartTime: '2024-05-15T00:00:00Z',
-          migrationEndTime: '2024-05-31T23:59:59Z',
-          migrationDeadline: '2024-06-15T23:59:59Z',
-          userActionRequired: true,
-          migrationGuideUrl: 'https://docs.illuvium.io/migration-guide',
-        },
-      },
-      3: {
-        seasonId: 3,
-        seasonName: 'Season 3 - Deprecated',
-        chain: ChainType.BASE,
-        startDate: '2023-01-01T00:00:00Z',
-        endDate: '2023-12-31T23:59:59Z',
-        status: SeasonStatusType.DEPRECATED,
-        withdrawalEnabled: true,
-        migrationStatus: MigrationStatus.COMPLETED,
-        features: {
-          depositsEnabled: false,
-          withdrawalsEnabled: true,
-          lockedUntilMainnet: false,
-          rewardsMultiplier: 0.8,
-        },
-        vaultMechanics: {
-          type: VaultMechanicsType.LOCKED,
-          lockDuration: 30,
-          earlyWithdrawalPenalty: 0.15,
-          compoundingEnabled: false,
-          redeemDelayDays: 14,
-        },
-        migrationConfig: null,
-      },
-    },
-    vaultConfigs: {
-      'vault-s1-ilv': {
-        vaultId: 'vault-s1-ilv',
-        vaultAddress: '0x1234567890123456789012345678901234567890',
-        name: 'ILV Staking Vault S1',
-        chain: ChainType.BASE,
-        seasonId: 1,
-        status: VaultStatusType.ACTIVE,
-        underlyingAsset: 'ILV',
-        mechanics: {
-          withdrawalEnabled: false,
-          lockedUntilMainnet: true,
-          redeemDelayDays: 7,
-        },
-      },
-      'vault-s2-ilv': {
-        vaultId: 'vault-s2-ilv',
-        vaultAddress: '0x2345678901234567890123456789012345678901',
-        name: 'ILV Staking Vault S2',
-        chain: ChainType.BASE,
-        seasonId: 2,
-        status: VaultStatusType.PLANNED,
-        underlyingAsset: 'ILV',
-        mechanics: {
-          withdrawalEnabled: true,
-          lockedUntilMainnet: false,
-          redeemDelayDays: 0,
-        },
-      },
-    },
-  };
 
   beforeEach(async () => {
     const mockConfigService = {
@@ -164,13 +167,9 @@ describe('VaultConfigService - Season Methods', () => {
       }),
     };
 
-    mockFs = fs as jest.Mocked<typeof fs>;
-    mockPath = path as jest.Mocked<typeof path>;
-
-    // Setup fs and path mocks before service creation
-    mockPath.join.mockReturnValue('/mock/path/seasons.config.json');
-    mockFs.existsSync.mockReturnValue(true);
-    mockFs.readFileSync.mockReturnValue(JSON.stringify(mockSeasonConfigFile));
+    // Setup SeasonsConfigService mocks with default data
+    mockSeasonsConfigService.getSeasons.mockReturnValue(mockSeasonsData);
+    mockSeasonsConfigService.getVaultConfigs.mockReturnValue(mockVaultsData);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -260,21 +259,18 @@ describe('VaultConfigService - Season Methods', () => {
 
     it('should return undefined when no active season exists', () => {
       // Set up mock with no active seasons
-      const configWithNoActive = {
-        ...mockSeasonConfigFile,
-        seasons: {
-          ...mockSeasonConfigFile.seasons,
-          1: {
-            ...mockSeasonConfigFile.seasons[1],
-            status: SeasonStatusType.PLANNED,
-          },
+      const seasonsWithNoActive = {
+        ...mockSeasonsData,
+        '1': {
+          ...mockSeasonsData['1'],
+          status: 'planned' as SeasonStatusType,
         },
       };
 
-      // Update the mock to return the modified config
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(configWithNoActive));
+      mockSeasonsConfigService.getSeasons.mockReturnValue(seasonsWithNoActive);
+      mockSeasonsConfigService.getVaultConfigs.mockReturnValue(mockVaultsData);
 
-      // Create new service instance (fs mocks are already set up)
+      // Create new service instance
       const newService = new VaultConfigService(configService);
 
       const currentSeason = newService.getCurrentSeasonFromFile();
@@ -299,19 +295,18 @@ describe('VaultConfigService - Season Methods', () => {
     });
 
     it('should return active season when end date is null', () => {
-      const configWithOpenEndedSeason = {
-        ...mockSeasonConfigFile,
-        seasons: {
-          1: {
-            ...mockSeasonConfigFile.seasons[1],
-            endDate: null,
-          },
+      const seasonsWithOpenEndedSeason = {
+        ...mockSeasonsData,
+        '1': {
+          ...mockSeasonsData['1'],
+          endDate: null,
         },
       };
 
-      mockFs.readFileSync.mockReturnValue(
-        JSON.stringify(configWithOpenEndedSeason),
+      mockSeasonsConfigService.getSeasons.mockReturnValue(
+        seasonsWithOpenEndedSeason,
       );
+      mockSeasonsConfigService.getVaultConfigs.mockReturnValue(mockVaultsData);
 
       const newService = new VaultConfigService(configService);
       jest.setSystemTime(new Date('2025-01-01T12:00:00Z'));
@@ -350,25 +345,20 @@ describe('VaultConfigService - Season Methods', () => {
     });
 
     it('should return undefined when next season does not exist', () => {
-      // Mock current season as season 2 (highest season ID) but also include season 1 for vault initialization
-      const configWithoutNextSeason = {
-        ...mockSeasonConfigFile,
-        seasons: {
-          1: {
-            ...mockSeasonConfigFile.seasons[1],
-            status: SeasonStatusType.ENDED,
-          },
-          2: {
-            ...mockSeasonConfigFile.seasons[2],
-            status: SeasonStatusType.ACTIVE,
-            startDate: '2024-01-01T00:00:00Z',
-          },
+      const seasonsWithoutNext = {
+        '1': {
+          ...mockSeasonsData['1'],
+          status: 'ended' as SeasonStatusType,
+        },
+        '2': {
+          ...mockSeasonsData['2'],
+          status: 'active' as SeasonStatusType,
+          startDate: '2024-01-01T00:00:00Z',
         },
       };
 
-      mockFs.readFileSync.mockReturnValue(
-        JSON.stringify(configWithoutNextSeason),
-      );
+      mockSeasonsConfigService.getSeasons.mockReturnValue(seasonsWithoutNext);
+      mockSeasonsConfigService.getVaultConfigs.mockReturnValue(mockVaultsData);
 
       const newService = new VaultConfigService(configService);
 
@@ -411,20 +401,19 @@ describe('VaultConfigService - Season Methods', () => {
     });
 
     it('should return empty array when no seasons loaded', () => {
-      // Force fallback by making file not exist - this will use fallback config that has seasons for vault init
-      mockFs.existsSync.mockReturnValue(false);
+      // Force empty seasons from service
+      mockSeasonsConfigService.getSeasons.mockReturnValue({});
+      mockSeasonsConfigService.getVaultConfigs.mockReturnValue({});
 
       const newService = new VaultConfigService(configService);
-
-      // Clear the seasonConfigsFromFile after initialization but keep legacy configs for vault init
-      newService['seasonConfigsFromFile'].clear();
 
       const allSeasons = newService.getAllSeasonConfigsFromFile();
 
       expect(allSeasons).toHaveLength(0);
 
       // Restore for other tests
-      mockFs.existsSync.mockReturnValue(true);
+      mockSeasonsConfigService.getSeasons.mockReturnValue(mockSeasonsData);
+      mockSeasonsConfigService.getVaultConfigs.mockReturnValue(mockVaultsData);
     });
   });
 
@@ -462,82 +451,91 @@ describe('VaultConfigService - Season Methods', () => {
     });
 
     it('should return empty array when no vaults loaded', () => {
-      // Force fallback by making file not exist
-      mockFs.existsSync.mockReturnValue(false);
+      // Force empty vaults from service
+      mockSeasonsConfigService.getSeasons.mockReturnValue(mockSeasonsData);
+      mockSeasonsConfigService.getVaultConfigs.mockReturnValue({});
 
       const newService = new VaultConfigService(configService);
-
-      // Clear vault season configs after initialization
-      newService['vaultSeasonConfigs'].clear();
 
       const allVaults = newService.getAllVaultSeasonConfigs();
 
       expect(allVaults).toHaveLength(0);
 
       // Restore for other tests
-      mockFs.existsSync.mockReturnValue(true);
+      mockSeasonsConfigService.getVaultConfigs.mockReturnValue(mockVaultsData);
     });
   });
 
   describe('error handling and fallback', () => {
-    it('should use fallback configuration when file does not exist', () => {
-      mockFs.existsSync.mockReturnValue(false);
+    it('should use fallback configuration when SeasonsConfigService throws error', () => {
+      mockSeasonsConfigService.getSeasons.mockImplementation(() => {
+        throw new Error('Config service error');
+      });
+      mockSeasonsConfigService.getVaultConfigs.mockImplementation(() => {
+        throw new Error('Config service error');
+      });
 
       const newService = new VaultConfigService(configService);
       const loggerSpy = jest
         .spyOn(newService['logger'], 'warn')
         .mockImplementation();
 
-      // We need to manually trigger the initialization since constructor already ran
-      // Instead, let's check that seasons were loaded from fallback
+      // With error, service should fall back and use the legacy season configs initialized in fallback
+      // But file-based configs will be empty
       const allSeasons = newService.getAllSeasonConfigsFromFile();
+      expect(allSeasons).toHaveLength(0); // No file-based seasons due to error
 
-      // With fallback, we won't have seasons in the file-based config, but we will have legacy configs
-      expect(allSeasons).toHaveLength(0); // No file-based seasons
+      // But legacy configs should still be available
+      const legacySeason = newService.getSeasonConfig(1);
+      expect(legacySeason).toBeDefined();
 
-      // Restore for other tests
-      mockFs.existsSync.mockReturnValue(true);
+      // Restore mocks for other tests
+      mockSeasonsConfigService.getSeasons.mockReturnValue(mockSeasonsData);
+      mockSeasonsConfigService.getVaultConfigs.mockReturnValue(mockVaultsData);
       loggerSpy.mockRestore();
     });
 
-    it('should use fallback configuration when file cannot be read', () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockImplementation(() => {
-        throw new Error('File read error');
+    it('should handle empty data from SeasonsConfigService', () => {
+      mockSeasonsConfigService.getSeasons.mockReturnValue({});
+      mockSeasonsConfigService.getVaultConfigs.mockReturnValue({});
+
+      const newService = new VaultConfigService(configService);
+
+      // Check that no file-based seasons are loaded
+      const allSeasons = newService.getAllSeasonConfigsFromFile();
+      expect(allSeasons).toHaveLength(0);
+
+      const allVaults = newService.getAllVaultSeasonConfigs();
+      expect(allVaults).toHaveLength(0);
+
+      // Restore mocks for other tests
+      mockSeasonsConfigService.getSeasons.mockReturnValue(mockSeasonsData);
+      mockSeasonsConfigService.getVaultConfigs.mockReturnValue(mockVaultsData);
+    });
+
+    it('should have fallback legacy configs available after error', () => {
+      mockSeasonsConfigService.getSeasons.mockImplementation(() => {
+        throw new Error('Service error');
+      });
+      mockSeasonsConfigService.getVaultConfigs.mockImplementation(() => {
+        throw new Error('Service error');
       });
 
       const newService = new VaultConfigService(configService);
 
-      // Check that fallback was used by verifying file-based seasons are empty
+      // File-based configs will be empty due to error
       const allSeasons = newService.getAllSeasonConfigsFromFile();
-      expect(allSeasons).toHaveLength(0); // No file-based seasons loaded due to error
+      expect(allSeasons).toHaveLength(0);
 
-      // Restore mocks for other tests
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(mockSeasonConfigFile));
-    });
+      // But legacy fallback configs should be available
+      const legacySeason1 = newService.getSeasonConfig(1);
+      const legacySeason2 = newService.getSeasonConfig(2);
+      expect(legacySeason1).toBeDefined();
+      expect(legacySeason2).toBeDefined();
 
-    it('should use fallback configuration when JSON is invalid', () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue('invalid json');
-
-      const newService = new VaultConfigService(configService);
-
-      // Check that fallback was used by verifying file-based seasons are empty
-      const allSeasons = newService.getAllSeasonConfigsFromFile();
-      expect(allSeasons).toHaveLength(0); // No file-based seasons loaded due to JSON error
-
-      // Restore mocks for other tests
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(mockSeasonConfigFile));
-    });
-
-    it('should have fallback seasons available after error', () => {
-      mockFs.existsSync.mockReturnValue(false);
-
-      const newService = new VaultConfigService(configService);
-
-      // Fallback should still provide some seasons (from initializeFallbackSeasonConfigs)
-      const allSeasons = newService.getAllSeasonConfigsFromFile();
-      expect(allSeasons).toHaveLength(0); // File-based configs will be empty, but legacy configs should exist
+      // Restore mocks
+      mockSeasonsConfigService.getSeasons.mockReturnValue(mockSeasonsData);
+      mockSeasonsConfigService.getVaultConfigs.mockReturnValue(mockVaultsData);
     });
   });
 
