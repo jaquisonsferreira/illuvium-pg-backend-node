@@ -61,6 +61,7 @@ describe('GetUserStakingPositionsUseCase', () => {
             findByWallet: jest.fn(),
             create: jest.fn(),
             upsert: jest.fn(),
+            getSummaryByWallet: jest.fn(),
           },
         },
         {
@@ -552,7 +553,7 @@ describe('GetUserStakingPositionsUseCase', () => {
       expect(result.vaults[0].vault_id).toBe('ilv_vault');
     });
 
-    it('should calculate user summary correctly', async () => {
+    it('should calculate user summary correctly with historical data', async () => {
       (vaultConfigService.getCurrentSeason as jest.Mock).mockReturnValue({
         seasonNumber: 1,
         primaryChain: ChainType.BASE,
@@ -731,6 +732,19 @@ describe('GetUserStakingPositionsUseCase', () => {
         mockShardEarning,
       );
 
+      // Mock historical summary with lifetime earnings including closed positions
+      shardEarningHistoryRepository.getSummaryByWallet.mockResolvedValue({
+        totalDays: 30,
+        totalShards: 4500,
+        avgDailyShards: 150,
+        breakdown: {
+          staking: 3500, // Includes both active and closed positions
+          social: 500,
+          developer: 300,
+          referral: 200,
+        },
+      });
+
       const result = await useCase.execute({
         walletAddress: mockWalletAddress,
         page: 1,
@@ -741,6 +755,15 @@ describe('GetUserStakingPositionsUseCase', () => {
       expect(result.user_summary.total_vaults_with_stakes).toBe(2);
       expect(result.user_summary.total_portfolio_value_usd).toBeTruthy();
       expect(result.user_summary.shards_earned_last_day).toBe('150');
+      expect(result.user_summary.total_user_earned_shards).toBe('3500'); // Historical total, not active positions
+
+      // Verify historical data was used instead of active positions
+      expect(
+        shardEarningHistoryRepository.getSummaryByWallet,
+      ).toHaveBeenCalledWith(
+        mockWalletAddress,
+        1, // season ID
+      );
     });
 
     it('should handle empty positions gracefully', async () => {
@@ -964,6 +987,362 @@ describe('GetUserStakingPositionsUseCase', () => {
         expect(
           shardEarningHistoryRepository.findByWalletAndDate,
         ).toHaveBeenCalledWith(mockWalletAddress, yesterday, 2);
+      });
+    });
+
+    describe('total_user_earned_shards with historical data', () => {
+      it('should include total_user_earned_shards from closed positions', async () => {
+        (vaultConfigService.getCurrentSeason as jest.Mock).mockReturnValue({
+          seasonNumber: 1,
+          primaryChain: ChainType.BASE,
+          vaults: [],
+          isActive: true,
+          startTimestamp: Date.now() / 1000 - 86400,
+        });
+
+        (vaultConfigService.getActiveVaults as jest.Mock).mockReturnValue([]);
+
+        stakingSubgraphRepository.getUserPositions.mockResolvedValue({
+          data: [], // No active positions
+          metadata: {
+            source: 'subgraph',
+            lastUpdated: new Date(),
+            isStale: false,
+          },
+        });
+
+        // Mock historical summary showing user has earnings from closed positions
+        shardEarningHistoryRepository.getSummaryByWallet.mockResolvedValue({
+          totalDays: 60,
+          totalShards: 8250,
+          avgDailyShards: 137.5,
+          breakdown: {
+            staking: 7500, // All from closed positions
+            social: 400,
+            developer: 200,
+            referral: 150,
+          },
+        });
+
+        const result = await useCase.execute({
+          walletAddress: mockWalletAddress,
+          page: 1,
+          limit: 10,
+        });
+
+        expect(result.user_summary.total_user_positions).toBe(0); // No active positions
+        expect(result.user_summary.total_vaults_with_stakes).toBe(0);
+        expect(result.user_summary.total_user_earned_shards).toBe('7500'); // Lifetime earnings from closed positions
+        expect(
+          shardEarningHistoryRepository.getSummaryByWallet,
+        ).toHaveBeenCalledWith(mockWalletAddress, 1);
+      });
+
+      it('should calculate user summary with mix of active and closed positions', async () => {
+        (vaultConfigService.getCurrentSeason as jest.Mock).mockReturnValue({
+          seasonNumber: 1,
+          primaryChain: ChainType.BASE,
+          vaults: [],
+          isActive: true,
+          startTimestamp: Date.now() / 1000 - 86400,
+        });
+
+        const mockVault = {
+          address: '0x742d35Cc4Bf3b4A5b5b8e10a4E1F0e8C6F8D9E0A',
+          name: 'ILV',
+          symbol: 'ILV',
+          asset: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
+          type: VaultType.SINGLE_TOKEN,
+          chain: ChainType.BASE,
+          tokenConfig: {
+            address: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
+            symbol: 'ILV',
+            name: 'Illuvium',
+            decimals: 18,
+            coingeckoId: 'illuvium',
+            isLP: false,
+          },
+          isActive: true,
+          totalAssets: '0',
+          totalSupply: '0',
+          depositEnabled: true,
+          withdrawalEnabled: true,
+          seasonNumber: 1,
+          minimumDeposit: '1000000000000000000',
+          maximumDeposit: '1000000000000000000000000',
+          lockDuration: 0,
+          aprBase: 0.05,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        (vaultConfigService.getActiveVaults as jest.Mock).mockReturnValue([
+          mockVault,
+        ]);
+
+        // Mock current active position
+        const mockPosition = {
+          vault: '0x742d35Cc4Bf3b4A5b5b8e10a4E1F0e8C6F8D9E0A',
+          user: mockWalletAddress,
+          shares: '50000000000000000000',
+          assets: '50000000000000000000',
+          blockNumber: 1000000,
+          timestamp: Math.floor(Date.now() / 1000) - 86400,
+        };
+
+        stakingSubgraphRepository.getUserPositions.mockResolvedValue({
+          data: [mockPosition],
+          metadata: {
+            source: 'subgraph',
+            lastUpdated: new Date(),
+            isStale: false,
+          },
+        });
+
+        // Mock token price
+        priceFeedRepository.getTokenPrice.mockResolvedValue({
+          tokenAddress: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
+          symbol: 'ILV',
+          priceUsd: 10,
+          change24h: 2.4,
+          lastUpdated: new Date(),
+          source: 'coingecko',
+          isStale: false,
+        });
+
+        tokenDecimalsService.getDecimals.mockResolvedValue(18);
+        tokenDecimalsService.formatTokenAmount.mockReturnValue('50');
+        blockchainRepository.getUserTokenBalance.mockResolvedValue('0');
+
+        // Mock historical summary showing total including closed positions
+        shardEarningHistoryRepository.getSummaryByWallet.mockResolvedValue({
+          totalDays: 45,
+          totalShards: 6750,
+          avgDailyShards: 150,
+          breakdown: {
+            staking: 6000, // 5000 from closed positions + 1000 from active
+            social: 400,
+            developer: 250,
+            referral: 100,
+          },
+        });
+
+        const result = await useCase.execute({
+          walletAddress: mockWalletAddress,
+          page: 1,
+          limit: 10,
+        });
+
+        expect(result.user_summary.total_user_positions).toBe(1); // Active positions
+        expect(result.user_summary.total_vaults_with_stakes).toBe(1);
+        expect(result.user_summary.total_user_earned_shards).toBe('6000'); // Total lifetime including closed
+        expect(
+          shardEarningHistoryRepository.getSummaryByWallet,
+        ).toHaveBeenCalledWith(mockWalletAddress, 1);
+      });
+
+      it('should fallback to active positions calculation when historical repository fails', async () => {
+        (vaultConfigService.getCurrentSeason as jest.Mock).mockReturnValue({
+          seasonNumber: 1,
+          primaryChain: ChainType.BASE,
+          vaults: [],
+          isActive: true,
+          startTimestamp: Date.now() / 1000 - 86400,
+        });
+
+        const mockVault = {
+          address: '0x742d35Cc4Bf3b4A5b5b8e10a4E1F0e8C6F8D9E0A',
+          name: 'ILV',
+          symbol: 'ILV',
+          asset: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
+          type: VaultType.SINGLE_TOKEN,
+          chain: ChainType.BASE,
+          tokenConfig: {
+            address: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
+            symbol: 'ILV',
+            name: 'Illuvium',
+            decimals: 18,
+            coingeckoId: 'illuvium',
+            isLP: false,
+          },
+          isActive: true,
+          totalAssets: '0',
+          totalSupply: '0',
+          depositEnabled: true,
+          withdrawalEnabled: true,
+          seasonNumber: 1,
+          minimumDeposit: '1000000000000000000',
+          maximumDeposit: '1000000000000000000000000',
+          lockDuration: 0,
+          aprBase: 0.05,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        (vaultConfigService.getActiveVaults as jest.Mock).mockReturnValue([
+          mockVault,
+        ]);
+
+        const mockPosition = {
+          vault: '0x742d35Cc4Bf3b4A5b5b8e10a4E1F0e8C6F8D9E0A',
+          user: mockWalletAddress,
+          shares: '100000000000000000000',
+          assets: '100000000000000000000',
+          blockNumber: 1000000,
+          timestamp: Math.floor(Date.now() / 1000) - 86400,
+        };
+
+        stakingSubgraphRepository.getUserPositions.mockResolvedValue({
+          data: [mockPosition],
+          metadata: {
+            source: 'subgraph',
+            lastUpdated: new Date(),
+            isStale: false,
+          },
+        });
+
+        priceFeedRepository.getTokenPrice.mockResolvedValue({
+          tokenAddress: '0x767FE9EDC9E0dF98E07454847909b5E959D7ca0E',
+          symbol: 'ILV',
+          priceUsd: 10,
+          change24h: 2.4,
+          lastUpdated: new Date(),
+          source: 'coingecko',
+          isStale: false,
+        });
+
+        tokenDecimalsService.getDecimals.mockResolvedValue(18);
+        tokenDecimalsService.formatTokenAmount.mockReturnValue('100');
+        blockchainRepository.getUserTokenBalance.mockResolvedValue('0');
+
+        // Mock historical repository failure
+        const repositoryError = new Error(
+          'Historical data service unavailable',
+        );
+        shardEarningHistoryRepository.getSummaryByWallet.mockRejectedValue(
+          repositoryError,
+        );
+
+        // Mock logger to verify warning was logged
+        const loggerWarnSpy = jest.spyOn(Logger.prototype, 'warn');
+
+        const result = await useCase.execute({
+          walletAddress: mockWalletAddress,
+          page: 1,
+          limit: 10,
+        });
+
+        // Should fallback to calculating from active positions only
+        // The vault will calculate earned shards based on staked amount * price * rate * multiplier
+        // 100 tokens * $10 * (100/1000) rate * 1.0 multiplier = 100 shards
+        expect(result.user_summary.total_user_earned_shards).toBe('100'); // Active positions calculation
+
+        expect(
+          shardEarningHistoryRepository.getSummaryByWallet,
+        ).toHaveBeenCalledWith(mockWalletAddress, 1);
+
+        expect(loggerWarnSpy).toHaveBeenCalledWith(
+          `Failed to fetch historical shard data for wallet ${mockWalletAddress}, falling back to active positions:`,
+          repositoryError,
+        );
+      });
+
+      it('should handle zero positions but with historical earnings', async () => {
+        (vaultConfigService.getCurrentSeason as jest.Mock).mockReturnValue({
+          seasonNumber: 1,
+          primaryChain: ChainType.BASE,
+          vaults: [],
+          isActive: true,
+          startTimestamp: Date.now() / 1000 - 86400,
+        });
+
+        (vaultConfigService.getActiveVaults as jest.Mock).mockReturnValue([]);
+
+        // No active positions
+        stakingSubgraphRepository.getUserPositions.mockResolvedValue({
+          data: [],
+          metadata: {
+            source: 'subgraph',
+            lastUpdated: new Date(),
+            isStale: false,
+          },
+        });
+
+        // But has historical earnings (all positions were closed)
+        shardEarningHistoryRepository.getSummaryByWallet.mockResolvedValue({
+          totalDays: 90,
+          totalShards: 12750,
+          avgDailyShards: 141.67,
+          breakdown: {
+            staking: 10000, // All from previous closed positions
+            social: 1500,
+            developer: 800,
+            referral: 450,
+          },
+        });
+
+        const result = await useCase.execute({
+          walletAddress: mockWalletAddress,
+          page: 1,
+          limit: 10,
+        });
+
+        expect(result.user_summary.total_user_positions).toBe(0);
+        expect(result.user_summary.total_vaults_with_stakes).toBe(0);
+        expect(result.user_summary.total_portfolio_value_usd).toBe('0.00');
+        expect(result.user_summary.total_user_earned_shards).toBe('10000'); // Historical total
+        expect(result.vaults).toEqual([]);
+
+        expect(
+          shardEarningHistoryRepository.getSummaryByWallet,
+        ).toHaveBeenCalledWith(mockWalletAddress, 1);
+      });
+
+      it('should handle different season IDs in historical data queries', async () => {
+        (vaultConfigService.getCurrentSeason as jest.Mock).mockReturnValue({
+          seasonNumber: 3, // Different season
+          primaryChain: ChainType.BASE,
+          vaults: [],
+          isActive: true,
+          startTimestamp: Date.now() / 1000 - 86400,
+        });
+
+        (vaultConfigService.getActiveVaults as jest.Mock).mockReturnValue([]);
+
+        stakingSubgraphRepository.getUserPositions.mockResolvedValue({
+          data: [],
+          metadata: {
+            source: 'subgraph',
+            lastUpdated: new Date(),
+            isStale: false,
+          },
+        });
+
+        shardEarningHistoryRepository.getSummaryByWallet.mockResolvedValue({
+          totalDays: 15,
+          totalShards: 2250,
+          avgDailyShards: 150,
+          breakdown: {
+            staking: 2000,
+            social: 150,
+            developer: 75,
+            referral: 25,
+          },
+        });
+
+        await useCase.execute({
+          walletAddress: mockWalletAddress,
+          page: 1,
+          limit: 10,
+        });
+
+        // Verify it uses the correct season ID
+        expect(
+          shardEarningHistoryRepository.getSummaryByWallet,
+        ).toHaveBeenCalledWith(
+          mockWalletAddress,
+          3, // Season 3
+        );
       });
     });
   });
