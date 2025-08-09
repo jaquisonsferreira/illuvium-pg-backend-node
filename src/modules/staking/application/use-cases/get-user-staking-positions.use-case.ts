@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { IStakingSubgraphRepository } from '../../domain/repositories/staking-subgraph.repository.interface';
 import { IStakingBlockchainRepository } from '../../domain/repositories/staking-blockchain.repository.interface';
 import { IPriceFeedRepository } from '../../domain/repositories/price-feed.repository.interface';
+import { IShardEarningHistoryRepository } from '../../../shards/domain/repositories/shard-earning-history.repository.interface';
 import { VaultConfigService } from '../../infrastructure/config/vault-config.service';
 import { RewardsConfigService } from '../../infrastructure/services/rewards-config.service';
 import { TokenDecimalsService } from '../../infrastructure/services/token-decimals.service';
@@ -34,6 +35,8 @@ export class GetUserStakingPositionsUseCase {
     private readonly blockchainRepository: IStakingBlockchainRepository,
     @Inject('IPriceFeedRepository')
     private readonly priceFeedRepository: IPriceFeedRepository,
+    @Inject('IShardEarningHistoryRepository')
+    private readonly shardEarningHistoryRepository: IShardEarningHistoryRepository,
     private readonly vaultConfigService: VaultConfigService,
     private readonly rewardsConfigService: RewardsConfigService,
     private readonly tokenDecimalsService: TokenDecimalsService,
@@ -451,7 +454,11 @@ export class GetUserStakingPositionsUseCase {
     const offset = (page - 1) * limit;
     const paginatedVaults = enrichedVaults.slice(offset, offset + limit);
 
-    const userSummary = this.calculateUserSummary(enrichedVaults);
+    const userSummary = await this.calculateUserSummary(
+      enrichedVaults,
+      walletAddress,
+      currentSeason.season_id,
+    );
 
     return {
       wallet: walletAddress,
@@ -501,7 +508,11 @@ export class GetUserStakingPositionsUseCase {
     return chain === ChainType.OBELISK ? 'Obelisk' : chain;
   }
 
-  private calculateUserSummary(vaults: any[]): any {
+  private async calculateUserSummary(
+    vaults: any[],
+    walletAddress: string,
+    seasonId: number,
+  ): Promise<any> {
     const totalPositions = vaults.reduce(
       (sum, vault) => sum + vault.user_active_positions_count,
       0,
@@ -530,6 +541,29 @@ export class GetUserStakingPositionsUseCase {
       return sum + staked * price;
     }, 0);
 
+    let shardsEarnedLastDay = '0';
+    try {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setUTCHours(0, 0, 0, 0);
+
+      const yesterdayEarnings =
+        await this.shardEarningHistoryRepository.findByWalletAndDate(
+          walletAddress,
+          yesterday,
+          seasonId,
+        );
+
+      if (yesterdayEarnings) {
+        shardsEarnedLastDay = yesterdayEarnings.stakingShards.toString();
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to fetch yesterday's shard earnings for wallet ${walletAddress}:`,
+        error,
+      );
+    }
+
     return {
       total_portfolio_value_usd: totalPortfolioValue.toFixed(2),
       total_user_positions: totalPositions,
@@ -537,6 +571,7 @@ export class GetUserStakingPositionsUseCase {
       total_user_staked_ilv: totalIlvStaked.toFixed(2),
       total_user_staked_ilv_eth: totalIlvEthStaked.toFixed(2),
       total_user_earned_shards: totalEarnedShards.toString(),
+      shards_earned_last_day: shardsEarnedLastDay,
     };
   }
 
